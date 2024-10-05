@@ -12,6 +12,8 @@ https://docs.djangoproject.com/en/4.1/ref/settings/
 
 from pathlib import Path
 import os
+from datetime import timedelta # import this library top of the settings.py file
+
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -25,24 +27,25 @@ SECRET_KEY = 'django-insecure-%*31g(-a^p*rx7_o4(v)_-0t#k0nvpn49ip(q471p9=*99^+9$
 DEBUG = True
 
 AUTH_USER_MODEL = 'User.User'  # Replace 'yourapp' with your actual app name
-LOGIN_URL = 'User/login/'  # URL to redirect to for login
-#LOGOUT_REDIRECT_URL = '/'  # Redirect after logout
-#LOGIN_REDIRECT_URL = '/dashboard/'  # Where to go after login
-
 ALLOWED_HOSTS = []
 
 
 # Application definition
 
 INSTALLED_APPS = [
-    "User",
-    "dashboard",
+    
+    'rest_framework',
+    'rest_framework.authtoken',
+    'rest_framework_simplejwt',
+
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    "User",
+    "Store"
 ]
 
 MIDDLEWARE = [
@@ -151,7 +154,19 @@ LOGGING = {
         },
     },
 }
-STATICFILES_DIRS = [
-    os.path.join(BASE_DIR, 'static'),
-]
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework_simplejwt.authentication.JWTAuthentication'
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ]
+}
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
+    'SLIDING_TOKEN_REFRESH_LIFETIME': timedelta(days=1),
+    'SLIDING_TOKEN_LIFETIME': timedelta(days=30),
+    'SLIDING_TOKEN_REFRESH_LIFETIME_LATE_USER': timedelta(days=1),
+    'SLIDING_TOKEN_LIFETIME_LATE_USER': timedelta(days=30),
+}

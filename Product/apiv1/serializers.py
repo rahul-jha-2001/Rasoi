@@ -1,4 +1,4 @@
-from .models import product_model,category_model
+from .models import Product,Category
 from rest_framework.exceptions import ValidationError
 import uuid
 from rest_framework import serializers
@@ -17,7 +17,7 @@ class category_serializer(serializers.ModelSerializer):
             raise ValidationError({"store_uuid": "Not a vaild UUID."})
         return data    
     class Meta:
-        model =  category_model
+        model =  Category
         fields = "__all__"
 
 class product_serializer(serializers.ModelSerializer):
@@ -28,12 +28,12 @@ class product_serializer(serializers.ModelSerializer):
         
         category_uuid = validated_data.pop('category_uuid')
         try:
-            category = category_model.objects.get(category_uuid=category_uuid)
-        except category_model.DoesNotExist:
+            category = Category.objects.get(category_uuid=category_uuid)
+        except Category.DoesNotExist:
             raise serializers.ValidationError({"category_uuid": "Category not found."})
         
         # Create the product with the retrieved category
-        product = product_model.objects.create(category=category, **validated_data)
+        product = Product.objects.create(category=category, **validated_data)
         return product
     
     def update(self, instance, validated_data):
@@ -48,16 +48,15 @@ class product_serializer(serializers.ModelSerializer):
         category_uuid = validated_data.get('category_uuid', None)
         if category_uuid:
             try:
-                category = category_model.objects.get(category_uuid=category_uuid)
+                category = Category.objects.get(category_uuid=category_uuid)
                 instance.category = category
-            except category_model.DoesNotExist:
+            except Category.DoesNotExist:
                 raise serializers.ValidationError({"category_uuid": "Invalid category UUID."})
 
         instance.save()
         return instance
     
     def validate(self, data):
-        print(data,"VAlidate")
         if not data:
             raise serializers.ValidationError({"detail": "No data provided."})
 
@@ -68,5 +67,5 @@ class product_serializer(serializers.ModelSerializer):
         return data
     
     class Meta:
-        model = product_model
+        model = Product
         fields = ["product_uuid","store_id", "name", "is_available", "price", "description", "image","category_uuid","category"]

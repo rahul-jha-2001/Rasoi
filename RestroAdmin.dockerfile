@@ -1,16 +1,15 @@
 FROM python:latest
 
 WORKDIR /app
-
-
-COPY ./Product .
-COPY ./Product/entrypoint.sh /usr/local/bin/entrypoint.sh
-
+COPY ./Restro_admin .
+COPY ./Restro_admin/entrypoint.sh /usr/local/bin/
 ENV PYTHONUNBUFFERED 1
 RUN pip install --no-cache-dir -r requirements.txt
 
 RUN chmod +x /usr/local/bin/entrypoint.sh
+ENV PYTHONPATH="${PYTHONPATH}:./proto"
+
 
 ENTRYPOINT ["entrypoint.sh"]
 
-EXPOSE 50051
+EXPOSE 8000

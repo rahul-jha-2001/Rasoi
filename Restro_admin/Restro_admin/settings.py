@@ -13,8 +13,9 @@ https://docs.djangoproject.com/en/4.1/ref/settings/
 from pathlib import Path
 import os
 from datetime import timedelta # import this library top of the settings.py file
-
-
+import logging
+from dotenv import load_dotenv
+load_dotenv()
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -45,7 +46,9 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     "User",
-    "Store"
+    "Store",
+    "Category",
+    "proto"
 ]
 
 MIDDLEWARE = [
@@ -81,18 +84,30 @@ WSGI_APPLICATION = 'Restro_admin.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/4.1/ref/settings/#databases
+## DATABASE SEtting for Local testing and dev
+# DATABASES =  {
+#         'default': {
+#         'ENGINE': 'django.db.backends.postgresql',
+#         'NAME': 'User',
+#         'USER': 'postgres',
+#         'PASSWORD': 'rahul',
+#         'HOST': 'localhost',
+#         'PORT': '5433',  # Default PostgreSQL port
+#     }
+# }
 
+logging.info(f"Name {os.getenv("ADMIN_DB_NAME")} User {os.getenv("ADMIN_DB_USER")} Pass {os.getenv("ADMIN_DB_PASSWORD")}")
 DATABASES =  {
-        'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'User',
-        'USER': 'postgres',
-        'PASSWORD': 'rahul',
-        'HOST': 'localhost',
-        'PORT': '5433',  # Default PostgreSQL port
-    }
+        'default': 
+        {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': f'{os.getenv("ADMIN_DB_NAME",)}',
+            'USER': f'{os.getenv("ADMIN_DB_USER")}',
+            'PASSWORD': f'{os.getenv("ADMIN_DB_PASSWORD")}',
+            'HOST': f'{os.getenv("ADMIN_DB_HOST")}',
+            'PORT': '5432',  # Default PostgreSQL port
+        }
 }
-
 
 # Password validation
 # https://docs.djangoproject.com/en/4.1/ref/settings/#auth-password-validators

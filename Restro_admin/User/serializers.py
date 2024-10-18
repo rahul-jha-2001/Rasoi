@@ -9,8 +9,8 @@ class UserSerializer(serializers.ModelSerializer):
         fields = ("Email","PhoneNo","RestaurantName")
 
 class LoginSerializer(serializers.Serializer):
-    UserName = serializers.CharField()
-    PassWord = serializers.CharField()
+    Username = serializers.CharField()
+    Password = serializers.CharField()
 
     def validate(self, attrs):
         return super().validate(attrs)

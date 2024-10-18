@@ -9,9 +9,27 @@ services:
             - "50051:50051"
         depends_on:
             - product-database
+        healthcheck:
+            test: ["CMD", "grpc_health_probe", "-addr=:50051"]
+            interval: 10s
+            timeout: 5s
+            retries: 5
+        restart: unless-stopped                     
+        
         networks:
             backend:
                 ipv4_address : 10.10.10.2
+    restro-admin:
+        build:
+            context: ./
+            dockerfile: RestroAdmin.dockerfile
+        ports:
+            - "8000:8000"
+        depends_on:
+            - restro-admin-database
+        networks:
+            backend:
+                ipv4_address : 10.10.10.4        
     
     product-database:
         image: postgres:latest
@@ -19,7 +37,7 @@ services:
         ports:
             - "5434:5432"
         volumes:
-            - ./product_db_data:/var/lib/postgresql/data
+            - product_db_data:/var/lib/postgresql/data
         environment:
             - POSTGRES_USER=postgres
             - POSTGRES_PASSWORD=postgres
@@ -29,9 +47,31 @@ services:
             interval: 10s
             timeout: 5s
             retries: 5
+        restart: unless-stopped                     
         networks:
             backend:
-                ipv4_address : 10.10.10.3    
+                ipv4_address : 10.10.10.3  
+        
+    restro-admin-database:
+        image: postgres:latest
+        container_name: restro-admin-database
+        ports:
+            - "5435:5432"
+        volumes:
+            - restro_db_data:/var/lib/postgresql/data
+        environment:            #Enviroment varible 
+            - POSTGRES_USER=postgres
+            - POSTGRES_PASSWORD=postgres
+            - POSTGRES_DB=User
+        healthcheck:               # Adding healthcheck for database
+            test: ["CMD-SHELL", "pg_isready -U postgres"]
+            interval: 10s
+            timeout: 5s
+            retries: 5
+        networks:
+            backend:
+                ipv4_address : 10.10.10.5
+        restart: unless-stopped                     
 
 networks:
 
@@ -41,3 +81,7 @@ networks:
             config:
             - subnet: 10.10.10.0/24
               gateway: 10.10.10.1
+
+volumes:
+    product_db_data: 
+    restro_db_data: 

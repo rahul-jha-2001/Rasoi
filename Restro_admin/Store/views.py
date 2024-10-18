@@ -11,9 +11,6 @@ from rest_framework.permissions import AllowAny
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.exceptions import NotAuthenticated,NotFound
 
-
-# Create your views here.
-
 class StoreView(APIView):
     permission_classes = [IsAuthenticated ]
     authentication_classes = [JWTAuthentication] 
@@ -33,9 +30,7 @@ class StoreView(APIView):
         data = serializer.data
         
         return Response(
-            data={
-                    "data" :data
-                 }
+            data=data
         ,status= status.HTTP_200_OK)
     
     def post(self,request):
@@ -83,4 +78,20 @@ class StoreView(APIView):
             }
         ,status = status.HTTP_400_BAD_REQUEST)
     
+    def delete(self,request,StoreUuid):
+        user = request.user
+
+        try:
+            store = Store.objects.get(StoreUuid=StoreUuid, user=user)
+        
+        except Store.DoesNotExist:
+            
+            raise NotFound("Store not found.")
+        data = store.delete()
+        return Response({
+            "Success" : True,
+            "data":data
+        })
+
+    #ADD delete Requeest
     

@@ -8,9 +8,6 @@ import logging
 import grpc
 from dataclasses import dataclass
 from typing import Optional, List
-from rest_framework.exceptions import ValidationError
-from django.shortcuts import render
-from proto import Category_pb2_grpc,Category_pb2
 from proto import Product_pb2,Product_pb2_grpc
 logger = logging.getLogger(__name__)
 
@@ -26,7 +23,6 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.exceptions import NotAuthenticated
 
-from .serializer import ProductSerializer
 
 def grpc_error_handler(func):
     def wrapper(*args, **kwargs):
@@ -62,7 +58,6 @@ class Client:
     
     def __init__(self, host: str = '127.0.0.1', port: int = 50051):
         self.channel = grpc.insecure_channel(f'{host}:{port}')
-        self.stub = Category_pb2_grpc.CategoryServiceStub(self.channel)
         self.stub = Product_pb2_grpc.ProductServiceStub(self.channel)
     
     @grpc_error_handler
@@ -82,9 +77,9 @@ class Client:
         return MessageToDict(response)
 
     @grpc_error_handler
-    def get_product(self, product_uuid: str, store_uuid: str) -> Product_pb2.ProductResponse:
+    def get_product(self, ProductUuid: str, StoreUuid: str) -> Product_pb2.ProductResponse:
         """Get a Product by UUID"""
-        request = Product_pb2.GetProductRequest(ProductUuid=product_uuid, StoreUuid=store_uuid)
+        request = Product_pb2.GetProductRequest(ProductUuid=ProductUuid, StoreUuid=StoreUuid)
         return MessageToDict(self.stub.GetProduct(request))
 
     @grpc_error_handler
@@ -112,17 +107,17 @@ class Client:
         return MessageToDict(response)
 
     @grpc_error_handler
-    def delete_product(self, product_uuid: str) -> bool:
+    def delete_product(self, ProductUuid: str) -> bool:
         """Delete a Product"""
-        request = Product_pb2.DeleteProductRequest(ProductUuid=product_uuid)
+        request = Product_pb2.DeleteProductRequest(ProductUuid=ProductUuid)
         response = self.stub.DeleteProduct(request)
-        logger.info(f"Deleted Product: {product_uuid}")
+        logger.info(f"Deleted Product: {ProductUuid}")
         return MessageToDict(response)
 
     @grpc_error_handler
-    def list_products(self, store_uuid: str) -> List[Product_pb2.ProductResponse]:
+    def list_products(self, StoreUuid: str) -> List[Product_pb2.ProductResponse]:
         """List all products for a store"""
-        request = Product_pb2.ListProductsRequest(StoreUuid=store_uuid)
+        request = Product_pb2.ListProductsRequest(StoreUuid=StoreUuid)
         
         response = self.stub.ListProducts(request)
         return response.products
@@ -150,7 +145,7 @@ class ProductView(APIView):
         
         StoreUuid = request.GET.get('StoreUuid')
         ProductUuid = request.GET.get("ProductUuid")
-        product = self.client.get_product(store_uuid=StoreUuid,product_uuid=ProductUuid)
+        product = self.client.get_product(StoreUuid=StoreUuid,ProductUuid=ProductUuid)
         return Response(product,status.HTTP_200_OK)
     
     def post(self,request):

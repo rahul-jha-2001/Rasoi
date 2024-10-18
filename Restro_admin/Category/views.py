@@ -34,18 +34,18 @@ def grpc_error_handler(func):
 
 @dataclass
 class CategoryCreate:
-    store_uuid: str
-    name: str
-    description: str
-    parent_Category_uuid: Optional[str] = None
+    StoreUuid: str
+    Name: str
+    Description: str
+    ParentCategoryUuid: Optional[str] = None
 
 
 @dataclass
 class CategoryUpdate:
     CategoryUuid: str
-    name: Optional[str] = None
-    description: Optional[str] = None
-    parent_Category_uuid: Optional[str] = None
+    Name: Optional[str] = None
+    Description: Optional[str] = None
+    ParentCategoryUuid: Optional[str] = None
 
 
 class Client:
@@ -59,10 +59,10 @@ class Client:
     def create_Category(self, Category_data: CategoryCreate) -> Category_pb2.CategoryResponse:
         """Create a new Category"""
         request = Category_pb2.CreateCategoryRequest(
-            StoreUuid=Category_data.store_uuid,
-            Name=Category_data.name,
-            Description=Category_data.description,
-            ParentCategoryUuid=Category_data.parent_Category_uuid
+            StoreUuid=Category_data.StoreUuid,
+            Name=Category_data.Name,
+            Description=Category_data.Description,
+            ParentCategoryUuid=Category_data.ParentCategoryUuid
         )
         
        
@@ -71,9 +71,9 @@ class Client:
         return MessageToDict(response)
 
     @grpc_error_handler
-    def get_Category(self, Category_uuid: str) -> Category_pb2.CategoryResponse:
+    def get_Category(self, CategoryUuid: str) -> Category_pb2.CategoryResponse:
         """Get a Category by UUID"""
-        request = Category_pb2.GetCategoryRequest(CategoryUuid=Category_uuid)
+        request = Category_pb2.GetCategoryRequest(CategoryUuid=CategoryUuid)
         
         return MessageToDict(self.stub.GetCategory(request))
         
@@ -81,15 +81,15 @@ class Client:
     def update_Category(self, update_data: CategoryUpdate) -> Category_pb2.CategoryResponse:
         """Update a Category"""
         request = Category_pb2.UpdateCategoryRequest(
-            CategoryUuid=update_data.Category_uuid
+            CategoryUuid=update_data.CategoryUuid
         )
         
-        if update_data.name is not None:
-            request.Name = update_data.name
-        if update_data.description is not None:
-            request.Description = update_data.description
-        if update_data.parent_Category_uuid is not None:
-            request.ParentCategoryUuid = update_data.parent_Category_uuid
+        if update_data.Name is not None:
+            request.Name = update_data.Name
+        if update_data.Description is not None:
+            request.Description = update_data.Description
+        if update_data.ParentCategoryUuid is not None:
+            request.ParentCategoryUuid = update_data.ParentCategoryUuid
 
         response = self.stub.UpdateCategory(request)
         logger.info(f"Updated Category: {response.CategoryUuid}")
@@ -97,18 +97,18 @@ class Client:
 
     
     @grpc_error_handler
-    def delete_Category(self, Category_uuid: str) -> bool:
+    def delete_Category(self, CategoryUuid: str) -> bool:
         """Delete a Category"""
-        request = Category_pb2.DeleteCategoryRequest(CategoryUuid=Category_uuid)
+        request = Category_pb2.DeleteCategoryRequest(CategoryUuid=CategoryUuid)
         
         response = self.stub.DeleteCategory(request)
-        logger.info(f"Deleted Category: {Category_uuid}")
+        logger.info(f"Deleted Category: {CategoryUuid}")
         return MessageToDict(response)
 
     @grpc_error_handler
-    def list_categories(self, store_uuid: str) -> List[Category_pb2.CategoryResponse]:
+    def list_categories(self, StoreUuid: str) -> List[Category_pb2.CategoryResponse]:
         """List all categories for a store"""
-        request = Category_pb2.ListCategoriesRequest(StoreUuid=store_uuid)
+        request = Category_pb2.ListCategoriesRequest(StoreUuid=StoreUuid)
         
         response = self.stub.ListCategories(request)
         return list(response.categories)
@@ -133,15 +133,15 @@ class CategoryView(APIView):
             return Response({"CategoryUuid":"CategoryUuid not present in request"},status.HTTP_400_BAD_REQUEST)
         
         CategoryUuid = request.GET.get('CategoryUuid')
-        Category = self.client.get_Category(Category_uuid=CategoryUuid)
+        Category = self.client.get_Category(CategoryUuid=CategoryUuid)
         return Response(Category,status.HTTP_200_OK)
     
     def post(self,request):
         data = request.data
         category  =  CategoryCreate(StoreUuid=data.get("StoreUuid"),
                                     Name=data.get("Name"),
-                                    description= data.get("Description"),
-                                    parent_Category_uuid=data.get("Parent"))
+                                    Description= data.get("Description"),
+                                    ParentCategoryUuid=data.get("Parent"))
         
         response = self.client.create_Category(category)
         return Response(response,status.HTTP_201_CREATED)
@@ -153,7 +153,7 @@ class CategoryView(APIView):
                                 CategoryUuid = data.get("CategoryUuid"),
                                 Name=data.get("Name"),
                                 Description=data.get("Description"),
-                                parent_Category_uuid = data.get("parent")
+                                ParentCategoryUuid = data.get("Parent")
                                 )
         response = self.client.update_Category(Category)
         return Response(response,status.HTTP_202_ACCEPTED)

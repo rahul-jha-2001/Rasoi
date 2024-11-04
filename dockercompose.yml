@@ -30,6 +30,23 @@ services:
         networks:
             backend:
                 ipv4_address : 10.10.10.4        
+    cart:
+        build:
+            context: ./
+            dockerfile: cart.dockerfile
+        ports:
+            - "50052:50051"
+        depends_on:
+            - cart-database
+        healthcheck:
+            test: ["CMD", "grpc_health_probe", "-addr=:50051"]
+            interval: 10s
+            timeout: 5s
+            retries: 5
+        restart: unless-stopped
+        networks:
+            backend:
+                ipv4_address : 10.10.10.6           
     
     product-database:
         image: postgres:latest
@@ -51,12 +68,31 @@ services:
         networks:
             backend:
                 ipv4_address : 10.10.10.3  
-        
+    cart-database:
+        image: postgres:latest
+        container_name: cart-database
+        ports:
+            - "5435:5432"
+        volumes:
+            - cart_db_data:/var/lib/postgresql/data
+        environment:            #Enviroment varible 
+            - POSTGRES_USER=postgres
+            - POSTGRES_PASSWORD=postgres
+            - POSTGRES_DB=Cart
+        healthcheck:               # Adding healthcheck for database
+            test: ["CMD-SHELL", "pg_isready -U postgres"]
+            interval: 10s
+            timeout: 5s
+            retries: 5
+        networks:
+            backend:
+                ipv4_address : 10.10.10.7
+        restart: unless-stopped
     restro-admin-database:
         image: postgres:latest
         container_name: restro-admin-database
         ports:
-            - "5435:5432"
+            - "5436:5432"
         volumes:
             - restro_db_data:/var/lib/postgresql/data
         environment:            #Enviroment varible 
@@ -74,7 +110,6 @@ services:
         restart: unless-stopped                     
 
 networks:
-
     backend:
         driver: bridge
         ipam:
@@ -85,3 +120,4 @@ networks:
 volumes:
     product_db_data: 
     restro_db_data: 
+    cart_db_data:

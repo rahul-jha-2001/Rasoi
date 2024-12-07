@@ -5,3 +5,4 @@ grpcio-tools
 djangorestframework-simplejwt
 python-dotenv
 psycopg
+confluent_kafka

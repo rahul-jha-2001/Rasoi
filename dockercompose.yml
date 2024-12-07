@@ -46,7 +46,46 @@ services:
         restart: unless-stopped
         networks:
             backend:
-                ipv4_address : 10.10.10.6           
+                ipv4_address : 10.10.10.6
+
+    order_kafka:
+        build:
+            context: ./
+            dockerfile: order_kafka.dockerfile
+        # ports:
+        #     - "50054:50051"
+        depends_on:
+            - order-database
+            - kafka
+        # healthcheck:
+        #     test: ["CMD", "kafka-topics", "--list", "--bootstrap-server", "kafka:9092"]
+        #     interval: 30s
+        #     timeout: 10s
+        #     retries: 3
+        restart: unless-stopped
+        networks:
+            backend:
+                ipv4_address: 10.10.10.8
+
+    order_grpc:
+        build:
+            context: ./
+            dockerfile: order_grpc.dockerfile
+        ports:
+            - "50055:50051"
+        depends_on:
+            - order-database
+        healthcheck:
+            test: ["CMD", "grpc_health_probe", "-addr=:50051"]
+            interval: 10s
+            timeout: 5s
+            retries: 5
+        restart: unless-stopped
+        networks:
+            backend:
+                ipv4_address: 10.10.10.12           
+
+
     
     product-database:
         image: postgres:latest
@@ -68,6 +107,7 @@ services:
         networks:
             backend:
                 ipv4_address : 10.10.10.3  
+    
     cart-database:
         image: postgres:latest
         container_name: cart-database
@@ -88,6 +128,7 @@ services:
             backend:
                 ipv4_address : 10.10.10.7
         restart: unless-stopped
+   
     restro-admin-database:
         image: postgres:latest
         container_name: restro-admin-database
@@ -96,9 +137,9 @@ services:
         volumes:
             - restro_db_data:/var/lib/postgresql/data
         environment:            #Enviroment varible 
-            - POSTGRES_USER=postgres
-            - POSTGRES_PASSWORD=postgres
-            - POSTGRES_DB=User
+            POSTGRES_USER: postgres
+            POSTGRES_PASSWORD: postgres
+            POSTGRES_DB: User
         healthcheck:               # Adding healthcheck for database
             test: ["CMD-SHELL", "pg_isready -U postgres"]
             interval: 10s
@@ -108,6 +149,94 @@ services:
             backend:
                 ipv4_address : 10.10.10.5
         restart: unless-stopped                     
+
+    order-database:
+        image: postgres:latest
+        container_name: order-database
+        ports:
+            - "5436:5432"
+        volumes:
+            - order_db_data:/var/lib/postgresql/data
+        environment:            #Enviroment varible 
+            POSTGRES_USER: postgres
+            POSTGRES_PASSWORD: postgres
+            POSTGRES_DB: order
+        healthcheck:               # Adding healthcheck for database
+            test: ["CMD-SHELL", "pg_isready -U postgres"]
+            interval: 10s
+            timeout: 5s
+            retries: 5
+        networks:
+            backend:
+                ipv4_address : 10.10.10.9
+        restart: unless-stopped                     
+
+
+    zookeeper:
+        image: confluentinc/cp-zookeeper:6.2.0
+        hostname: zookeeper
+        container_name: zookeeper
+        networks:
+                backend:
+                    ipv4_address : 10.10.10.11
+        ports:
+        - "2181:2181"
+        environment:
+            ZOOKEEPER_CLIENT_PORT: 2181
+            ZOOKEEPER_TICK_TIME: 2000
+        healthcheck:
+            test: ["CMD", "echo", "ruok", "|", "nc", "localhost", "2181"]
+            interval: 10s
+            timeout: 5s
+            retries: 3
+            start_period: 30s
+    kafka:
+        image: confluentinc/cp-kafka:6.2.0
+        hostname: kafka
+        container_name: kafka
+        depends_on:
+            - zookeeper
+        ports:
+            - "29092:29092"
+            - "9092:9092"
+            - "9101:9101"
+        environment:
+            KAFKA_BROKER_ID: 1
+            KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+            KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+            KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092  
+            KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+            KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+            KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+            KAFKA_JMX_PORT: 9101
+            KAFKA_JMX_HOSTNAME: localhost
+        healthcheck:
+            test: ["CMD", "nc", "-z", "kafka", "29092"]
+            interval: 10s
+            timeout: 5s
+            retries: 3
+            start_period: 30s    
+        networks:
+            backend:
+                ipv4_address : 10.10.10.10
+
+
+
+
+    # kafka-ui:
+    #     container_name: kafka-ui
+    #     image: provectuslabs/kafka-ui:latest
+    #     ports: 
+    #         - "8090:8080"
+    #     environment:
+    #         KAFKA_CLUSTERS_0_NAME: local
+    #      # other properties, omitted
+    #         SPRING_CONFIG_ADDITIONAL-LOCATION: /config.yml
+    #     volumes:
+    #         - /config.yml:/config.yml
+    #     networks:
+    #         backend:
+    #             ipv4_address : 10.10.10.12
 
 networks:
     backend:
@@ -121,3 +250,4 @@ volumes:
     product_db_data: 
     restro_db_data: 
     cart_db_data:
+    order_db_data:

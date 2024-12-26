@@ -11,10 +11,15 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
 from pathlib import Path
+from dotenv import load_dotenv
+import os
+import logging
+logging.basicConfig(level=logging.INFO)
 
+flag = load_dotenv()
+logging.info(f"envioment loaded {flag} ")
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
@@ -73,11 +78,26 @@ WSGI_APPLICATION = 'UserAuth.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
+logging.info(f"USER_DB_NAME {os.getenv("USER_DB_NAME")}  USER_DB_USER {os.getenv("USER_DB_USER")}  'USER_DB_ADDRESS':{os.getenv("USER_DB_ADDRESS")}")
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+    # 'default': {
+    #     'ENGINE': 'django.db.backends.postgresql',
+    #     'NAME' : "User",#f"{os.getenv("USER_DB_NAME","User")}",
+    #     'USER' : "postgres",#f"{os.getenv("USER_DB_USER","postgres")}",
+    #     'PASSWORD':"postgres", #f"{os.getenv("USER_DB_PASSWORD","postgres")}",
+    #     'HOST':"localhost",#f"{os.getenv("USER_DB_ADDRESS","localhost")}",
+    #     'PORT' :"5436" #f"{os.getenv("USER_DB_PORT","5436")}"
+    # }
+    # ,
+    'default' :
+    {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME' : f"{os.getenv("USER_DB_NAME","User")}",
+        'USER' : f"{os.getenv("USER_DB_USER","postgres")}",
+        'PASSWORD': f"{os.getenv("USER_DB_PASSWORD","postgres")}",
+        'HOST': f"{os.getenv("USER_DB_ADDRESS","localhost")}",
+        'PORT' : f"{os.getenv("USER_DB_PORT","5436")}"
     }
 }
 

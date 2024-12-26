@@ -102,18 +102,20 @@ class AuthStoreResponse(_message.Message):
     def __init__(self, Authenticated: bool = ..., StoreUuid: _Optional[str] = ..., JWTToken: _Optional[_Union[Token, _Mapping]] = ..., message: _Optional[str] = ...) -> None: ...
 
 class UpdateStoreRequest(_message.Message):
-    __slots__ = ("StoreUuid", "PhoneNumber", "StoreName", "StoreAddress", "GSTNumber")
+    __slots__ = ("StoreUuid", "PhoneNumber", "StoreName", "StoreAddress", "GSTNumber", "Email")
     STOREUUID_FIELD_NUMBER: _ClassVar[int]
     PHONENUMBER_FIELD_NUMBER: _ClassVar[int]
     STORENAME_FIELD_NUMBER: _ClassVar[int]
     STOREADDRESS_FIELD_NUMBER: _ClassVar[int]
     GSTNUMBER_FIELD_NUMBER: _ClassVar[int]
+    EMAIL_FIELD_NUMBER: _ClassVar[int]
     StoreUuid: str
     PhoneNumber: str
     StoreName: str
     StoreAddress: str
     GSTNumber: str
-    def __init__(self, StoreUuid: _Optional[str] = ..., PhoneNumber: _Optional[str] = ..., StoreName: _Optional[str] = ..., StoreAddress: _Optional[str] = ..., GSTNumber: _Optional[str] = ...) -> None: ...
+    Email: str
+    def __init__(self, StoreUuid: _Optional[str] = ..., PhoneNumber: _Optional[str] = ..., StoreName: _Optional[str] = ..., StoreAddress: _Optional[str] = ..., GSTNumber: _Optional[str] = ..., Email: _Optional[str] = ...) -> None: ...
 
 class UpdateStoreResponse(_message.Message):
     __slots__ = ("success", "message")

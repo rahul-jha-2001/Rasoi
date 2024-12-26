@@ -19,17 +19,17 @@ services:
         networks:
             backend:
                 ipv4_address : 10.10.10.2
-    restro-admin:
-        build:
-            context: ./
-            dockerfile: RestroAdmin.dockerfile
-        ports:
-            - "8000:8000"
-        depends_on:
-            - restro-admin-database
-        networks:
-            backend:
-                ipv4_address : 10.10.10.4        
+    # restro-admin:
+    #     build:
+    #         context: ./
+    #         dockerfile: RestroAdmin.dockerfile
+    #     ports:
+    #         - "8000:8000"
+    #     depends_on:
+    #         - restro-admin-database
+    #     networks:
+    #         backend:
+    #             ipv4_address : 10.10.10.4        
     cart:
         build:
             context: ./
@@ -47,21 +47,39 @@ services:
         networks:
             backend:
                 ipv4_address : 10.10.10.6
+    user:
+        build:
+            context: ./
+            dockerfile: userauth.dockerfile
+        ports:
+            - "50055:50051"
+        depends_on:
+            - user-database
+            - redis
+        healthcheck:
+            test: ["CMD", "grpc_health_probe", "-addr=:50051"]
+            interval: 10s
+            timeout: 5s
+            retries: 5
+        restart: unless-stopped
+        networks:
+            backend:
+                ipv4_address : 10.10.10.14            
 
     order_kafka:
         build:
             context: ./
             dockerfile: order_kafka.dockerfile
-        # ports:
-        #     - "50054:50051"
+        ports:
+            - "50054:50051"
         depends_on:
             - order-database
             - kafka
-        # healthcheck:
-        #     test: ["CMD", "kafka-topics", "--list", "--bootstrap-server", "kafka:9092"]
-        #     interval: 30s
-        #     timeout: 10s
-        #     retries: 3
+        healthcheck:
+            test: ["CMD", "kafka-topics", "--list", "--bootstrap-server", "kafka:9092"]
+            interval: 30s
+            timeout: 10s
+            retries: 3
         restart: unless-stopped
         networks:
             backend:
@@ -84,7 +102,6 @@ services:
         networks:
             backend:
                 ipv4_address: 10.10.10.12           
-
 
     
     product-database:
@@ -129,13 +146,13 @@ services:
                 ipv4_address : 10.10.10.7
         restart: unless-stopped
    
-    restro-admin-database:
+    user-database:
         image: postgres:latest
-        container_name: restro-admin-database
+        container_name: user-database
         ports:
             - "5436:5432"
         volumes:
-            - restro_db_data:/var/lib/postgresql/data
+            - user_db_data:/var/lib/postgresql/data
         environment:            #Enviroment varible 
             POSTGRES_USER: postgres
             POSTGRES_PASSWORD: postgres
@@ -154,7 +171,7 @@ services:
         image: postgres:latest
         container_name: order-database
         ports:
-            - "5436:5432"
+            - "5437:5432"
         volumes:
             - order_db_data:/var/lib/postgresql/data
         environment:            #Enviroment varible 
@@ -190,6 +207,7 @@ services:
             timeout: 5s
             retries: 3
             start_period: 30s
+    
     kafka:
         image: confluentinc/cp-kafka:6.2.0
         hostname: kafka
@@ -219,8 +237,33 @@ services:
         networks:
             backend:
                 ipv4_address : 10.10.10.10
+    
+    redis:
+        image: redis:latest
+        container_name: redis
+        ports:
+            - "6379:6379"
+        volumes:
+            - redis_data:/data
+        command: ["redis-server", "--requirepass", "Temp_Pass"]
+        healthcheck:
+            test: ["CMD", "redis-cli", "-a", "Temp_Pass", "ping"]
+            interval: 30s
+            timeout: 10s
+            retries: 3
+        restart: unless-stopped
+        networks:
+            backend:
+                ipv4_address : 10.10.10.15
 
-
+    redisinsight:
+        image: redislabs/redisinsight:latest
+        container_name: redisinsight
+        ports:
+            - "8001:8001"
+        networks:
+            backend:
+                ipv4_address : 10.10.10.16
 
 
     # kafka-ui:
@@ -251,3 +294,5 @@ volumes:
     restro_db_data: 
     cart_db_data:
     order_db_data:
+    user_db_data:
+    redis_data:

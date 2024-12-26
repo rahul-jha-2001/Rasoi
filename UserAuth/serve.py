@@ -322,72 +322,56 @@ class UserAuthService(UserAuth_pb2_grpc.UserAuthServiceServicer):
         """Update store information"""
         # Update store details
         try:
-            store = Store.objects.get(StoreUuid = request.StoreUuid)
-        
-        except Store.DoesNotExist:
-            logger.error(f"Store does not Exist for {request.StoreUuid} ")
-            context.set_code(grpc.StatusCode.NOT_FOUND)
-            context.set_details('Store not found')
-            return UserAuth_pb2.UpdateStoreResponse(success=False, message='Store does not exist')
+            store = Store.objects.get(StoreUuid=request.StoreUuid)
             
-        except Exception as e:
-            # Catch any unexpected errors
-            logger.error(f"Some error  {str(e)}")
-
-            context.set_code(grpc.StatusCode.INTERNAL)
-            context.set_details(f'Internal error: {str(e)}')
-            return UserAuth_pb2.UpdateStoreResponse(success=False, message=f'Error {str(e)} has occured ')
-
-
-        try:
             if request.HasField("PhoneNumber"):
                 if not self._validate_phone_number(request.PhoneNumber):
                     logger.error(f"Invalid Phone Number {request.PhoneNumber}")
-                    
                     context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
                     context.set_details('Invalid phone number')
                     return UserAuth_pb2.UpdateStoreResponse(success=False, message='Invalid phone number')
-                store.PhoneNumber = request.PhoneNumber
+                store.PhoneNo = request.PhoneNumber
             
+            if request.HasField("GSTNumber"):
+                if not self._validate_gst_number(request.GSTNumber):
+                    logger.error(f"GST number Incorrect {request.GSTNumber}")
+                    context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
+                    context.set_details('Invalid GST number')
+                    return UserAuth_pb2.UpdateStoreResponse(success=False, message='Invalid GST number')
+                store.GST = request.GSTNumber #Need to change GST to GSTNumber
+
             if request.HasField("StoreName"):
                 store.StoreName = request.StoreName
             
             if request.HasField("StoreAddress"):
                 store.StoreAddress = request.StoreAddress
 
-            if request.HasField("GSTNumber"):
-                if not self._validate_gst_number(request.GSTNumber):
-                    logger.error(f"GST number Incorrect {request.GSTNumber}")
-
-                    context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
-                    context.set_details('Invalid GST number')
-                    return UserAuth_pb2.CreateStoreResponse(success=False, message='Invalid GST number')
-                store.GSTNumber = request.GSTNumber
+            if request.HasField("Email"):
+                store.email = request.Email
 
             store.full_clean()
             store.save()
-
-            logger.info(f"Store for Store Uuid:{request.StoreUuid} updated")
             
-            return UserAuth_pb2.UpdateStoreResponse(
-                success=True,
-                message='Store Updated Successfully'
-            )
-        
+            logger.info(f"Store for Store Uuid:{request.StoreUuid} updated")
+            return UserAuth_pb2.UpdateStoreResponse(success=True, message='Store Updated Successfully')
+
+        except Store.DoesNotExist:
+            logger.error(f"Store does not Exist for {request.StoreUuid}")
+            context.set_code(grpc.StatusCode.NOT_FOUND)
+            context.set_details('Store not found')
+            return UserAuth_pb2.UpdateStoreResponse(success=False, message='Store does not exist')
+            
         except ValidationError as e:
-
-            logger.error(f"Validation error for {str(e)}")
-
+            logger.error(f"Validation error: {str(e)}")
             context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
             context.set_details(f'Validation Error: {str(e)}')
-            return UserAuth_pb2.UpdateStoreResponse(success=False, message=f'Error {str(e)} has occured ')
-        
+            return UserAuth_pb2.UpdateStoreResponse(success=False, message=str(e))
+            
         except Exception as e:
-            # Catch any unexpected errors
-            logger.error(f"error for {str(e)}")
+            logger.error(f"Unexpected error: {str(e)}")
             context.set_code(grpc.StatusCode.INTERNAL)
             context.set_details(f'Internal error: {str(e)}')
-            return UserAuth_pb2.UpdateStoreResponse(success=False, message=f'Error {str(e)} has occured ')
+            return UserAuth_pb2.UpdateStoreResponse(success=False, message=str(e))
 def serve():
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
 
@@ -403,6 +387,7 @@ def serve():
 if __name__ == "__main__":
     RedisCilent = redis.Redis(host=os.getenv("REDIS_ADDRESS","localhost"),
                               port=os.getenv("REDIS_PORT",6379),
+                              password= os.getenv("REDIS_PASSWORD"),
                               decode_responses=True)
     logging.basicConfig(level= logging.INFO)
     serve()

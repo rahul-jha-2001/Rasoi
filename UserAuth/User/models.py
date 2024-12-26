@@ -90,13 +90,11 @@ class Customer(models.Model):
 
     Name = models.CharField(
                             _("Username"),
-                            max_length= 254,
-                            unique=True)
+                            max_length= 254)
     
     PhoneNo = models.CharField(
                                 _("Phone Number"),
-                                max_length= 13,
-                                unique=True)
+                                max_length= 13)
 
     logged_in_stores = models.ManyToManyField(Store, 
                                               through='CustomerLogin',

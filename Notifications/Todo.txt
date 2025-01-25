@@ -1,0 +1,14 @@
+Grpc Services :
+    add message
+    remove message
+    
+    add list of message
+    delete list of message
+
+    view messages
+
+
+
+message structre
+
+    

@@ -162,4 +162,4 @@ migrations
 #.idea/
 product_db_data
 Restro_db_data
-secrets.env
+secrets.*

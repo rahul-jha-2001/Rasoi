@@ -10,11 +10,79 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
+import os
+import sys
 from pathlib import Path
+import logging
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# Logging Configuration
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'detailed': {
+            'format': '{asctime} {levelname} [{name}] {message}',
+            'style': '{',
+            'datefmt': '%Y-%m-%d %H:%M:%S'
+        }
+    },
+    'handlers': {
+        'file': {
+            'level': 'DEBUG',
+            'class': 'logging.FileHandler',
+            'filename': BASE_DIR / 'logs/notifications.log',
+            'formatter': 'detailed',
+        },
+        'console': {
+            'level': 'DEBUG',
+            'class': 'logging.StreamHandler',
+            'formatter': 'detailed'
+        }
+    },
+    'loggers': {
+        'notifications': {
+            'handlers': ['file', 'console'],
+            'level': 'DEBUG',
+            'propagate': True,
+        }
+    }
+}
+
+# Create logs directory if it doesn't exist
+LOGS_DIR = BASE_DIR / 'logs'
+LOGS_DIR.mkdir(exist_ok=True)
+
+# Setup basic logging for settings initialization
+
+
+# Add all directories in project root to Python path
+# Skip common directories that shouldn't be in path
+SKIP_DIRS = {
+    '__pycache__',
+    'venv',
+    'env',
+    '.git',
+    '.idea',
+    '.vscode',
+    'logs',
+    'media',
+    'static',
+    'migrations',
+}
+
+# Get all directories in BASE_DIR
+for item in BASE_DIR.iterdir():
+    if item.is_dir() and item.name not in SKIP_DIRS:
+        sys.path.append(str(item))
+
+# Print added paths for debugging
+print("Python path additions:")
+for path in sys.path:
+    if str(BASE_DIR) in path:
+        print(f"- {path}")
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
@@ -28,6 +96,7 @@ DEBUG = True
 ALLOWED_HOSTS = []
 
 
+
 # Application definition
 
 INSTALLED_APPS = [
@@ -37,6 +106,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'template',
 ]
 
 MIDDLEWARE = [

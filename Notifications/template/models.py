@@ -2,48 +2,46 @@ from django.db import models,transaction
 import uuid 
 # from managers import TemplateManager, TemplateVersionManager, TemplateContentManager
 from django.core.exceptions import ValidationError
-
+from utils.logger import Logger,log_operation
+logger = Logger("template")
 
 """Managers"""
 class TemplateVersionManager(models.Manager):
+
+    def get_latest_version(self, template, template_type):
+        return self.filter(
+            template=template,
+            type=template_type
+        ).order_by('-version_number').first()
+    
     @transaction.atomic
     def create_version(
         self,
         template,
         template_type: str,
-        version_number: int = 1,
         is_current: bool = False,
         status: str = 'DRAFT'
     ):
         """Creates a new template version"""
         try:
-            #     # Set all other versions of this type to not current if this is current
-            #     if is_current:
-            #         self.filter(
-            #             template=template,
-            #             type=template_type
-            #         ).update(is_current=False)
-
             # Get the latest version number for this template type
             latest_version = self.get_latest_version(template, template_type)
+            logger.debug(f"Latest Version: {latest_version}")
             if latest_version:
                 version_number = latest_version.version_number + 1
-
+            else:
+                version_number = 1
             return self.create(
-                template=template,
+                template=Template.objects.get(id=template),
                 version_number=version_number,
-                template_type=template_type,
+                type=template_type,
                 is_current=is_current,
                 status=status
             )
         except Exception as e:
             raise ValidationError(f"Failed to create template version: {str(e)}")
 
-    def get_latest_version(self, template, template_type):
-        return self.filter(
-            template=template,
-            template_type=template_type
-        ).order_by('-version_number').first()
+
 
 class TemplateContentManager(models.Manager):
     @transaction.atomic
@@ -70,13 +68,15 @@ class TemplateManager(models.Manager):
 
     
     @transaction.atomic
-    def create_template_with_version_and_content(
+    def create_new_template(
         self,
         name: str,
         description: str,
         template_type: str,
-        content: dict,
-        variables: list,
+        header: str,
+        body: str,
+        footer: str,
+        variables: dict,
         version_number: int = 1,
         is_current: bool = True,
         status: str = 'DRAFT'
@@ -102,9 +102,9 @@ class TemplateManager(models.Manager):
             # Create content using ContentManager
             content = TemplateContent.objects.create(
                 template_version=version,
-                header=content.get('header', ''),
-                body=content.get('body', ''),
-                footer=content.get('footer', ''),
+                header=header,
+                body=body,
+                footer=footer,
                 variables=variables
             )
 
@@ -113,36 +113,38 @@ class TemplateManager(models.Manager):
         except Exception as e:
             raise ValidationError(f"Failed to create template: {str(e)}")
 
+    @transaction.atomic
     def create_new_version(
         self,
-        template_id,
+        template_id:str,
         template_type: str,
-        content: dict,
-        variables: list
+        header: str,
+        body: str,
+        footer: str,
+        variables: dict,
+        status: str = 'DRAFT'
     ):
         
         """Creates new version for existing template"""
-        template = self.get(id=template_id)
+        if not template_id:
+            raise ValidationError("Template ID is required")
         
-        # Get latest version number
-        latest_version = template.template_version.get_latest_version(
-            template=template,
-            template_type=template_type
-        )
-        new_version_number = (latest_version.version_number + 1) if latest_version else 1
-
+        template = self.get(id=template_id)
+      
         # Create new version
         version = TemplateVersion.objects.create_version(
-            template=template,
+            template=template.id,
             template_type=template_type,
-            version_number=new_version_number,
-            is_current=True
+            is_current=True,
+            status=status
         )
 
         # Create content
         content = TemplateContent.objects.create(
             template_version=version,
-            content=content,
+            header=header,
+            body=body,
+            footer=footer,   
             variables=variables
         )
 

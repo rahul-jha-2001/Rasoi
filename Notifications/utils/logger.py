@@ -2,16 +2,17 @@ import logging
 import functools
 from typing import Any,Dict,Optional
 
-logger = logging.getLogger('notifications')
 
 class Logger:
 
-    @staticmethod
-    def info(message:str,extra:Dict[str,Any]={}) -> None:
-        logger.info(message,extra=extra)
+    def __init__(self,name:str):
+        self.logger = logging.getLogger(name)
+
     
-    @staticmethod
-    def  error(message:str,error :Exception = None,extra:Dict[str,Any]={}) -> None:
+    def info(self,message:str,extra:Dict[str,Any]={}) -> None:
+        self.logger.info(message,extra=extra)
+    
+    def  error(self,message:str,error :Exception = None,extra:Dict[str,Any]={}) -> None:
         error_details = extra.get('error_details',{})
         if error:
             error_details.update(
@@ -21,29 +22,29 @@ class Logger:
                     'error_traceback': error.__traceback__,
                 }
             )
-        logger.error(message,extra=error_details)
+        self.logger.error(message,extra=error_details)
 
-    @staticmethod
-    def debug(message:str,extra:Dict[str,Any]={}) -> None:
-        logger.debug(message,extra=extra or {})
+    def debug(self,message:str,extra:Dict[str,Any]={}) -> None:
+        self.logger.debug(message,extra=extra or {})
 
 
 def log_operation(operation_name:str):
     """Decorator to log the operation of a function"""
+    logger = Logger(operation_name)
     def decorator(func):
         @functools.wraps(func)
         def wrapper(*args,**kwargs):
             try:
 
-                Logger.info(f"starting {operation_name}")
+                logger.info(f"starting {operation_name}")
 
                 result = func(*args,*kwargs)
 
-                Logger.info(f"Finished {operation_name}")
+                logger.info(f"Finished {operation_name}")
 
                 return result
             except Exception as e:
-                Logger.error(
+                logger.error(
                     f"Error during {operation_name}",
                     error=e,
                     extra={'args':args,'kwargs':kwargs}
@@ -51,7 +52,3 @@ def log_operation(operation_name:str):
                 raise
         return wrapper
     return decorator
-
-
-if __name__ == "__main__":
-    Logger.info("Logger initialized")

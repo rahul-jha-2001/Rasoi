@@ -79,10 +79,10 @@ for item in BASE_DIR.iterdir():
         sys.path.append(str(item))
 
 # Print added paths for debugging
-print("Python path additions:")
-for path in sys.path:
-    if str(BASE_DIR) in path:
-        print(f"- {path}")
+# print("Python path additions:")
+# for path in sys.path:
+#     if str(BASE_DIR) in path:
+#         print(f"- {path}")
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/

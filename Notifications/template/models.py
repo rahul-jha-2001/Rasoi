@@ -2,8 +2,7 @@ from django.db import models,transaction
 import uuid 
 # from managers import TemplateManager, TemplateVersionManager, TemplateContentManager
 from django.core.exceptions import ValidationError
-from utils.logger import Logger,log_operation
-logger = Logger("template")
+from utils.logger import Logger
 
 """Managers"""
 class TemplateVersionManager(models.Manager):
@@ -26,7 +25,7 @@ class TemplateVersionManager(models.Manager):
         try:
             # Get the latest version number for this template type
             latest_version = self.get_latest_version(template, template_type)
-            logger.debug(f"Latest Version: {latest_version}")
+            Logger.debug(f"Latest Version: {latest_version}")
             if latest_version:
                 version_number = latest_version.version_number + 1
             else:
@@ -72,6 +71,7 @@ class TemplateManager(models.Manager):
         self,
         name: str,
         description: str,
+        category: str,
         template_type: str,
         header: str,
         body: str,
@@ -87,6 +87,7 @@ class TemplateManager(models.Manager):
             template = super().create(
                 name=name,
                 description=description,
+                category=category,
                 status=status
             )
 
@@ -99,6 +100,7 @@ class TemplateManager(models.Manager):
                 status=status
             )
 
+        
             # Create content using ContentManager
             content = TemplateContent.objects.create(
                 template_version=version,
@@ -172,11 +174,17 @@ class TemplateType(models.TextChoices):
     INAPP = 'INAPP', 'In-App'
     WHATSAPP = 'WHATSAPP', 'Whatsapp'
 
+class TemplateCategory(models.TextChoices):
+    AUTHENTICATION = 'AUTHENTICATION', 'Authentication'
+    PROMOTIONAL = 'PROMOTIONAL', 'Promotional'
+    TRANSACTIONAL = 'TRANSACTIONAL', 'Transactional'
+
 class Template(models.Model):
     id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True,primary_key=True)
     name = models.CharField(max_length=255,unique=True)
     description = models.TextField()
-    status = models.CharField(max_length=10,choices=TemplateStatus.choices,default=TemplateStatus.DRAFT)
+    status = models.CharField(max_length=225,choices=TemplateStatus.choices,default=TemplateStatus.DRAFT)
+    category = models.CharField(max_length=225,choices=TemplateCategory.choices,null=True,blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

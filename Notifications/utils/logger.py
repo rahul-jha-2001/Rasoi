@@ -2,17 +2,16 @@ import logging
 import functools
 from typing import Any,Dict,Optional
 
-
+logger = logging.getLogger('notifications')
 class Logger:
 
-    def __init__(self,name:str):
-        self.logger = logging.getLogger(name)
 
+    @staticmethod
+    def info(message:str,extra:Dict[str,Any]={}) -> None:
+        logger.info(message,extra=extra)
     
-    def info(self,message:str,extra:Dict[str,Any]={}) -> None:
-        self.logger.info(message,extra=extra)
-    
-    def  error(self,message:str,error :Exception = None,extra:Dict[str,Any]={}) -> None:
+    @staticmethod
+    def  error(message:str,error :Exception = None,extra:Dict[str,Any]={}) -> None:
         error_details = extra.get('error_details',{})
         if error:
             error_details.update(
@@ -22,15 +21,15 @@ class Logger:
                     'error_traceback': error.__traceback__,
                 }
             )
-        self.logger.error(message,extra=error_details)
+        logger.error(message,extra=error_details)
 
-    def debug(self,message:str,extra:Dict[str,Any]={}) -> None:
-        self.logger.debug(message,extra=extra or {})
+    @staticmethod
+    def debug(message:str,extra:Dict[str,Any]={}) -> None:
+        logger.debug(message,extra=extra or {})
 
 
 def log_operation(operation_name:str):
     """Decorator to log the operation of a function"""
-    logger = Logger(operation_name)
     def decorator(func):
         @functools.wraps(func)
         def wrapper(*args,**kwargs):

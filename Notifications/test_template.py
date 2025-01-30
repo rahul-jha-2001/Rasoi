@@ -12,7 +12,6 @@ django.setup()
 from template.models import Template, TemplateVersion, TemplateContent
 from utils.logger import Logger
 
-logger = Logger("template")
 
 def create_template():
     # Create a complete template
@@ -20,6 +19,7 @@ def create_template():
         name="Welcome Email",
         description="Welcome email for new users",
         template_type="EMAIL",
+        category="AUTHENTICATION",
         header="Welcome {{user_name}}!",
         body="Thank you for joining.",
         footer="Best regards",

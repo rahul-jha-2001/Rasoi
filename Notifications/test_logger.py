@@ -19,8 +19,6 @@ django.setup()
 from utils.logger import Logger
 
 def test_logger():
-    print("Testing logger...")
-    print(f"Logs will be written to: {Path('logs')}")
     
     # Force logger to handle logs immediately
     logging.getLogger('notifications').handlers[0].flush()

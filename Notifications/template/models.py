@@ -4,40 +4,58 @@ import uuid
 from django.core.exceptions import ValidationError
 from utils.logger import Logger
 
+logger = Logger(__name__)
 """Managers"""
 class TemplateVersionManager(models.Manager):
 
-    def get_latest_version(self, template, template_type):
-        return self.filter(
+    def get_latest_version(self, template, channel):
+        logger.debug(f"Getting latest version for template {template} and channel {channel}")
+        version = self.filter(
             template=template,
-            type=template_type
+            channel=channel
         ).order_by('-version_number').first()
+        logger.debug(f"Latest version found: {version}")
+        return version
+    def get_latest_active_version(self, template, channel):
+        logger.debug(f"Getting latest version for template {template} and channel {channel}")
+        version = self.filter(
+            template=template,
+            channel=channel,
+            status='ACTIVE',
+            is_current=True
+        ).order_by('-version_number').first()
+        logger.debug(f"Latest active version found: {version}")
+        return version
     
     @transaction.atomic
     def create_version(
         self,
         template,
-        template_type: str,
+        channel: str,
         is_current: bool = False,
         status: str = 'DRAFT'
     ):
+        logger.info(f"Creating new version for template {template} with channel {channel}")
         """Creates a new template version"""
         try:
             # Get the latest version number for this template type
-            latest_version = self.get_latest_version(template, template_type)
-            Logger.debug(f"Latest Version: {latest_version}")
+            latest_version = self.get_latest_version(template, channel)
+            logger.debug(f"Latest Version: {latest_version}")
             if latest_version:
                 version_number = latest_version.version_number + 1
             else:
                 version_number = 1
-            return self.create(
+            version = self.create(
                 template=Template.objects.get(id=template),
                 version_number=version_number,
-                type=template_type,
+                channel=channel,
                 is_current=is_current,
                 status=status
             )
+            logger.info(f"Successfully created template version {version_number} for template {template}")
+            return version
         except Exception as e:
+            logger.error(f"Failed to create template version: {str(e)}")
             raise ValidationError(f"Failed to create template version: {str(e)}")
 
 
@@ -50,6 +68,7 @@ class TemplateContentManager(models.Manager):
         content: dict,
         variables: dict
     ):
+        logger.info(f"Creating content for template version {template_version}")
         """Creates template content with variables"""
         try:
             template_content = self.create(
@@ -59,8 +78,10 @@ class TemplateContentManager(models.Manager):
                 footer=content.get('footer', ''),
                 variables=variables
             )
+            logger.info(f"Successfully created template content for version {template_version}")
             return template_content
         except Exception as e:
+            logger.error(f"Failed to create template content: {str(e)}")
             raise ValidationError(f"Failed to create template content: {str(e)}")
 
 class TemplateManager(models.Manager):
@@ -72,7 +93,7 @@ class TemplateManager(models.Manager):
         name: str,
         description: str,
         category: str,
-        template_type: str,
+        channel: str,
         header: str,
         body: str,
         footer: str,
@@ -81,6 +102,7 @@ class TemplateManager(models.Manager):
         is_current: bool = True,
         status: str = 'DRAFT'
     ):
+        logger.info(f"Creating new template with name: {name}")
         """Creates a complete template with version and content"""
         try:
             # Create base template
@@ -95,7 +117,7 @@ class TemplateManager(models.Manager):
             version = TemplateVersion.objects.create(
                 template=template,
                 version_number=version_number,
-                type=template_type,
+                channel=channel,
                 is_current=is_current,
                 status=status
             )
@@ -110,47 +132,55 @@ class TemplateManager(models.Manager):
                 variables=variables
             )
 
+            logger.info(f"Successfully created template {template.id} with initial version")
             return template
 
         except Exception as e:
+            logger.error(f"Failed to create template: {str(e)}")
             raise ValidationError(f"Failed to create template: {str(e)}")
 
     @transaction.atomic
     def create_new_version(
         self,
         template_id:str,
-        template_type: str,
+        channel: str,
         header: str,
         body: str,
         footer: str,
         variables: dict,
         status: str = 'DRAFT'
     ):
-        
+        logger.info(f"Creating new version for template {template_id}")
         """Creates new version for existing template"""
         if not template_id:
+            logger.error("Template ID is required")
             raise ValidationError("Template ID is required")
         
-        template = self.get(id=template_id)
+        try:
+            template = self.get(id=template_id)
       
-        # Create new version
-        version = TemplateVersion.objects.create_version(
-            template=template.id,
-            template_type=template_type,
-            is_current=True,
-            status=status
-        )
+            # Create new version
+            version = TemplateVersion.objects.create_version(
+                template=template.id,
+                channel=channel,
+                is_current=True,
+                status=status
+            )
 
-        # Create content
-        content = TemplateContent.objects.create(
-            template_version=version,
-            header=header,
-            body=body,
-            footer=footer,   
-            variables=variables
-        )
+            # Create content
+            content = TemplateContent.objects.create(
+                template_version=version,
+                header=header,
+                body=body,
+                footer=footer,   
+                variables=variables
+            )
 
-        return version
+            logger.info(f"Successfully created new version {version.version_number} for template {template_id}")
+            return version
+        except Exception as e:
+            logger.error(f"Failed to create new version: {str(e)}")
+            raise ValidationError(f"Failed to create new version: {str(e)}")
 
 
     """
@@ -167,7 +197,7 @@ class TemplateStatus(models.TextChoices):
     DRAFT = 'DRAFT', 'Draft'
     DEPRECATED = 'DEPRECATED', 'Deprecated'
 
-class TemplateType(models.TextChoices):
+class TemplateChannel(models.TextChoices):
     EMAIL = 'EMAIL', 'Email'
     SMS = 'SMS', 'SMS'
     PUSH = 'PUSH', 'Push'
@@ -201,7 +231,7 @@ class TemplateVersion(models.Model):
     template = models.ForeignKey(Template,on_delete=models.CASCADE,related_name="template_version")
     version_number = models.PositiveIntegerField()
     status = models.CharField(max_length=10,choices=TemplateStatus.choices,default=TemplateStatus.DRAFT)
-    type = models.CharField(max_length=10,choices=TemplateType.choices,default=TemplateType.EMAIL)
+    channel = models.CharField(max_length=10,choices=TemplateChannel.choices,default=TemplateChannel.EMAIL)
     is_current = models.BooleanField(default=False)
 
     created_at = models.DateTimeField(auto_now_add=True)
@@ -211,7 +241,7 @@ class TemplateVersion(models.Model):
     objects = TemplateVersionManager()
 
     def __str__(self):
-        return f"{self.template.name}-{self.type} - Version {self.version_number}"
+        return f"{self.template.name}-{self.channel} - Version {self.version_number}"
 
     class Meta:
         ordering = ['-created_at']

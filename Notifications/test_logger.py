@@ -21,7 +21,7 @@ from utils.logger import Logger
 def test_logger():
     
     # Force logger to handle logs immediately
-    logging.getLogger('notifications').handlers[0].flush()
+    Logger.get_logger('notifications').handlers[0].flush()
     
     # Test different logging levels with more obvious messages
     Logger.info("INFO TEST: This is a test info message")

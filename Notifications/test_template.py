@@ -18,7 +18,7 @@ def create_template():
     template = Template.objects.create_new_template(
         name="Welcome Email",
         description="Welcome email for new users",
-        template_type="EMAIL",
+        channel="EMAIL",
         category="AUTHENTICATION",
         header="Welcome {{user_name}}!",
         body="Thank you for joining.",
@@ -39,7 +39,7 @@ def create_new_version(template_id) -> Template:
     # Create a complete template
     template = Template.objects.create_new_version(
         template_id=template_id,
-        template_type="SMS",
+        channel="SMS",
         header="Welcome {{user_name}}!",
         body="Thank you for joining.",
         footer="Best regards",
@@ -76,7 +76,7 @@ def test_template():
         template_versions = TemplateVersion.objects.all()
         print(f"\nTemplate Versions: {template_versions}")
         for version in template_versions:
-            print(f"Version {version.version_number} of template {version.template.name} ({version.type})")
+            print(f"Version {version.version_number} of template {version.template.name} ({version.channel})")
             content = TemplateContent.objects.get(template_version=version)
             print(f"Content: Header={content.header}, Body={content.body}, Footer={content.footer}")
     except Exception as e:

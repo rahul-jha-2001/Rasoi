@@ -43,7 +43,7 @@ LOGGING = {
         }
     },
     'loggers': {
-        'notifications': {
+        '': {
             'handlers': ['file', 'console'],
             'level': 'DEBUG',
             'propagate': True,

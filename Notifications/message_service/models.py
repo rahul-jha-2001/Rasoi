@@ -3,7 +3,8 @@ import uuid
 from template.models import Template, TemplateVersion
 from django.utils.translation import gettext_lazy as _
 import re
-
+from utils.logger import Logger
+logger = Logger(__name__)
 class MessageManager(models.Manager):
     def get_pending_messages(self):
         return self.filter(status=Message.Status.PENDING)
@@ -65,55 +66,88 @@ class Message(models.Model):
         Validates if the message has all required fields properly set with enhanced validation.
         Returns True if message is valid, False otherwise.
         """
+        logger.debug(f"Validating message {self.message_id}")
+        # Initialize validation error message
+        self.validation_error = None
+
         # Check for empty required fields
-        if not self.to_address or not self.from_address:
+        if not self.to_address:
+            self.validation_error = "Missing recipient address"
+            logger.error(f"Message {self.message_id} validation failed: {self.validation_error}")
             return False
-            
+        if not self.from_address:
+            self.validation_error = "Missing sender address"
+            logger.error(f"Message {self.message_id} validation failed: {self.validation_error}")
+            return False
         if not self.message_content:
+            self.validation_error = "Missing message content"
+            logger.error(f"Message {self.message_id} validation failed: {self.validation_error}")
             return False
-            
         if not self.channel:
+            self.validation_error = "Missing channel"
+            logger.error(f"Message {self.message_id} validation failed: {self.validation_error}")
             return False
             
         # Check content length limits
-        if len(self.message_content) > 10000:  # Standard subject length limit
+        if len(self.message_content) > 10000:
+            self.validation_error = "Message content exceeds 10000 characters"
+            logger.error(f"Message {self.message_id} validation failed: {self.validation_error}")
             return False
                         
-        
         # Email validation
         if self.channel == self.Channel.EMAIL:
             email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
-            if not (re.match(email_pattern, self.to_address) and 
-                   re.match(email_pattern, self.from_address)):
+            if not re.match(email_pattern, self.to_address):
+                self.validation_error = "Invalid recipient email address"
+                logger.error(f"Message {self.message_id} validation failed: {self.validation_error}")
+                return False
+            if not re.match(email_pattern, self.from_address):
+                self.validation_error = "Invalid sender email address"
+                logger.error(f"Message {self.message_id} validation failed: {self.validation_error}")
                 return False
                 
         # SMS validation
         if self.channel == self.Channel.SMS:
-            # International phone number format: +1234567890 or 1234567890
             phone_pattern = r'^\+?[1-9]\d{7,14}$'
-            if not (re.match(phone_pattern, self.to_address) and 
-                   re.match(phone_pattern, self.from_address)):
+            if not re.match(phone_pattern, self.to_address):
+                self.validation_error = "Invalid recipient phone number"
+                logger.error(f"Message {self.message_id} validation failed: {self.validation_error}")
+                return False
+            if not re.match(phone_pattern, self.from_address):
+                self.validation_error = "Invalid sender phone number"
+                logger.error(f"Message {self.message_id} validation failed: {self.validation_error}")
                 return False
         
         # Content type validation for email
         if self.channel == self.Channel.EMAIL:
-            # Check if body contains suspected HTML without proper tags
             if ('<' in self.message_content or '>' in self.message_content) and not (
                 self.message_content.startswith('<!DOCTYPE html>') or 
                 self.message_content.startswith('<html>')):
+                self.validation_error = "HTML content detected without proper HTML tags"
+                logger.error(f"Message {self.message_id} validation failed: {self.validation_error}")
                 return False
         
         # SMS specific validation
         if self.channel == self.Channel.SMS:
-            # SMS typically has a 160 character limit for single messages
             if len(self.message_content) > 160:
+                self.validation_error = "SMS content exceeds 160 characters"
+                logger.error(f"Message {self.message_id} validation failed: {self.validation_error}")
                 return False
             
-            # Check for Unicode characters that might not be SMS-compatible
             if not all(ord(char) < 128 for char in self.message_content):
+                self.validation_error = "SMS contains unsupported Unicode characters"
+                logger.error(f"Message {self.message_id} validation failed: {self.validation_error}")
                 return False
         
+        logger.info(f"Message {self.message_id} validation successful")
         return True
+
+    def get_validation_error(self):
+        """Returns the validation error message if it exists, otherwise returns None."""
+        error = getattr(self, 'validation_error', None)
+        if error:
+            logger.debug(f"Retrieving validation error for message {self.message_id}: {error}")
+        return error
 
     class Meta:
         verbose_name = _("Message")

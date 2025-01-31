@@ -163,3 +163,4 @@ migrations
 product_db_data
 Restro_db_data
 secrets.*
+*.log

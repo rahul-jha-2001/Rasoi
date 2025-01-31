@@ -7,3 +7,5 @@ python-dotenv
 psycopg
 redis
 pyjwt
+tenacity
+jijna2

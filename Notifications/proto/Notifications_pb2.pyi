@@ -41,3 +41,5 @@ class NotificationMessage(_message.Message):
     from_address: str
     variables: _containers.ScalarMap[str, str]
     def __init__(self, template_name: _Optional[str] = ..., channel: _Optional[_Union[Channel, str]] = ..., to_address: _Optional[str] = ..., from_address: _Optional[str] = ..., variables: _Optional[_Mapping[str, str]] = ...) -> None: ...
+
+    

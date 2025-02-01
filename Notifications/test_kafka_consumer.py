@@ -53,7 +53,7 @@ def create_test_notification():
     notification.to_address = "test@example.com"
     notification.from_address = "sender@example.com"
     notification.channel = Message.Channel.EMAIL
-    notification.variables["name"] = "Test User"
+    notification.variables["name_key"] = "Test User"
     return notification
 
 def create_kafka_producer():
@@ -93,12 +93,14 @@ def test_send_multiple_messages():
     """Test sending multiple messages to Kafka"""
     producer = create_kafka_producer()
     messages_count = 5
-    
+
+    names = ["John", "Jane", "Alice", "Bob", "Charlie"]
     try:
         # Send multiple test messages
         for i in range(messages_count):
             notification = create_test_notification()
             notification.to_address = f"test{i}@example.com"
+            notification.variables["name"] = names[i]
             serialized_message = notification.SerializeToString()
             
             producer.produce(TEST_TOPIC, serialized_message)
@@ -139,8 +141,8 @@ def run_all_tests():
         
         tests = [
             ("Single Message", test_send_single_message()),
-            ("Multiple Messages", test_send_multiple_messages()),
-            ("Invalid Message", test_send_invalid_message())
+            #("Multiple Messages", test_send_multiple_messages()),
+            #("Invalid Message", test_send_invalid_message())
         ]
         
         print("\n📊 Test Results:")

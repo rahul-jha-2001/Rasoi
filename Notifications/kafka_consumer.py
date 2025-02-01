@@ -87,57 +87,21 @@ class NotificationKafkaConsumer:
     def _create_message_record(self, notification: NotificationMessage) -> Optional[str]:
         """Creates a message record in the database"""
         try:
-           
-            # Get template and its latest version
-            template = self.Template.objects.get(name=notification.template_name)
+            # Create and validate the message
+            message_id, error = self.Message.objects.create_from_notification(notification)
 
-            
-            template_version = self.TemplateVersion.objects.get_latest_active_version(template, Channel.Name(notification.channel))
-            
-            if not template_version:
-                logger.error(f"No active version found for template {notification.template_name}")
+            if error:
+                logger.error(f"Failed to create message: {error}")
                 return None
 
-            # Create message record
-            message = self.Message.objects.create(
-                to_address=notification.to_address,
-                from_address=notification.from_address,
-                channel=Channel.Name(notification.channel),
-                status=self.Message.Status.PENDING,
-                template=template,
-                template_version=template_version,
-                message_content=self._render_template(template_version, notification.variables)
-            )
-            # Validate the message
-            if not message.is_valid():
-                logger.error(f"Invalid message format: {message.get_validation_error()}")
-                message.status = self.Message.Status.FAILED
-                message.save()
-                return None
-
-            return str(message.message_id)
-
-        except self.Template.DoesNotExist:
-            logger.error(f"Template not found: {notification.template_name}")
-            return None
+            return message_id
         except Exception as e:
             logger.error(f"Error creating message record: {str(e)}")
             return None
 
     def _render_template(self, template_version, variables: dict) -> str:
         """Renders the template with the provided variables"""
-        try:
-            template_content = TemplateContent.objects.get(template_version=template_version)
-            content = template_content.body  # You might want to combine header, body, footer
-            
-            # Simple variable replacement
-            for key, value in variables.items():
-                content = content.replace(f"{{{{{key}}}}}", str(value))
-            
-            return content
-        except Exception as e:
-            logger.error(f"Error rendering template: {str(e)}")
-            raise
+        return self.Message.objects.render_message(template_version, variables)
 
     def _process_message(self, notification: NotificationMessage) -> bool:
         """
@@ -151,7 +115,6 @@ class NotificationKafkaConsumer:
                 logger.error(f"Failed to create message record for notification: {notification}")
                 return False
             else:
-                print(f"Message record created successfully for notification: {message_id}")
                 logger.info(f"Message record created successfully for notification: {message_id}")
                 return True
 

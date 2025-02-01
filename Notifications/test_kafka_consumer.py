@@ -25,17 +25,18 @@ def create_test_template():
         template = Template.objects.create(
             name="Test Template",
             description="Test template for notifications",
-            channel=Message.Channel.EMAIL,
-            status=Template.Status.ACTIVE,
+            status="ACTIVE",
+            category="NOTIFICATION"
         )
-    
+
     template_version = TemplateVersion.objects.filter(template=template).first()
     if not template_version:
         template_version = TemplateVersion.objects.create(
             template=template,
             version_number=1,
-            channel=Message.Channel.EMAIL,
-            status=TemplateVersion.Status.ACTIVE,
+            channel="EMAIL",
+            status="ACTIVE",
+            is_current=True,
         )
         
         TemplateContent.objects.create(

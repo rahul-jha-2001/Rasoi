@@ -50,8 +50,8 @@ class Message(models.Model):
     message_content = models.TextField()
     
     # template relationships
-    template = models.ForeignKey(Template, verbose_name=_("Template"), on_delete=models.DO_NOTHING)
-    template_version = models.ForeignKey(TemplateVersion, verbose_name=_("Template Version"), on_delete=models.DO_NOTHING)
+    template = models.ForeignKey(Template, verbose_name=_("Template"), on_delete=models.SET_NULL, null=True, blank=True)
+    template_version = models.ForeignKey(TemplateVersion, verbose_name=_("Template Version"), on_delete=models.SET_NULL, null=True, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

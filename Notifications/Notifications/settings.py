@@ -107,7 +107,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'template',
-    'message_service',
+    # 'message_service',
 ]
 
 MIDDLEWARE = [
@@ -192,3 +192,7 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+WHATSAPP_BUSINESS_ACCOUNT_ID = "529193380271872"
+WHATSAPP_ACCESS_TOKEN = "EAAIKPl0JQMUBO9zdcHxqlqTRKuj1TKxA82L4IbfQkF645HkFSSw5UdaptYNZCGVTN8t3sanbMOkZCW4PiKBVy6Ie05jg6mO5m26LrzQiYM2VSCnLgNXkZChIqekjbELFjtebXEHHflZAZBNL6DdGKGtzZCMKJBU7CXAP50vZBQtJEEe771yCQZBZBfFpPbyInLsG2b54kTsg1ewnXSPCtqCQ824cYWIfonegn28DZC8GbH"

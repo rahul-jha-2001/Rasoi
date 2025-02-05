@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 from pathlib import Path
 from dotenv import load_dotenv
 import os
+import sys
 import logging
 logging.basicConfig(level=logging.INFO)
 
@@ -76,6 +77,23 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'Cart.wsgi.application'
+SKIP_DIRS = {
+    '__pycache__',
+    'venv',
+    'env',
+    '.git',
+    '.idea',
+    '.vscode',
+    'logs',
+    'media',
+    'static',
+    'migrations',
+}
+
+# Get all directories in BASE_DIR
+for item in BASE_DIR.iterdir():
+    if item.is_dir() and item.name not in SKIP_DIRS:
+        sys.path.append(str(item))
 
 
 # Database

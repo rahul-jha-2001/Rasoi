@@ -1,0 +1,127 @@
+//two button template
+[{
+    "name": "seasonal_promotion",
+    "language": "en",
+    "category": "MARKETING",
+    "components": [
+      {
+        "type": "HEADER",
+        "format": "TEXT",
+        "text": "Our {{1}} is on!",
+        "example": {
+          "header_text": [
+            "Summer Sale"
+          ]
+        }
+      },
+      {
+        "type": "BODY",
+        "text": "Shop now through {{1}} and use code {{2}} to get {{3}} off of all merchandise.",
+        "example": {
+          "body_text": [
+            [
+              "the end of August","25OFF","25%"
+            ]
+          ]
+        }
+      },
+      {
+        "type": "FOOTER",
+        "text": "Use the buttons below to manage your marketing subscriptions"
+      },
+      {
+        "type":"BUTTONS",
+        "buttons": [
+          {
+            "type": "QUICK_REPLY",
+            "text": "Unsubcribe from Promos"
+          },
+          {
+            "type":"QUICK_REPLY",
+            "text": "Unsubscribe from All"
+          }
+        ]
+      }
+    ]
+}]
+
+//MINE template
+{
+    "name": "one_time_password",
+    "message_send_ttl_seconds": 300,
+    "parameter_format": "POSITIONAL",
+        "components": [
+            {
+                "type": "BODY",
+                "text": "*{{1}}* is your verification code. For your security, do not share this code.",
+                "add_security_recommendation": true,
+                "example": {
+                    "body_text": [
+                        [
+                            "123456"
+                        ]
+                    ]
+                }
+            },
+            {
+                "type": "FOOTER",
+                "text": "This code expires in 5 minutes.",
+                "code_expiration_minutes": 5
+            },
+            {
+                "type": "BUTTONS",
+                "buttons": [
+                    {
+                        "type": "URL",
+                        "text": "Copy code",
+                        "url": "https://www.whatsapp.com/otp/code/?otp_type=COPY_CODE&code_expiration_minutes=5&code=otp{{1}}",
+                        "example": [
+                            "https://www.whatsapp.com/otp/code/?otp_type=COPY_CODE&code_expiration_minutes=5&code=otp123456"
+                        ]
+                    }
+                ]
+            }
+        ],
+        "language": "en",
+        "category": "AUTHENTICATION",
+        }
+
+
+        {
+            "name": "delivery_confirmation_1",
+            "message_send_ttl_seconds": 3600,
+            "parameter_format": "POSITIONAL",
+            "components": [
+                {
+                    "type": "HEADER",
+                    "format": "TEXT",
+                    "text": "Order Placed"
+                },
+                {
+                    "type": "BODY",
+                    "text": "{{1}}, your order was successfully placed! \n\nYou can track your order and manage your order below.",
+                    "example": {
+                        "body_text": [
+                            [
+                                "John"
+                            ]
+                        ]
+                    }
+                },
+                {
+                    "type": "BUTTONS",
+                    "buttons": [
+                        {
+                            "type": "URL",
+                            "text": "Manage order",
+                            "url": "https://www.example.com/"
+                        }
+                    ]
+                }
+            ],
+            "language": "en_US",
+            "status": "APPROVED",
+            "category": "UTILITY",
+            "sub_category": "CUSTOM",
+            "id": "1124638896002332"
+        }

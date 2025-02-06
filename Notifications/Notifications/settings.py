@@ -107,7 +107,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'template',
-    # 'message_service',
+    'message_service',
 ]
 
 MIDDLEWARE = [

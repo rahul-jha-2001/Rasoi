@@ -30,6 +30,9 @@ class Logger:
     def debug(self, message: str, extra: Dict[str, Any] = {}) -> None:
         self.logger.debug(message, extra=extra or {})
 
+    def warning(self, message: str, extra: Dict[str, Any] = {}) -> None:
+        self.logger.warning(message, extra=extra or {})
+
 
 def log_operation(operation_name: str):
     """Decorator to log the operation of a function"""

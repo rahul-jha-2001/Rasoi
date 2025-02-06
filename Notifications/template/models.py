@@ -367,9 +367,9 @@ class ParameterFormat(models.TextChoices):
     NAMED = 'NAMED', 'Named'
 
 class ComponentType(models.TextChoices):
-    HEADER = 'HEADER', 'Header' # Header is the first component in the template
-    BODY = 'BODY', 'Body' # Body is the second component in the template
-    FOOTER = 'FOOTER', 'Footer' # Footer is the third component in the template
+    HEADER = 'HEADER', 'Header'
+    BODY = 'BODY', 'Body'
+    FOOTER = 'FOOTER', 'Footer'
 
 class ParameterType(models.TextChoices):
     TEXT = 'TEXT', 'Text'
@@ -582,7 +582,6 @@ class Parameters(models.Model):
         return dict
     def to_message_format(self):
         data = {}
-        logger.info(f"Parameters: {self.name} - {self.type} - {self.text_value} - {self.index}")
         if self.index is not None:
             data["type"] = self.type
             data["text"] = f"{{{{{self.component.type+"_"+str(self.index)}}}}}"
@@ -649,7 +648,7 @@ class Button(models.Model):
         button["index"] = self.index
         button["parameters"] = [{
             "type": "text",
-            "text": f"{{{{{"button_"+str(self.index)}}}}}"
+            "text": f"{{{{{"BUTTON_"+str(self.index)}}}}}"
         }]
         return button
 

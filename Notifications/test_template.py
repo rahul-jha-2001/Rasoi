@@ -92,12 +92,74 @@ def test_update_template_with_json():
     objects = Template.objects.update_template_with_json(objects.to_whatsapp_format())
     print(objects)
 
+def test_template_render():
+    template = Template.objects.get(name="seasonal_promotion")
+    template_format = template.to_message_format()
+    
+    # Example values to replace the placeholders
+    values = {
+        "HEADER_0": "Special Season Sale! 🎉",
+        "BODY_0": "Get amazing discounts",
+        "BODY_1": "up to 50% off",
+        "BODY_2": "on selected items",
+        "button_0": "Shop Now",
+        "button_1": "View Catalog"
+    }
+    
+    # Render the template
+    rendered_template = render_template(template_format, values)
+    print("\nRendered Message Format:")
+    print_formatted_message(rendered_template)
+
+def render_template(template, values):
+    rendered = json.loads(json.dumps(template))  # Create a deep copy
+    
+    for component in rendered['components']:
+        if 'parameters' in component:
+            for param in component['parameters']:
+                if param['type'].upper() == 'TEXT':
+                    placeholder = param['text']
+                    if placeholder.startswith('{{') and placeholder.endswith('}}'):
+                        key = placeholder[2:-2]  # Remove {{ and }}
+                        if key in values:
+                            param['text'] = values[key]
+    print(json.dumps(rendered, indent=4))
+    return rendered
+
+def print_formatted_message(template):
+    formatted_message = {
+        'header': '',
+        'body': '',
+        'buttons': []
+    }
+    
+    for component in template['components']:
+        if component['type'] == 'HEADER':
+            if 'parameters' in component:
+                formatted_message['header'] = component['parameters'][0]['text']
+        
+        elif component['type'] == 'BODY':
+            if 'parameters' in component:
+                body_texts = [param['text'] for param in component['parameters'] if param['type'] == 'TEXT']
+                formatted_message['body'] = ' '.join(body_texts)
+        
+        elif component['type'] == 'button':
+            if formatted_message["buttons"] == []:
+                formatted_message['buttons'] =  [Parameter["text"] for Parameter in component["parameters"]]
+            else:
+                formatted_message['buttons'] = formatted_message['buttons'] + [Parameter["text"] for Parameter in component["parameters"]]
+    
+    # Print the formatted message
+    print(f"Header: {formatted_message['header']}")
+    print(f"Body: {formatted_message['body']}")
+    print(f"Buttons: {formatted_message['buttons']}")
+
 if __name__ == "__main__":
     # test_update_template_with_json()
     # test_template_creation()
     # test_template_to_whatsapp_format()
     #test_whatsapp_sync()
     # test_template_creation()
-    # test_template_to_message_format()
-    test_sync_with_whatsapp()
+    test_template_render()
+    # test_sync_with_whatsapp()
 

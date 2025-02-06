@@ -5,6 +5,7 @@ from django.core.exceptions import ValidationError
 from utils.logger import Logger
 import requests
 from django.conf import settings
+import urllib.parse
 
 logger = Logger(__name__)
 
@@ -14,7 +15,7 @@ class TemplateManager(models.Manager):
     Manager class for handling Template model operations including creation, retrieval,
     and synchronization with WhatsApp API.
     """
-
+    @transaction.atomic
     def create_template_with_json(self, template_data):
         """
         Create a template with its associated components, parameters, and buttons from JSON data.
@@ -36,6 +37,7 @@ class TemplateManager(models.Manager):
         Raises:
             ValidationError: If template data is invalid or creation fails
         """
+        logger.info(f"Creating template: {template_data['name']}")
         try:
             with transaction.atomic():
                 # Validate required template fields
@@ -110,6 +112,98 @@ class TemplateManager(models.Manager):
             logger.error(f"Unexpected error creating template: {str(e)}")
             raise ValidationError(f"Failed to create template: {str(e)}")
 
+    @transaction.atomic
+    def update_template_with_json(self, template_data):
+        """
+        Update a template with its associated components, parameters, and buttons from JSON data.
+        
+        Args:
+            template_data (dict): JSON data containing template information including:
+                - name (str): Template name
+                - category (str): Template category (MARKETING/UTILITY/AUTHENTICATION)
+                - language (str): Template language code
+                - id (str): WhatsApp template ID
+                - status (str): Template status
+                - components (list): List of component dictionaries
+                - parameter_format (str, optional): Format for parameters
+                - message_send_ttl_seconds (int, optional): Time-to-live in seconds
+        
+        Returns:
+            Template: Updated template instance
+        
+        Raises:
+            ValidationError: If template data is invalid or update fails
+        """
+        logger.info(f"Updating template: {template_data['name']}")
+        try:
+            with transaction.atomic():
+                # Get existing template
+                template = self.get(name=template_data["name"])
+                # Update basic template fields
+                if "category" in template_data:
+                    template.category = template_data["category"]
+                if "status" in template_data:
+                    template.status = template_data["status"]
+                
+                try:
+                    template.full_clean()
+                    template.save()
+                    logger.info(f"Updated template: {template.id} - {template.name}")
+                except ValidationError as ve:
+                    logger.error(f"Template validation failed: {str(ve)}")
+                    raise ValidationError(f"Invalid template data: {str(ve)}")
+
+                # Delete existing components, parameters, and buttons
+                template.components.all().delete()
+                template.buttons.all().delete()
+
+                # Create new components if present
+                if "components" in template_data:
+                    for component_data in template_data["components"]:
+                        if "type" not in component_data:
+                            logger.error("Component type is required")
+                            continue
+
+                        # Handle BUTTONS component
+                        if "BUTTONS" == component_data['type']:
+                            self._create_buttons(template, component_data)
+                            continue
+
+                        # Handle specific component types
+                        component_handler = {
+                            'HEADER': self._create_header_component,
+                            'BODY': self._create_body_component,
+                            'FOOTER': self._create_footer_component
+                        }.get(component_data['type'])
+
+                        if component_handler:
+                            try:
+                                component = component_handler(template, component_data)
+                                if component and component.text:
+                                    self._create_parameters(component, template)
+                                logger.info(f"Created {component_data['type']} component for template {template.id}")
+                            except Exception as ce:
+                                logger.error(f"Failed to create {component_data['type']} component: {str(ce)}")
+                                continue
+                        else:
+                            logger.error(f"Unsupported component type: {component_data['type']}")
+
+                logger.info(f"Successfully updated template {template.id} with all components")
+                return template
+
+        except Template.DoesNotExist:
+            logger.error(f"Template with WhatsApp ID {template_data['id']} not found")
+            raise ValidationError(f"Template with WhatsApp ID {template_data['id']} not found")
+        except ValidationError:
+            raise
+        except (KeyError, TypeError) as e:
+            logger.error(f"Invalid template data structure: {str(e)}")
+            raise ValidationError(f"Invalid template data structure: {str(e)}")
+        except Exception as e:
+            logger.error(f"Unexpected error updating template: {str(e)}")
+            raise ValidationError(f"Failed to update template: {str(e)}")
+
+    @transaction.atomic
     def _create_buttons(self, template, component_data):
         """Helper method to create buttons"""
         logger.info(f"Creating buttons for template {template.id}")
@@ -128,6 +222,7 @@ class TemplateManager(models.Manager):
                 except Exception as be:
                     logger.error(f"Failed to create button: {str(be)}")
 
+    @transaction.atomic
     def _create_header_component(self, template, component_data):
         """Create header component with specific validation"""
         if "format" in component_data:
@@ -142,7 +237,7 @@ class TemplateManager(models.Manager):
             type=ComponentType.HEADER,
             text=component_data.get("text")
         )
-
+    @transaction.atomic
     def _create_body_component(self, template, component_data):
         """Create body component"""
         return Component.objects.create(
@@ -151,6 +246,7 @@ class TemplateManager(models.Manager):
             text=component_data.get("text")
         )
 
+    @transaction.atomic
     def _create_footer_component(self, template, component_data):
         """Create footer component"""
         return Component.objects.create(
@@ -159,6 +255,7 @@ class TemplateManager(models.Manager):
             text=component_data.get("text")
         )
 
+    @transaction.atomic
     def _create_parameters(self, component, template):
         """Helper method to create parameters for a component"""
         import re
@@ -184,6 +281,7 @@ class TemplateManager(models.Manager):
                     type=ParameterType.TEXT,
                 )
                 logger.info(f"Created parameter {match} for component {component.id}")
+    
     def get_template_with_components(self, template_id):
         """
         Get template with all its components and related data
@@ -200,28 +298,59 @@ class TemplateManager(models.Manager):
         """
         return self.filter(category=category)
 
+    def get_template_by_names(self, names):
+        """
+        Get all templates for a specific category
+        """
+        return self.filter(name__in=names)
+
     def get_active_templates(self):
         """
         Get all approved templates
         """
         return self.filter(status=Status.APPROVED)
-
-
     
+    @transaction.atomic
     def sync_with_whatsapp(self):
         """
-        Sync templates with whatsapp
+        Sync all templates with WhatsApp API, handling pagination via next URL.
+        Will update existing templates or create new ones as needed.
         """
-        rs = requests.get(f"{settings.WHATSAPP_API_URL}/{settings.WHATSAPP_BUSINESS_ACCOUNT_ID}/message_templates", params={"access_token": settings.WHATSAPP_ACCESS_TOKEN})
-        data = rs.json()["data"]
-        for template in data:
-            try:
-                Template.objects.create_template_with_json(template)
-            except Exception as e:
-                logger.error(f"Failed to create template: {str(e)}")    
-        return rs.json()
-
+        base_url = f"{settings.WHATSAPP_API_URL}/{settings.WHATSAPP_BUSINESS_ACCOUNT_ID}/message_templates"
+        params = {
+            "access_token": settings.WHATSAPP_ACCESS_TOKEN
+        }
         
+        current_url = base_url
+        while True:
+            logger.info(f"Syncing templates with WhatsApp API, current URL: {current_url}")
+            rs = requests.get(current_url, params=params if current_url == base_url else None)
+            response_data = rs.json()
+            
+            # Process current page of templates
+            for template_data in response_data["data"]:
+                logger.info(f"Processing template: {template_data['name']}")
+                try:
+                    # Try to find existing template by name
+                    try:
+                        existing_template = self.get(name=template_data["name"])
+                        # If found, update it
+                        self.update_template_with_json(template_data)
+                        logger.info(f"Updated existing template: {template_data['name']}")
+                    except Template.DoesNotExist:
+                        # If not found, create new template
+                        self.create_template_with_json(template_data)
+                        logger.info(f"Created new template: {template_data['name']}")
+                except Exception as e:
+                    logger.error(f"Failed to sync template {template_data.get('name', 'unknown')}: {str(e)}")
+            
+            # Check if there are more pages using the "next" URL
+            if "paging" in response_data and "next" in response_data["paging"]:
+                current_url = response_data["paging"]["next"]
+            else:
+                break
+        logger.info(f"Syncing templates with WhatsApp API completed")
+        return True
 
 class Category(models.TextChoices):
     MARKETING = 'MARKETING', 'Marketing'
@@ -272,13 +401,13 @@ class Template(models.Model):
         whatsapp_template_id (str): Associated WhatsApp template ID
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    name = models.CharField(max_length=255)
+    name = models.CharField(max_length=255,unique=True)
     category = models.CharField(max_length=255, choices=Category.choices)
     status = models.CharField(max_length=255, choices=Status.choices, default=Status.PENDING)
     language = models.CharField(max_length=255)
     parameter_format = models.CharField(max_length=255, choices=ParameterFormat.choices, default=ParameterFormat.POSITIONAL)
     message_send_ttl_seconds = models.IntegerField(default=86400)
-    whatsapp_template_id = models.CharField(max_length=255, null=True, blank=True)
+    whatsapp_template_id = models.CharField(max_length=255, null=True, blank=True, unique=True)
 
     objects = TemplateManager()
 
@@ -321,7 +450,6 @@ class Template(models.Model):
             data["BUTTONS"]= buttons
         return data
     
-
     def to_message_format(self):
         """
         Convert template to message sending format.
@@ -345,7 +473,7 @@ class Template(models.Model):
             for button in buttons:
                 template["components"].append(button.to_message_format())
         return template
-        
+
 class ComponentManager(models.Manager):
     def get_components_by_order(self, template):
         return self.filter(template=template).order_by('type')

@@ -87,11 +87,17 @@ def test_sync_with_whatsapp():
     objects = Template.objects.sync_with_whatsapp()
     print(objects)
 
+def test_update_template_with_json():
+    objects = Template.objects.get(name="seasonal_promotion")
+    objects = Template.objects.update_template_with_json(objects.to_whatsapp_format())
+    print(objects)
+
 if __name__ == "__main__":
+    # test_update_template_with_json()
     # test_template_creation()
     # test_template_to_whatsapp_format()
     #test_whatsapp_sync()
     # test_template_creation()
-    test_template_to_message_format()
-    # test_sync_with_whatsapp()
+    # test_template_to_message_format()
+    test_sync_with_whatsapp()
 

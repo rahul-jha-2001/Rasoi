@@ -10,15 +10,31 @@ logger = Logger(__name__)
 
 
 class TemplateManager(models.Manager):
+    """
+    Manager class for handling Template model operations including creation, retrieval,
+    and synchronization with WhatsApp API.
+    """
+
     def create_template_with_json(self, template_data):
         """
-        Create a template with its associated components, parameters, and buttons
+        Create a template with its associated components, parameters, and buttons from JSON data.
         
         Args:
-            template_data (dict): Template data
+            template_data (dict): JSON data containing template information including:
+                - name (str): Template name
+                - category (str): Template category (MARKETING/UTILITY/AUTHENTICATION)
+                - language (str): Template language code
+                - id (str): WhatsApp template ID
+                - status (str): Template status
+                - components (list): List of component dictionaries
+                - parameter_format (str, optional): Format for parameters
+                - message_send_ttl_seconds (int, optional): Time-to-live in seconds
+        
+        Returns:
+            Template: Created template instance
         
         Raises:
-            ValidationError: If template creation or component creation fails
+            ValidationError: If template data is invalid or creation fails
         """
         try:
             with transaction.atomic():
@@ -196,8 +212,14 @@ class TemplateManager(models.Manager):
         """
         Sync templates with whatsapp
         """
-        pass
-
+        rs = requests.get(f"{settings.WHATSAPP_API_URL}/{settings.WHATSAPP_BUSINESS_ACCOUNT_ID}/message_templates", params={"access_token": settings.WHATSAPP_ACCESS_TOKEN})
+        data = rs.json()["data"]
+        for template in data:
+            try:
+                Template.objects.create_template_with_json(template)
+            except Exception as e:
+                logger.error(f"Failed to create template: {str(e)}")    
+        return rs.json()
 
         
 
@@ -232,6 +254,23 @@ class ButtonType(models.TextChoices):
 
 
 class Template(models.Model):
+    """
+    Represents a WhatsApp message template with components, parameters, and buttons.
+    
+    A template consists of various components (header, body, footer) and can include
+    interactive elements like buttons. Templates support both positional and named
+    parameters for dynamic content.
+
+    Attributes:
+        id (UUID): Unique identifier for the template
+        name (str): Template name
+        category (str): Template category (from Category choices)
+        status (str): Current template status (from Status choices)
+        language (str): Template language code
+        parameter_format (str): Format for parameters (POSITIONAL/NAMED)
+        message_send_ttl_seconds (int): Message time-to-live in seconds
+        whatsapp_template_id (str): Associated WhatsApp template ID
+    """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=255)
     category = models.CharField(max_length=255, choices=Category.choices)
@@ -246,9 +285,15 @@ class Template(models.Model):
     def __str__(self) -> str:
         return self.name + " - " + self.category + " - " + self.status + " - " + self.language + " - " + self.parameter_format
 
-    def to_whatsapp_format(self,name=None):
+    def to_whatsapp_format(self, name=None):
         """
-        Convert template to dictionary format matching the API structure
+        Convert template to WhatsApp API format.
+        
+        Args:
+            name (str, optional): Template name to fetch specific template
+        
+        Returns:
+            dict: Template data in WhatsApp API format including components and buttons
         """
         data= {}
         if name:
@@ -278,6 +323,15 @@ class Template(models.Model):
     
 
     def to_message_format(self):
+        """
+        Convert template to message sending format.
+        
+        Returns:
+            dict: Template data formatted for message sending including:
+                - name: Template name
+                - language: Language information
+                - components: List of component data
+        """
         template = {}
         template["name"] = self.name
         template["language"] = {"code": self.language}
@@ -297,6 +351,18 @@ class ComponentManager(models.Manager):
         return self.filter(template=template).order_by('type')
 
 class Component(models.Model):
+    """
+    Represents a component within a WhatsApp template (header, body, or footer).
+    
+    Components can contain text with parameters and are ordered based on their type.
+    
+    Attributes:
+        id (UUID): Unique identifier for the component
+        template (Template): Associated template
+        type (str): Component type (HEADER/BODY/FOOTER)
+        format (str): Format specification (optional)
+        text (str): Component text content
+    """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     template = models.ForeignKey(Template, related_name='components', on_delete=models.CASCADE)
     type = models.CharField(max_length=255, choices=ComponentType.choices)
@@ -353,6 +419,20 @@ class ParametersManager(models.Manager):
         return self.filter(component=component).order_by('index')
 
 class Parameters(models.Model):
+    """
+    Represents a parameter within a template component.
+    
+    Parameters allow for dynamic content insertion in templates and can be
+    either positional or named.
+    
+    Attributes:
+        id (UUID): Unique identifier for the parameter
+        component (Component): Associated component
+        name (str): Parameter name
+        type (str): Parameter type (TEXT/URL/CURRENCY/MEDIA)
+        text_value (str): Default text value (optional)
+        index (int): Position index for ordered parameters (optional)
+    """
     id =  models.UUIDField(primary_key=True,default=uuid.uuid4,editable=False)
     component = models.ForeignKey(Component, related_name='parameters', on_delete=models.CASCADE)
     name = models.CharField(max_length=255)
@@ -374,12 +454,14 @@ class Parameters(models.Model):
         return dict
     def to_message_format(self):
         data = {}
-        if self.index:
+        logger.info(f"Parameters: {self.name} - {self.type} - {self.text_value} - {self.index}")
+        if self.index is not None:
             data["type"] = self.type
-            data["text"] = f"{{{self.text_value}}}"
+            data["text"] = f"{{{{{self.component.type+"_"+str(self.index)}}}}}"
         else:
+            data["parameter_name"] = self.name
             data["type"] = self.type
-            data["text"] = f"{{{self.name}}}"
+            data["text"] = f"{{{{{self.name}}}}}"
         return data
     def __str__(self) -> str:
         return self.component.template.name + " - " + self.component.type + " - " + self.name + " - " + self.type
@@ -389,6 +471,23 @@ class Parameters(models.Model):
         verbose_name_plural = 'Parameters'
 
 class Button(models.Model):
+    """
+    Represents an interactive button in a WhatsApp template.
+    
+    Templates can have up to 3 buttons of either QUICK_REPLY or URL type.
+    
+    Attributes:
+        id (UUID): Unique identifier for the button
+        template (Template): Associated template
+        type (str): Button type (QUICK_REPLY/URL)
+        text (str): Button text
+        url (str): URL for URL-type buttons (optional)
+        index (int): Button position index (optional)
+    
+    Note:
+        - Maximum 3 buttons per template
+        - URL buttons require a valid URL
+    """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     template = models.ForeignKey(Template, related_name='buttons', on_delete=models.CASCADE)  # Changed from component to template
     type = models.CharField(max_length=255, choices=ButtonType.choices)
@@ -397,6 +496,14 @@ class Button(models.Model):
     index = models.IntegerField(null=True, blank=True)
     # example = models.JSONField(null=True, blank=True)
     def clean(self):
+        """
+        Validate button data before saving.
+        
+        Raises:
+            ValidationError: If validation fails for:
+                - Maximum button count exceeded
+                - Missing URL for URL-type buttons
+        """
         # Add validation for button limits per template
         button_count = self.template.buttons.count()
         if button_count >= 3:  # WhatsApp typically limits to 3 buttons
@@ -412,10 +519,10 @@ class Button(models.Model):
         button["type"] = "button"
         button["sub_type"] = self.type
         button["index"] = self.index
-        button["parameters"] = {
+        button["parameters"] = [{
             "type": "text",
-            "text": f"{{{self.index}}}"
-        }
+            "text": f"{{{{{"button_"+str(self.index)}}}}}"
+        }]
         return button
 
     def to_whatsapp_format(self):
@@ -436,8 +543,7 @@ class Button(models.Model):
 
     class Meta:
         indexes = [
-            models.Index(fields=['category', 'status']),
-            models.Index(fields=['name']),
+            models.Index(fields=['template', 'index']),
         ]
 
 

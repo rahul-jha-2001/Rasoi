@@ -101,20 +101,19 @@ class MesssageManager(models.Manager):
     @transaction.atomic
     def create_message(self, template_name: str, variables: dict, to_phone_number: str, from_phone_number: str):
         try:
-
+            logger.info(f"Creating message for template: {template_name}")
             template = Template.objects.get(name=template_name)
             # Validate all inputs
             logger.info(f"Creating message for template: {template.name}")
             self._validate_phone_numbers(to_phone_number, from_phone_number)
             self._validate_template(template)
+
             self._validate_variables(template, variables)
             self._validate_required_variables(template, variables)
             self._validate_message_type(template)
-            logger.info(f"All validations passed")
             # Render the message
             message_json = template.to_message_format()
             rendered_message = self._render_template(message_json, variables)
-            logger.info(f"Rendered message: {rendered_message}")
             # Create the message
             message = self.create(
                 template=template,
@@ -130,10 +129,11 @@ class MesssageManager(models.Manager):
             return message
 
         except Exception as e:
-            invalid_message = InvalidMessage.objects.create_invalid_message(template_name, to_phone_number, from_phone_number, str(e), variables)
-            logger.error(f"Error creating message: {str(e)}")
+            
+            invalid_message = InvalidMessage.objects.create_invalid_message(template, to_phone_number, from_phone_number, str(e), variables)
+            invalid_message.save()
             logger.error(f"Invalid message: {invalid_message.id}")
-            raise
+        
 
 class Message(models.Model):
     id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True,primary_key=True)
@@ -215,8 +215,12 @@ class Message(models.Model):
             models.Index(fields=['message_type', 'status'])
         ]
 class InvalidMessageManager(models.Manager):
+    @transaction.atomic
     def create_invalid_message(self, template:Template, to_phone_number:str, from_phone_number:str, error_message: str, variables: dict):
-        return self.create(template=template, to_phone_number=to_phone_number, from_phone_number=from_phone_number, error_message=error_message, variables=variables)
+        logger.error(f"Creating Invalid Message: {error_message}")
+        invalid_message = self.create(template=template, to_phone_number=to_phone_number, from_phone_number=from_phone_number, error_message=error_message, variables=variables)
+        logger.error(f"Invalid Message created: {invalid_message}")
+        return invalid_message
 
 class InvalidMessage(models.Model):
     id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True,primary_key=True)

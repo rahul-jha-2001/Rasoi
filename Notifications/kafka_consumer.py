@@ -106,7 +106,6 @@ class NotificationKafkaConsumer:
         try:
             notification = NotificationMessage()
             notification.ParseFromString(raw_message)
-        
             return notification
         except DecodeError as e:
             logger.error(f"Failed to deserialize message: {str(e)}")
@@ -144,15 +143,15 @@ class NotificationKafkaConsumer:
         try:
             message_id = self._create_message_record(
                 template_name=notification.template_name,
-                variables=notification.variables,
+                variables=dict(notification.variables.variables),
                 to_phone_number=notification.recipient.to_number,
                 from_phone_number=notification.recipient.from_number
             )
             if not message_id:
-                logger.error(f"Failed to create message record for notification: {notification}")
+                logger.error(f"Failed to create message record for Message Request id: {notification.meta_data.request_id}")
                 return False
             
-            logger.info(f"Message record created successfully for notification: {message_id}")
+            logger.info(f"MessageId:{message_id} record created successfully for Message Request id: {notification.meta_data.request_id}")
             return True
 
         except Exception as e:

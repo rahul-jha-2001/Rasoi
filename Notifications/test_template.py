@@ -160,6 +160,6 @@ if __name__ == "__main__":
     # test_template_to_whatsapp_format()
     #test_whatsapp_sync()
     # test_template_creation()
-    test_template_render()
-    # test_sync_with_whatsapp()
+    # test_template_render()
+    test_sync_with_whatsapp()
 

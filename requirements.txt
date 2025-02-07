@@ -8,3 +8,4 @@ psycopg
 redis
 pyjwt
 tenacity
+confluent-kafka

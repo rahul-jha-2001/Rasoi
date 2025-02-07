@@ -7,8 +7,8 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'Notifications.settings')
 django.setup()
 
 from confluent_kafka import Consumer, KafkaError
-from proto.Notifications_pb2 import NotificationMessage,Channel
-from typing import Optional
+from proto.Notifications_pb2 import NotificationMessage
+from typing import Optional, List
 from utils.logger import Logger
 
 from contextlib import contextmanager
@@ -16,13 +16,28 @@ from tenacity import retry, stop_after_attempt, wait_exponential
 from google.protobuf.message import DecodeError
 
 from message_service.models import Message
-from template.models import Template, TemplateVersion, TemplateContent
+from template.models import Template
+from dataclasses import dataclass
 
 logger = Logger("KafkaConsumer")
+
+@dataclass
+class ConsumerConfig:
+    """Configuration for the Kafka consumer"""
+    bootstrap_servers: List[str]
+    topic: str
+    group_id: str
+    auto_offset_reset: str
+    batch_size: int = 10
+    max_poll_interval_ms: int = 300000
+
 class NotificationKafkaConsumer:
     """
     Kafka consumer for notification messages.
     Handles message deserialization and delegation to Celery tasks.
+    
+    Args:
+        config (ConsumerConfig): Configuration for the consumer
     """
     
     def __init__(
@@ -30,29 +45,45 @@ class NotificationKafkaConsumer:
         bootstrap_servers: list[str],
         topic: str = 'notifications',
         group_id: str = 'notification_processor',
-        auto_offset_reset: str = 'earliest'
+        auto_offset_reset: str = 'earliest',
+        batch_size: int = 10
     ):
-        self.topic = topic
-        self.consumer = self._create_consumer(
+        self.config = ConsumerConfig(
             bootstrap_servers=bootstrap_servers,
+            topic=topic,
             group_id=group_id,
-            auto_offset_reset=auto_offset_reset
+            auto_offset_reset=auto_offset_reset,
+            batch_size=batch_size
         )
+        self._validate_config()
+        
+        self.topic = topic
+        self.consumer = self._create_consumer()
         self._running = False
+        self._health_status = True
         
         # Get Django models
         self.Message = Message
         self.Template = Template
-        self.TemplateVersion = TemplateVersion
     
-    def _create_consumer(self, **kwargs) -> Consumer:
+    def _validate_config(self) -> None:
+        """Validates the consumer configuration"""
+        if not self.config.bootstrap_servers:
+            raise ValueError("Bootstrap servers cannot be empty")
+        if not self.config.topic:
+            raise ValueError("Topic cannot be empty")
+        if not self.config.group_id:
+            raise ValueError("Group ID cannot be empty")
+
+    def _create_consumer(self) -> Consumer:
         """Creates and configures the Kafka consumer"""
         try:
             config = {
-                'bootstrap.servers': ','.join(kwargs['bootstrap_servers']),
-                'group.id': kwargs['group_id'],
-                'auto.offset.reset': kwargs['auto_offset_reset'],
-                'enable.auto.commit': True
+                'bootstrap.servers': ','.join(self.config.bootstrap_servers),
+                'group.id': self.config.group_id,
+                'auto.offset.reset': self.config.auto_offset_reset,
+                'enable.auto.commit': True,
+                'max.poll.interval.ms': self.config.max_poll_interval_ms
             }
             
             consumer = Consumer(config)
@@ -61,6 +92,7 @@ class NotificationKafkaConsumer:
         
         except KafkaError as e:
             logger.error(f"Failed to create Kafka consumer: {str(e)}")
+            self._health_status = False
             raise
 
     @retry(
@@ -84,11 +116,11 @@ class NotificationKafkaConsumer:
             return None
 
     @transaction.atomic
-    def _create_message_record(self, notification: NotificationMessage) -> Optional[str]:
+    def _create_message_record(self, template_name: str, variables: dict, to_phone_number: str, from_phone_number: str) -> Optional[str]:
         """Creates a message record in the database"""
         try:
             # Create and validate the message
-            message_id, error = self.Message.objects.create_from_notification(notification)
+            message_id, error = self.Message.objects.create_message(template_name, variables, to_phone_number, from_phone_number)
 
             if error:
                 logger.error(f"Failed to create message: {error}")
@@ -99,24 +131,29 @@ class NotificationKafkaConsumer:
             logger.error(f"Error creating message record: {str(e)}")
             return None
 
-    def _render_template(self, template_version, variables: dict) -> str:
-        """Renders the template with the provided variables"""
-        return self.Message.objects.render_message(template_version, variables)
-
     def _process_message(self, notification: NotificationMessage) -> bool:
         """
         Processes a single notification message
-        Returns True if processing was successful
+        
+        Args:
+            notification (NotificationMessage): The notification to process
+            
+        Returns:
+            bool: True if processing was successful
         """
         try:
-            # Create message record
-            message_id = self._create_message_record(notification)
+            message_id = self._create_message_record(
+                template_name=notification.template_name,
+                variables=notification.variables,
+                to_phone_number=notification.recipient.to_number,
+                from_phone_number=notification.recipient.from_number
+            )
             if not message_id:
                 logger.error(f"Failed to create message record for notification: {notification}")
                 return False
-            else:
-                logger.info(f"Message record created successfully for notification: {message_id}")
-                return True
+            
+            logger.info(f"Message record created successfully for notification: {message_id}")
+            return True
 
         except Exception as e:
             logger.error(f"Error processing message: {str(e)}")
@@ -137,53 +174,58 @@ class NotificationKafkaConsumer:
             except Exception as e:
                 logger.error(f"Error closing consumer: {str(e)}")
 
+    @property
+    def is_healthy(self) -> bool:
+        """Returns the health status of the consumer"""
+        return self._health_status
+
     def start_consuming(self):
-        """
-        Main method to start consuming messages
-        """
+        """Main method to start consuming messages"""
         logger.info(f"Starting to consume messages from topic: {self.topic}")
         self._running = True
+        consecutive_errors = 0
+        MAX_CONSECUTIVE_ERRORS = 3
 
         with self._consumer_context():
             while self._running:
                 try:
                     # Get message batch
-                    message_batch = self.consumer.consume(num_messages=10, timeout=1.0)
+                    message_batch = self.consumer.consume(
+                        num_messages=self.config.batch_size, 
+                        timeout=1.0
+                    )
                     
                     if not message_batch:
                         continue
 
+                    consecutive_errors = 0  # Reset error counter on successful poll
+                    self._health_status = True
+
                     # Process messages
                     for msg in message_batch:
-                        if msg is None:
-                            continue
-                        if msg.error():
-                            logger.error(f"Kafka error: {msg.error()}")
+                        if msg is None or msg.error():
+                            logger.error(f"Kafka error: {msg.error() if msg else 'Empty message'}")
                             continue
 
                         logger.debug(f"Processing message from partition {msg.partition()}")
                         
-                        # Deserialize message
                         notification = self._deserialize_message(msg.value())
                         if not notification:
-                                continue
+                            continue
 
-                        # Process message
                         success = self._process_message(notification)
                         if success:
-                            logger.info(
-                                f"Successfully processed notification for template: "
-                                f"{notification.template_name}"
-                            )
+                            logger.info(f"Successfully processed notification for template: {notification.template_name}")
                         else:
-                            logger.error(
-                                f"Failed to process notification for template: "
-                                f"{notification.template_name}"
-                            )
+                            logger.error(f"Failed to process notification for template: {notification.template_name}")
 
                 except Exception as e:
                     logger.error(f"Unexpected error in consumer loop: {str(e)}")
-                    # Consider implementing a circuit breaker here
+                    consecutive_errors += 1
+                    if consecutive_errors >= MAX_CONSECUTIVE_ERRORS:
+                        logger.critical("Circuit breaker triggered - too many consecutive errors")
+                        self._health_status = False
+                        self.stop_consuming()
 
     def stop_consuming(self):
         """

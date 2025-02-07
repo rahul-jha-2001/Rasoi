@@ -98,10 +98,11 @@ class MesssageManager(models.Manager):
         
         return rendered_json
 
-
-
-    def create_message(self, template: Template, variables: dict, to_phone_number: str, from_phone_number: str):
+    @transaction.atomic
+    def create_message(self, template_name: str, variables: dict, to_phone_number: str, from_phone_number: str):
         try:
+
+            template = Template.objects.get(name=template_name)
             # Validate all inputs
             logger.info(f"Creating message for template: {template.name}")
             self._validate_phone_numbers(to_phone_number, from_phone_number)
@@ -129,10 +130,11 @@ class MesssageManager(models.Manager):
             return message
 
         except Exception as e:
-            invalid_message = InvalidMessage.objects.create_invalid_message(template, to_phone_number, from_phone_number, str(e), variables)
+            invalid_message = InvalidMessage.objects.create_invalid_message(template_name, to_phone_number, from_phone_number, str(e), variables)
             logger.error(f"Error creating message: {str(e)}")
             logger.error(f"Invalid message: {invalid_message.id}")
             raise
+
 class Message(models.Model):
     id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True,primary_key=True)
     to_phone_number = models.CharField(max_length=20,null=True,blank=True)

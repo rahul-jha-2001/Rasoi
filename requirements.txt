@@ -9,3 +9,4 @@ redis
 pyjwt
 tenacity
 confluent-kafka
+celery

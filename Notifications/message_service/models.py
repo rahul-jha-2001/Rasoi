@@ -72,7 +72,7 @@ class MesssageManager(models.Manager):
         if template.category not in [choice[0] for choice in Category.choices]:
             raise ValueError("Invalid template category")
     def _render_template(self, message_json: dict, variables: dict):
-        logger.info(f"Rendering the template: {message_json}")
+        logger.debug(f"Rendering the template: {message_json}")
         # Create a deep copy to avoid modifying the original template
         rendered_json = json.loads(json.dumps(message_json))
         

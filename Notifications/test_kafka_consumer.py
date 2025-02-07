@@ -115,7 +115,7 @@ def run_all_tests():
     try:
         print("\n🏃 Running Kafka producer tests...")
         tests = [
-            # ("Valid Message", test_send_valid_message()),
+            ("Valid Message", test_send_valid_message()),
             ("Invalid Message", test_send_invalid_message())
         ]
         

@@ -115,22 +115,23 @@ class NotificationKafkaConsumer:
             return None
 
     @transaction.atomic
-    def _create_message_record(self, template_name: str, variables: dict, to_phone_number: str, from_phone_number: str) -> Optional[str]:
+    def _create_message_record(self, notification: NotificationMessage) -> Optional[Message]:
         """Creates a message record in the database"""
         try:
+            template_name = notification.template_name
+            variables = dict(notification.variables.variables)
+            to_phone_number = notification.recipient.to_number
+            from_phone_number = notification.recipient.from_number
             # Create and validate the message
-            message_id, error = self.Message.objects.create_message(template_name, variables, to_phone_number, from_phone_number)
+            message = self.Message.objects.create_message(template_name, variables, to_phone_number, from_phone_number)
+            logger.info(f"MessageId:{message.id} record created successfully for Message Request id: {notification.meta_data.request_id}")
 
-            if error:
-                logger.error(f"Failed to create message: {error}")
-                return None
-
-            return message_id
+            return message
         except Exception as e:
             logger.error(f"Error creating message record: {str(e)}")
             return None
 
-    def _process_message(self, notification: NotificationMessage) -> bool:
+    def _process_message(self, notification: NotificationMessage) -> Optional[Message]:
         """
         Processes a single notification message
         
@@ -138,25 +139,20 @@ class NotificationKafkaConsumer:
             notification (NotificationMessage): The notification to process
             
         Returns:
-            bool: True if processing was successful
+            Message: The message record created
         """
         try:
-            message_id = self._create_message_record(
-                template_name=notification.template_name,
-                variables=dict(notification.variables.variables),
-                to_phone_number=notification.recipient.to_number,
-                from_phone_number=notification.recipient.from_number
-            )
-            if not message_id:
+            message = self._create_message_record(notification)
+            if not message:
                 logger.error(f"Failed to create message record for Message Request id: {notification.meta_data.request_id}")
-                return False
+                return None
             
-            logger.info(f"MessageId:{message_id} record created successfully for Message Request id: {notification.meta_data.request_id}")
-            return True
+            logger.info(f"MessageId:{message.id} record created successfully for Message Request id: {notification.meta_data.request_id}")
+            return message
 
         except Exception as e:
             logger.error(f"Error processing message: {str(e)}")
-            return False
+            return None
 
     @contextmanager
     def _consumer_context(self):
@@ -212,11 +208,11 @@ class NotificationKafkaConsumer:
                         if not notification:
                             continue
 
-                        success = self._process_message(notification)
-                        if success:
-                            logger.info(f"Successfully processed notification for template: {notification.template_name}")
+                        Message = self._process_message(notification)
+                        if Message:
+                            logger.info(f"Successfully processed MessageId:{Message.id} for Message Request id: {notification.meta_data.request_id}")
                         else:
-                            logger.error(f"Failed to process notification for template: {notification.template_name}")
+                            logger.error(f"Failed to process MessageId:{Message.id} for Message Request id: {notification.meta_data.request_id}")
 
                 except Exception as e:
                     logger.error(f"Unexpected error in consumer loop: {str(e)}")

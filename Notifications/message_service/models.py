@@ -220,8 +220,8 @@ class InvalidMessageManager(models.Manager):
 
 class InvalidMessage(models.Model):
     id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True,primary_key=True)
-    to_phone_number = models.CharField(max_length=20)
-    from_phone_number = models.CharField(max_length=20)
+    to_phone_number = models.CharField(max_length=20,null=True,blank=True)
+    from_phone_number = models.CharField(max_length=20,null=True,blank=True)
     template = models.ForeignKey(Template, on_delete=models.SET_NULL, null=True)
     message_json = models.JSONField(default=dict)
     rendered_message = models.JSONField(default=dict)

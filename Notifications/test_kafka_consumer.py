@@ -11,50 +11,21 @@ django.setup()
 
 from proto.Notifications_pb2 import NotificationMessage
 from message_service.models import Message
-from template.models import Template, TemplateVersion, TemplateContent
 from utils.logger import Logger
 
 # Kafka configuration
 KAFKA_BOOTSTRAP_SERVERS = ['localhost:29092']
 TEST_TOPIC = 'notifications'
 
-def create_test_template():
-    """Helper function to create test template and version"""
-    template = Template.objects.first()
-    if not template:
-        template = Template.objects.create(
-            name="Test Template",
-            description="Test template for notifications",
-            status="ACTIVE",
-            category="NOTIFICATION"
-        )
+def test_send_message():
+    message = Message.objects.create(
+        template_name="Test Template",
+        to_address="test@example.com",
+        from_address="sender@example.com",
+        channel="EMAIL",
+        variables={"name_key": "Test User"}
+    )
 
-    template_version = TemplateVersion.objects.filter(template=template).first()
-    if not template_version:
-        template_version = TemplateVersion.objects.create(
-            template=template,
-            version_number=1,
-            channel="EMAIL",
-            status="ACTIVE",
-            is_current=True,
-        )
-        
-        TemplateContent.objects.create(
-            template_version=template_version,
-            body="Hello {{name}}, welcome to our service!"
-        )
-    
-    return template, template_version
-
-def create_test_notification():
-    """Create a test notification protobuf message"""
-    notification = NotificationMessage()
-    notification.template_name = "Test Template"
-    notification.to_address = "test@example.com"
-    notification.from_address = "sender@example.com"
-    notification.channel = Message.Channel.EMAIL
-    notification.variables["name_key"] = "Test User"
-    return notification
 
 def create_kafka_producer():
     """Create a Kafka producer for testing"""

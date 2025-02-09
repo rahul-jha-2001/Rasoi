@@ -27,7 +27,11 @@ LOGGING = {
             'format': '{asctime} {levelname} [{name}] {message}',
             'style': '{',
             'datefmt': '%Y-%m-%d %H:%M:%S'
-        }
+        },
+        'simple': {
+            'format': '{levelname} {message}',
+            'style': '{'
+        },
     },
     'handlers': {
         'file': {
@@ -40,16 +44,44 @@ LOGGING = {
             'level': 'DEBUG',
             'class': 'logging.StreamHandler',
             'formatter': 'detailed'
-        }
+        },
+        'kafka_file': {
+            'level': 'INFO',
+            'class': 'logging.FileHandler',
+            'filename': BASE_DIR / 'logs/kafka_consumer.log',
+            'formatter': 'simple',
+        },
+        'worker_file': {
+            'level': 'DEBUG',
+            'class': 'logging.FileHandler',
+            'filename': BASE_DIR / 'logs/worker.log',
+            'formatter': 'simple',
+        },  
+        'kafka_console': {
+            'level': 'INFO',
+            'class': 'logging.StreamHandler',
+            'formatter': 'simple'
+        },
     },
     'loggers': {
         '': {
             'handlers': ['file', 'console'],
-            'level': 'DEBUG',
+            'level': 'INFO',
             'propagate': True,
+        },
+        'kafka_consumer': {
+            'handlers': ['kafka_file', 'kafka_console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'worker': {
+            'handlers': ['worker_file', 'console'],
+            'level': 'DEBUG',
+            'propagate': False,
         }
     }
 }
+
 
 # Create logs directory if it doesn't exist
 LOGS_DIR = BASE_DIR / 'logs'
@@ -195,8 +227,10 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
 WHATSAPP_BUSINESS_ACCOUNT_ID = "529193380271872"
+WHATSAPP_PHONE_NUMBER_ID = "485021908033854"
 WHATSAPP_ACCESS_TOKEN = "EAAIKPl0JQMUBO9zdcHxqlqTRKuj1TKxA82L4IbfQkF645HkFSSw5UdaptYNZCGVTN8t3sanbMOkZCW4PiKBVy6Ie05jg6mO5m26LrzQiYM2VSCnLgNXkZChIqekjbELFjtebXEHHflZAZBNL6DdGKGtzZCMKJBU7CXAP50vZBQtJEEe771yCQZBZBfFpPbyInLsG2b54kTsg1ewnXSPCtqCQ824cYWIfonegn28DZC8GbH"
 WHATSAPP_API_URL = "https://graph.facebook.com/v21.0"
 
-CELERY_BROKER_URL = 'redis://localhost:6379/0'
-CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
+REDIS_HOST = "localhost"
+REDIS_PORT = 6379
+REDIS_DB = 0

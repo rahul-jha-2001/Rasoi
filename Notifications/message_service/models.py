@@ -4,7 +4,9 @@ from template.models import Template,Status,Category
 from django.utils.translation import gettext_lazy as _
 from utils.logger import Logger
 import json
-
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from typing import Optional
+from django.db.models import QuerySet
 logger = Logger(__name__)
 
 class MessageStatus(models.TextChoices):
@@ -12,9 +14,19 @@ class MessageStatus(models.TextChoices):
     SENT = 'SENT', _('Sent')
     FAILED = 'FAILED', _('Failed')
 
+class MessagePriority(models.IntegerChoices):
+    MARKETING = 1
+    UTILITY = 2
+    AUTHENTICATION = 3
 
 
-class MesssageManager(models.Manager):
+class MessageManager(models.Manager):
+    PRIORITY_MAP = {
+        Category.AUTHENTICATION: MessagePriority.AUTHENTICATION,
+        Category.UTILITY: MessagePriority.UTILITY,
+        Category.MARKETING: MessagePriority.MARKETING
+    }
+
     def _validate_phone_numbers(self, to_phone_number, from_phone_number):
         # Basic phone number validation
         if not to_phone_number or not from_phone_number:
@@ -24,8 +36,7 @@ class MesssageManager(models.Manager):
         if not (to_phone_number.startswith('+') and len(to_phone_number) >= 10):
             raise ValueError("Invalid 'to' phone number format. Must start with '+' and have at least 10 digits")
         
-        if not (from_phone_number.startswith('+') and len(from_phone_number) >= 10):
-            raise ValueError("Invalid 'from' phone number format. Must start with '+' and have at least 10 digits")
+        
 
     def _validate_template(self, template):
         if not template:
@@ -115,6 +126,8 @@ class MesssageManager(models.Manager):
             message_json = template.to_message_format()
             rendered_message = self._render_template(message_json, variables)
             # Create the message
+            priority = self.PRIORITY_MAP.get(template.category, MessagePriority.AUTHENTICATION)
+            
             message = self.create(
                 template=template,
                 message_json=message_json,
@@ -123,7 +136,8 @@ class MesssageManager(models.Manager):
                 to_phone_number=to_phone_number,
                 from_phone_number=from_phone_number,
                 status=MessageStatus.PENDING,
-                message_type=template.category
+                message_type=template.category,
+                priority=priority
             )
             logger.info(f"Message created successfully: {message}")
             return message
@@ -133,7 +147,51 @@ class MesssageManager(models.Manager):
             invalid_message = InvalidMessage.objects.create_invalid_message(template, to_phone_number, from_phone_number, str(e), variables)
             invalid_message.save()
             logger.error(f"Invalid message: {invalid_message.id}")
+    def get_pending_messages_by_priority(
+        self,
+        page: int = 1,
+        batch_size: int = 10) -> tuple[QuerySet, Optional[int]]:
+        """
+                Retrieve pending messages ordered by priority and creation date with pagination.
+
+            Args:
+                page (int): The page number to retrieve (default: 1)
+                batch_size (int): Number of items per page (default: 10)
+
+            Returns:
+                Tuple[QuerySet, Optional[int]]: A tuple containing:
+                    - The page of messages
+                    - The next page number, or None if there isn't one
+
+            Raises:
+                ValueError: If batch_size is less than 1
+                Exception: For any other unexpected errors
+            """
+        if batch_size < 1:
+            raise ValueError("batch_size must be at least 1")
+
+        try:
+            logger.debug(f"Fetching pending messages for page {page} with batch size {batch_size}")
+            
+            base_qs = self.filter(status=MessageStatus.PENDING).order_by('priority', '-created_at')
+            paginator = Paginator(base_qs, batch_size)
         
+            try:
+                messages = paginator.page(page)
+            except (EmptyPage, PageNotAnInteger):
+                logger.info(f"Invalid page {page} requested, defaulting to page 1")
+                messages = paginator.page(1)
+        
+            next_page = messages.next_page_number() if messages.has_next() else None
+            
+            logger.debug(f"Successfully retrieved {len(messages)} messages")
+            return messages, next_page
+            
+        except Exception as e:
+            logger.error(f"Error getting pending messages by priority: {e}")
+            raise
+
+
 
 class Message(models.Model):
     id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True,primary_key=True)
@@ -145,7 +203,7 @@ class Message(models.Model):
     rendered_message = models.JSONField(default=dict)
     variables = models.JSONField(default=dict)
     message_type = models.CharField(max_length=20, choices=Category.choices,null=True,blank=True)
-
+    priority = models.IntegerField(choices=MessagePriority.choices,default=MessagePriority.AUTHENTICATION)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     sent_at = models.DateTimeField(null=True, blank=True)
@@ -154,7 +212,7 @@ class Message(models.Model):
     def __str__(self):
         return f"Message {self.id} - {self.status}"
 
-    objects = MesssageManager()
+    objects = MessageManager()
     # def _get_template_variables(self, template):
     #     required_vars = set()
     #     for component in template['components']:
@@ -210,9 +268,9 @@ class Message(models.Model):
         return f"Message {self.template.name} - {self.status}-{self.message_type}-{self.to_phone_number}-{self.from_phone_number}"
 
     class Meta:
-        ordering = ["message_type",'status','-created_at']
+        ordering = ["priority",'status','-created_at']
         indexes = [
-            models.Index(fields=['message_type', 'status'])
+            models.Index(fields=['priority', 'status'])
         ]
 class InvalidMessageManager(models.Manager):
     @transaction.atomic

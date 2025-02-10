@@ -1,10 +1,13 @@
 from django.db import models,transaction
+from django.core.exceptions import ValidationError
+from django.conf import settings
+from django.core.paginator import Paginator
 import uuid 
 # from managers import TemplateManager, TemplateVersionManager, TemplateContentManager
-from django.core.exceptions import ValidationError
+
 from utils.logger import Logger
 import requests
-from django.conf import settings
+
 import urllib.parse
 
 logger = Logger(__name__)
@@ -298,11 +301,23 @@ class TemplateManager(models.Manager):
         """
         return self.filter(category=category)
 
-    def get_template_by_names(self, names):
+    def get_template_by_name(self, name):
         """
         Get all templates for a specific category
         """
-        return self.filter(name__in=names)
+        return self.get(name=name)
+
+    def get_template_by_id(self, id):
+        """
+        Get template by id
+        """
+        return self.get(id=id)
+    
+    def get_template_by_whatsapp_id(self, whatsapp_id):
+        """
+        Get template by whatsapp id
+        """
+        return self.get(whatsapp_template_id=whatsapp_id)
 
     def get_active_templates(self):
         """
@@ -351,6 +366,27 @@ class TemplateManager(models.Manager):
                 break
         logger.info(f"Syncing templates with WhatsApp API completed")
         return True
+
+
+    def get_templates_by_filter(self, category=None, status=None, language=None, parameter_format=None, page=1, limit=10):
+        """
+        Get templates by filter with pagination
+        """
+        filters = {}
+        if category:
+            filters['category'] = category
+        if status:
+            filters['status'] = status
+        if language:
+            filters['language'] = language
+        if parameter_format:
+            filters['parameter_format'] = parameter_format
+        templates = self.filter(**filters).order_by('name')
+        paginator = Paginator(templates, limit)
+        next_page = paginator.page(page).next_page_number() if paginator.page(page).has_next() else None
+        previous_page = paginator.page(page).previous_page_number() if paginator.page(page).has_previous() else None
+        return paginator.page(page).object_list, next_page, previous_page
+
 
 class Category(models.TextChoices):
     MARKETING = 'MARKETING', 'Marketing'

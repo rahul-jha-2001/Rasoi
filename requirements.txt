@@ -10,3 +10,4 @@ pyjwt
 tenacity
 confluent-kafka
 celery
+httpx

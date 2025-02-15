@@ -7,7 +7,7 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'Notifications.settings')
 django.setup()
 
 from confluent_kafka import Consumer, KafkaError
-from proto.Notifications_pb2 import NotificationMessage
+from Notifications.proto.Messages_pb2 import MessageEvent
 from typing import Optional, List
 from utils.logger import Logger
 
@@ -99,14 +99,14 @@ class NotificationKafkaConsumer:
         stop=stop_after_attempt(3),
         wait=wait_exponential(multiplier=1, min=4, max=10)
     )
-    def _deserialize_message(self, raw_message: bytes) -> Optional[NotificationMessage]:
+    def _deserialize_message(self, raw_message: bytes) -> Optional[MessageEvent]:
         """
         Deserializes a protobuf message with retry logic
         """
         try:
-            notification = NotificationMessage()
-            notification.ParseFromString(raw_message)
-            return notification
+            message_event = MessageEvent()
+            message_event.ParseFromString(raw_message)
+            return message_event
         except DecodeError as e:
             logger.error(f"Failed to deserialize message: {str(e)}")
             raise
@@ -115,13 +115,13 @@ class NotificationKafkaConsumer:
             return None
 
     @transaction.atomic
-    def _create_message_record(self, notification: NotificationMessage) -> Optional[Message]:
+    def _create_message_record(self, message_event: MessageEvent) -> Optional[Message]:
         """Creates a message record in the database"""
         try:
-            template_name = notification.template_name
-            variables = dict(notification.variables.variables)
-            to_phone_number = notification.recipient.to_number
-            from_phone_number = notification.recipient.from_number
+            template_name = message_event.template_name
+            variables = dict(message_event.variables.variables)
+            to_phone_number = message_event.recipient.to_number
+            from_phone_number = message_event.recipient.from_number
             # Create and validate the message
             message = self.Message.objects.create_message(template_name, variables, to_phone_number, from_phone_number)
             logger.info(f"MessageId:{message.id} record created successfully for Message Request id: {notification.meta_data.request_id}")
@@ -131,9 +131,9 @@ class NotificationKafkaConsumer:
             logger.error(f"Error creating message record: {str(e)}")
             return None
 
-    def _process_message(self, notification: NotificationMessage) -> Optional[Message]:
+    def _process_message(self, message_event: MessageEvent) -> Optional[Message]:
         """
-        Processes a single notification message
+        Processes a single notification messagex
         
         Args:
             notification (NotificationMessage): The notification to process
@@ -142,9 +142,9 @@ class NotificationKafkaConsumer:
             Message: The message record created
         """
         try:
-            message = self._create_message_record(notification)
+            message = self._create_message_record(message_event)
             if not message:
-                logger.error(f"Failed to create message record for Message Request id: {notification.meta_data.request_id}")
+                logger.error(f"Failed to create message record for Message Request id: {message_event.meta_data.request_id}")
                 return None
             
             logger.info(f"MessageId:{message.id} record created successfully for Message Request id: {notification.meta_data.request_id}")

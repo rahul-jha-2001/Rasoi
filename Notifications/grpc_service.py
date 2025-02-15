@@ -3,19 +3,25 @@ import sys
 import django
 from django.apps import apps
 from django.db import transaction
-
+from django.utils import timezone
+from datetime import datetime, timedelta
+from google.protobuf.timestamp_pb2 import Timestamp
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'Notifications.settings')
 django.setup()
 
 from template.models import Template, Component, Parameters, Button
+from message_service.models import Message,InvalidMessage
 from utils.logger import Logger
-
+# from utils.datetime_helpers import proto_to_django, django_to_proto, now_proto
 logger = Logger("grpc_service")
 
 import grpc
 from concurrent import futures
 import proto.Template_pb2 as template_pb2
 import proto.Template_pb2_grpc as template_pb2_grpc
+import proto.Messages_pb2 as message_pb2
+import proto.Messages_pb2_grpc as message_pb2_grpc
+
 from proto.Template_pb2 import (
     TemplateCategory, 
     TemplateStatus, 
@@ -24,6 +30,12 @@ from proto.Template_pb2 import (
     TemplateParameterType,
     TemplateButtonType
 )
+
+from proto.Messages_pb2 import (
+    MessageStatus,
+    MessagePriority
+)
+
 
 # Category mappings
 CATEGORY_MAP = {
@@ -226,10 +238,317 @@ class TemplateService(template_pb2_grpc.TemplateServiceServicer):
             logger.error(f"Error listing templates: {request}")
             raise grpc.RpcError(grpc.StatusCode.INTERNAL, f"Error listing templates: {e}")
 
+class MessageService(message_pb2_grpc.MessageServiceServicer):
+
+    def _verify_wire_format(self, message, message_type, context_info=""):
+        """Helper to verify protobuf wire format
+        Args:
+            message: The protobuf message to verify
+            message_type: The protobuf message class type
+            context_info: Additional context for logging
+        Returns:
+            bool: True if verification succeeds
+        """
+        try:
+            serialized = message.SerializeToString()
+            # logger.debug(f"Serialized message size: {len(serialized)} bytes")
+            # logger.debug(f"Message before serialization: {message}")
+            
+            test_msg = message_type()
+            test_msg.ParseFromString(serialized)
+            
+            # Compare fields before and after serialization
+            original_fields = message.ListFields()
+            test_fields = test_msg.ListFields()
+            
+            if len(original_fields) != len(test_fields):
+                logger.error(f"Field count mismatch - Original: {len(original_fields)}, Deserialized: {len(test_fields)}")
+                logger.error(f"Original fields: {[f[0].name for f in original_fields]}")
+                logger.error(f"Deserialized fields: {[f[0].name for f in test_fields]}")
+            
+            return True
+        except Exception as e:
+            logger.error(f"Wire format verification failed for {message_type.__name__} {context_info}: {str(e)}")
+            logger.error(f"Message contents: {message}")
+            # Print hex dump of serialized data if available
+            try:
+                logger.error(f"Serialized hex: {serialized.hex()}")
+            except:
+                pass
+            return False
+
+    def _message_to_proto(self, message: Message) -> message_pb2.Message:
+        proto_message = message_pb2.Message(
+            id=str(message.id),
+            to_phone_number=message.to_phone_number,
+            from_phone_number=message.from_phone_number,
+            template_name=message.template.name,
+            status=MessageStatus.Value(message.status),
+            message_type=MessagePriority.Value(message.message_type),
+            message_json=str(message.message_json),
+            rendered_message=str(message.rendered_message),
+            variables=str(message.variables),
+            created_at=message.created_at,
+            updated_at=message.updated_at,
+            sent_at=message.sent_at,
+            error_message=message.error_message
+        )
+        if not self._verify_wire_format(proto_message, message_pb2.Message, f"message_id={message.id}"):
+            raise grpc.RpcError(grpc.StatusCode.INTERNAL, f"Failed to serialize message {message.id}")
+        return proto_message
+
+    def _short_message_to_proto(self, message: Message) -> message_pb2.ShortMessage:
+        proto_short_message = message_pb2.ShortMessage(
+            id=str(message.id),
+            to_phone_number=message.to_phone_number,
+            from_phone_number=message.from_phone_number,
+            template_name=message.template.name,
+            # Fix: Use direct enum value instead of .get()
+            status=MessageStatus.Value(message.status),
+            rendered_message= message.template.to_readable_message(message.variables),
+            message_type=MessagePriority.Value(message.message_type),
+            created_at=message.created_at,
+            updated_at=message.updated_at,
+            sent_at=message.sent_at
+        )
+        if not self._verify_wire_format(proto_short_message, message_pb2.ShortMessage, f"message_id={message.id}"):
+            raise grpc.RpcError(grpc.StatusCode.INTERNAL, f"Failed to serialize short message {message.id}")
+        return proto_short_message
+
+
+    def AddMessageEvent(self, request, context):
+        # Fix: Add logging for the request
+        logger.info(f"Adding message event: {request.message_event.template_name}")
+        if not self._verify_wire_format(request, message_pb2.AddMessageEventRequest):
+            logger.error(f"Invalid protobuf request format: {request}")
+            return message_pb2.AddMessageEventResponse(success=False, error="Invalid protobuf request format")
+        try:
+            message_event = Message.objects.create_message(
+                template_name=request.message_event.template_name,
+                variables=dict(request.message_event.variables.variables),
+                to_phone_number=request.message_event.recipient.to_number,
+                from_phone_number=request.message_event.recipient.from_number
+            )
+        except Exception as e:
+            logger.error(f"Failed to create message event: {request.message_event.template_name}")
+            return message_pb2.AddMessageEventResponse(success=False, error=str(e))
+        
+        if message_event is None:
+            logger.error(f"Invalid message Data {request.message_event.template_name}")
+            return message_pb2.AddMessageEventResponse(message=None, success=False, error="Invalid message Data ")
+        else:
+            response = message_pb2.AddMessageEventResponse(
+                message=self._message_to_proto(message_event),
+                success=True,
+                error=None
+            )
+        logger.info(f"Message event added: {response.message.id}")
+        if not self._verify_wire_format(response, message_pb2.AddMessageEventResponse):
+            logger.error(f"Failed to serialize response: {response}")
+            return message_pb2.AddMessageEventResponse(success=False, error="Failed to serialize response")
+        return response
+    
+    def UpdateMessageEvent(self, request, context):
+        logger.info(f"Updating message event: {request.message_id}")
+        if not self._verify_wire_format(request, message_pb2.UpdateMessageEventRequest):
+            logger.error(f"Invalid protobuf request format: {request.message_id}")
+            return message_pb2.UpdateMessageEventResponse(success=False, error="Invalid protobuf request format")
+        try:
+            message_event = Message.objects.update_message(
+                message_id=request.message_id,
+                variables=dict(request.message_event.variables.variables),
+                to_phone_number=request.message_event.recipient.to_number,
+                from_phone_number=request.message_event.recipient.from_number
+            )
+        except Exception as e:
+            logger.error(f"Failed to update message event: {request.message_id}")
+            return message_pb2.UpdateMessageEventResponse(success=False, error=str(e))
+        if message_event is None:
+            logger.error(f"Invalid message Data {request.message_event.template_name}")
+            return message_pb2.UpdateMessageEventResponse(message=None, success=False, error="Invalid message Data ")
+        else:
+            response = message_pb2.UpdateMessageEventResponse(
+                message=self._message_to_proto(message_event),
+                success=True,
+                error=None
+            )
+        logger.info(f"Message event updated: {response.message.id}")
+        if not self._verify_wire_format(response, message_pb2.UpdateMessageEventResponse):
+            logger.error(f"Failed to serialize response: {response.message.idx}")
+            return message_pb2.UpdateMessageEventResponse(success=False, error="Failed to serialize response")
+        return response
+    
+    def RemoveMessageEvent(self, request, context):
+        logger.info(f"Removing message event: {request.message_id}")
+        if not self._verify_wire_format(request, message_pb2.RemoveMessageEventRequest):
+            logger.error(f"Invalid protobuf request format: {request.message_id}")
+            return message_pb2.RemoveMessageEventResponse(success=False, error="Invalid protobuf request format")
+        try:
+           message = Message.objects.get(id=request.message_id)
+        except Message.DoesNotExist:
+            logger.error(f"Message not found: {request.message_id}")
+            return message_pb2.RemoveMessageEventResponse(success=False, error="Message not found")
+        try:
+            message.delete()
+        except Exception as e:
+            logger.error(f"Failed to delete message event: {request.message_id}")
+            return message_pb2.RemoveMessageEventResponse(success=False, error=str(e))
+        return message_pb2.RemoveMessageEventResponse(success=True)
+    
+    def GetMessageEvent(self, request, context):
+        logger.info(f"Getting message event: {request}")
+        if not self._verify_wire_format(request, message_pb2.GetMessageEventRequest):
+            logger.error(f"Invalid protobuf request format: {request}")
+            return message_pb2.GetMessageEventResponse(success=False, error="Invalid protobuf request format")
+        try:
+            message = Message.objects.get(id=request.message_id)
+        except Message.DoesNotExist:
+            logger.error(f"Message not found: {request.message_id}")
+            return message_pb2.GetMessageEventResponse(success=False, error="Message not found")
+        response = message_pb2.GetMessageEventResponse(
+            message=self._message_to_proto(message),
+            success=True,
+            error=None
+        )
+        if not self._verify_wire_format(response, message_pb2.GetMessageEventResponse):
+            logger.error(f"Failed to serialize response: {response}")
+            return message_pb2.GetMessageEventResponse(success=False, error="Failed to serialize response")
+        return response
+    
+    def ListMessageEvents(self, request, context):
+        logger.info(f"Listing message events: {request}")
+        if not self._verify_wire_format(request, message_pb2.ListMessageEventRequest):
+            logger.error(f"Invalid protobuf request format: {request}")
+            return message_pb2.ListMessageEventResponse(success=False, error="Invalid protobuf request format")
+        
+        try:    
+            
+            if request.HasField('start_date'):
+                start_date = datetime.fromtimestamp(request.start_date.seconds + request.start_date.nanos/1e9, timezone.get_current_timezone())
+            else:
+                start_date = None
+            if request.HasField('end_date'):
+                end_date = datetime.fromtimestamp(request.end_date.seconds + request.end_date.nanos/1e9, timezone.get_current_timezone())
+            else:
+                end_date = None
+
+
+            filters = {}
+            # Add validated date filters
+            if start_date:
+                filters['created_at__gte'] = start_date
+            if end_date:
+                filters['created_at__lte'] = end_date
+
+            # Add other filters only if explicitly set
+            if request.HasField('template_name'):
+                filters['template__name'] = request.template_name
+            if request.HasField('to_phone_number'):
+                filters['to_phone_number'] = request.to_phone_number
+            if request.HasField('from_phone_number'):
+                filters['from_phone_number'] = request.from_phone_number
+            if request.HasField('message_category'):
+                filters['message_type'] = TemplateCategory.Name(request.message_category)
+            if request.HasField('status'):
+                filters['status'] = request.status
+
+            logger.debug(f"Filters: {filters}")
+            messages, next_page, previous_page = Message.objects.get_messages_by_filter(
+                page=request.page,
+                limit=request.limit,
+                **filters
+            )
+            
+            response = message_pb2.ListMessageEventResponse(
+                messages=[self._message_to_proto(message) for message in messages],
+                next_page=next_page,
+                previous_page=previous_page,
+                success=True
+            )
+            
+            if not self._verify_wire_format(response, message_pb2.ListMessageEventResponse):
+                logger.error(f"Failed to serialize response: {response}")
+                return message_pb2.ListMessageEventResponse(success=False, error="Failed to serialize response")
+            return response
+
+        except Exception as e:
+            logger.error(f"Error listing message events: {str(e)}")
+            return message_pb2.ListMessageEventResponse(
+                success=False,
+                error=message_pb2.Error(error=str(e), error_code="INTERNAL_ERROR")
+            )
+
+    def GetMessage(self, request, context):
+        if not self._verify_wire_format(request, message_pb2.GetMessageRequest):
+            logger.error(f"Invalid protobuf request format: {request}")
+            return message_pb2.GetMessageResponse(success=False, error="Invalid protobuf request format")
+        try:
+            message = Message.objects.get(id=request.message_id)
+        except Message.DoesNotExist:
+            logger.error(f"Message not found: {request.message_id}")
+            return message_pb2.GetMessageResponse(success=False, error="Message not found")
+        response = message_pb2.GetMessageResponse(
+            message=self._short_message_to_proto(message),
+            success=True,
+            error=None
+        )
+        if not self._verify_wire_format(response, message_pb2.GetMessageResponse):
+            logger.error(f"Failed to serialize response: {response}")
+            return message_pb2.GetMessageResponse(success=False, error="Failed to serialize response")
+        return response
+    
+    def DeleteMessage(self, request, context):
+        logger.info(f"Deleting message: {request.message_id}")
+        if not self._verify_wire_format(request, message_pb2.DeleteMessageRequest):
+            logger.error(f"Invalid protobuf request format: {request}")
+            return message_pb2.DeleteMessageResponse(success=False, error="Invalid protobuf request format")
+        try:
+            message = Message.objects.get(id=request.message_id)
+        except Message.DoesNotExist:
+            logger.error(f"Message not found: {request.message_id}")
+            return message_pb2.DeleteMessageResponse(success=False, error="Message not found")
+        try:
+            message.delete()
+        except Exception as e:
+            logger.error(f"Failed to delete message: {request.message_id}")
+            return message_pb2.DeleteMessageResponse(success=False, error=str(e))
+        return message_pb2.DeleteMessageResponse(success=True)
+    
+    def ListMessages(self, request, context):
+        logger.info(f"Listing messages: {request}")
+        if not self._verify_wire_format(request, message_pb2.ListMessagesRequest):
+            logger.error(f"Invalid protobuf request format: {request}")
+            return message_pb2.ListMessagesResponse(success=False, error="Invalid protobuf request format")
+        try:
+            messages, next_page, previous_page = Message.objects.get_messages_by_filter(
+                page=request.page,
+                limit=request.limit,
+                template_name=request.template_name,
+                to_phone_number=request.to_phone_number,
+                from_phone_number=request.from_phone_number,
+                message_category=request.message_category,
+                status=request.status,
+                start_date=request.start_date,
+                end_date=request.end_date
+            )
+            response = message_pb2.ListMessagesResponse(
+                messages=[self._short_message_to_proto(message) for message in messages],
+                next_page=next_page,
+                previous_page=previous_page
+            )
+            if not self._verify_wire_format(response, message_pb2.ListMessagesResponse):
+                logger.error(f"Failed to serialize response: {response}")
+                return message_pb2.ListMessagesResponse(success=False, error="Failed to serialize response")
+            return response
+        except Exception as e:
+            logger.error(f"Error listing messages: {request}")
+            raise grpc.RpcError(grpc.StatusCode.INTERNAL, f"Error listing messages: {e}")
+
 class Server:
     def __init__(self):
         self.server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
-        template_pb2_grpc.add_TemplateServiceServicer_to_server(TemplateService(), self.server)
+        # template_pb2_grpc.add_TemplateServiceServicer_to_server(TemplateService(), self.server)
+        message_pb2_grpc.add_MessageServiceServicer_to_server(MessageService(), self.server)
         self.server.add_insecure_port('localhost:50051')
         self.server.start()
         logger.info(f"Server started on port 50051")

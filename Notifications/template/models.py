@@ -4,7 +4,7 @@ from django.conf import settings
 from django.core.paginator import Paginator
 import uuid 
 # from managers import TemplateManager, TemplateVersionManager, TemplateContentManager
-
+from collections import defaultdict
 from utils.logger import Logger
 import requests
 
@@ -270,7 +270,7 @@ class TemplateManager(models.Manager):
             for i in range(len(param_patterns)):    
                 Parameters.objects.create(
                         component=component,
-                        name=f"param_{i}",
+                        name=f"{i}",
                         type=ParameterType.TEXT,
                         index=i
                     )
@@ -509,6 +509,49 @@ class Template(models.Model):
             for button in buttons:
                 template["components"].append(button.to_message_format())
         return template
+
+    def to_readable_message(self, variables):
+        """
+        Convert template to human-readable message format by replacing variables.
+        
+        Args:
+            variables (dict): Dictionary of variable names and their values
+                for replacing placeholders in the template
+        
+        Returns:
+            str: Template with variables replaced in a readable format
+        """
+        def _destructure_variables(variables: dict):
+            """
+            Destructure variables into a dictionary of variable names and their values
+            """
+            for k, v in variables.items():
+                print(k.split("_"), v)
+        
+
+
+        broken_variables = _destructure_variables(variables)
+        render_text = {}
+        # for component in self.components.all():
+        #     if component.type == ComponentType.HEADER :
+        #         if "HEADER" in variables:
+        #                 render_text["HEADER"] = component.text.replace("{{", "{").replace("}}", "}").format(variable["HEADER"])
+        #             else:
+        #                 render_text["HEADER"] = component.text
+        #         elif component.type == ComponentType.BODY:
+        #             if "BODY" in variable:
+        #                 render_text["BODY"] = component.text.replace("{{", "{").replace("}}", "}").format(variable["BODY"])
+        #             else:
+        #                 render_text["BODY"] = component.text
+        #         elif component.type == ComponentType.FOOTER:
+        #             if "FOOTER" in variable:
+        #                 render_text["FOOTER"] = component.text.replace("{{", "{").replace("}}", "}").format(variable["FOOTER"])
+        #             else:
+        #                 render_text["FOOTER"] = component.text
+        # return str(render_text)
+        return ""
+            
+        
 
 class ComponentManager(models.Manager):
     def get_components_by_order(self, template):

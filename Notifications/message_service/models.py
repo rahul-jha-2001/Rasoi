@@ -4,9 +4,12 @@ from template.models import Template,Status,Category
 from django.utils.translation import gettext_lazy as _
 from utils.logger import Logger
 import json
+from django.utils import timezone
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from typing import Optional
 from django.db.models import QuerySet
+from datetime import datetime
+import re  # Add this import at the top of the file
 logger = Logger(__name__)
 
 class MessageStatus(models.TextChoices):
@@ -26,8 +29,12 @@ class MessageManager(models.Manager):
         Category.UTILITY: MessagePriority.UTILITY,
         Category.MARKETING: MessagePriority.MARKETING
     }
+    def get_queryset(self):
+        """Override default queryset to exclude soft-deleted messages"""
+        return super().get_queryset().filter(is_deleted=False)
 
     def _validate_phone_numbers(self, to_phone_number, from_phone_number):
+
         # Basic phone number validation
         if not to_phone_number or not from_phone_number:
             raise ValueError("Both 'to' and 'from' phone numbers are required")
@@ -36,8 +43,6 @@ class MessageManager(models.Manager):
         if not (to_phone_number.startswith('+') and len(to_phone_number) >= 10):
             raise ValueError("Invalid 'to' phone number format. Must start with '+' and have at least 10 digits")
         
-        
-
     def _validate_template(self, template):
         if not template:
             raise ValueError("Template is required")
@@ -82,6 +87,7 @@ class MessageManager(models.Manager):
             raise ValueError("Template category is required")
         if template.category not in [choice[0] for choice in Category.choices]:
             raise ValueError("Invalid template category")
+        
     def _render_template(self, message_json: dict, variables: dict):
         logger.debug(f"Rendering the template: {message_json}")
         # Create a deep copy to avoid modifying the original template
@@ -109,6 +115,12 @@ class MessageManager(models.Manager):
         
         return rendered_json
 
+    def _readble_message(self, variables: dict):
+
+        
+
+        return message_json
+    
     @transaction.atomic
     def create_message(self, template_name: str, variables: dict, to_phone_number: str, from_phone_number: str):
         try:
@@ -147,6 +159,69 @@ class MessageManager(models.Manager):
             invalid_message = InvalidMessage.objects.create_invalid_message(template, to_phone_number, from_phone_number, str(e), variables)
             invalid_message.save()
             logger.error(f"Invalid message: {invalid_message.id}")
+            return None
+    
+    @transaction.atomic
+    def update_message(self, message_id: str, variables: dict=None, to_phone_number: str=None, from_phone_number: str=None):
+        try:
+            message = self.get(id=message_id)
+        except Message.DoesNotExist:
+            logger.error(f"Message not found: {message_id}")
+            return None
+        except Exception as e:
+            logger.error(f"Failed to update message: {e}")
+            return None
+        
+        try:
+            if message.status == MessageStatus.PENDING:
+                logger.debug(f"Updating message: {message.id}")
+                
+                if to_phone_number is not None:
+                    logger.debug(f"Updating to phone number: {to_phone_number}")
+                    if to_phone_number.startswith('+') and len(to_phone_number) >= 10:
+                        message.to_phone_number = to_phone_number
+                        logger.info(f"Updated to phone number: {message.to_phone_number}")
+                
+                if from_phone_number is not None:
+                    logger.debug(f"Updating from phone number: {from_phone_number}")
+                    if from_phone_number.startswith('+') and len(from_phone_number) >= 10:
+                        message.from_phone_number = from_phone_number
+                        logger.info(f"Updated from phone number: {message.from_phone_number}")
+                
+                if variables is not None:
+                    logger.debug(f"Updating variables: {variables}")
+                    template = message.template
+                    # These methods will raise exceptions if validation fails
+                    self._validate_variables(template, variables)
+                    self._validate_required_variables(template, variables)
+                    
+                    message.variables = variables
+                    logger.info(f"Updated variables: {message.variables}")
+                    message.rendered_message = self._render_template(message.message_json, variables)
+                    logger.info(f"Updated rendered message: {message.rendered_message}")
+                
+                message.updated_at = timezone.now()
+                message.save()
+                logger.info(f"Updated message: {message}")
+                return message
+            else:
+                logger.error(f"Message is not pending: {message.status}")
+                return message
+        except Exception as e:
+            logger.error(f"Failed to update message: {e}")
+            return None
+
+    @transaction.atomic
+    def delete_message(self, message_id: str):
+        try:
+            message = self.get(id=message_id)
+            message.delete()
+            logger.info(f"Deleted message: {message_id}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to delete message: {e}")
+            return False
+
     def get_pending_messages_by_priority(
         self,
         page: int = 1,
@@ -173,7 +248,7 @@ class MessageManager(models.Manager):
         try:
             logger.debug(f"Fetching pending messages for page {page} with batch size {batch_size}")
             
-            base_qs = self.filter(status=MessageStatus.PENDING).order_by('priority', '-created_at')
+            base_qs = self.filter(status=MessageStatus.PENDING,is_deleted=False).order_by('priority', '-created_at')
             paginator = Paginator(base_qs, batch_size)
         
             try:
@@ -191,8 +266,28 @@ class MessageManager(models.Manager):
             logger.error(f"Error getting pending messages by priority: {e}")
             raise
 
+    def get_messages_by_filter(self,
+                               page: int = 1,
+                               limit: int = 10,
+                               **kwargs):
+        logger.debug(f"Start date: {kwargs.get('start_date')}")
+        logger.debug(f"End date: {kwargs.get('end_date')}")
 
+        
 
+        if page < 1:
+            page = 1
+        if limit < 1:
+            limit = 10
+        
+        messages = self.filter(**kwargs).order_by('-created_at')
+        paginator = Paginator(messages, limit)
+        page_messages = paginator.page(page)
+        next_page = page_messages.next_page_number() if page_messages.has_next() else None
+        previous_page = page_messages.previous_page_number() if page_messages.has_previous() else None
+        return page_messages, next_page, previous_page
+        
+        
 class Message(models.Model):
     id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True,primary_key=True)
     to_phone_number = models.CharField(max_length=20,null=True,blank=True)
@@ -208,43 +303,12 @@ class Message(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     sent_at = models.DateTimeField(null=True, blank=True)
     error_message = models.TextField(null=True, blank=True)
+    is_deleted = models.BooleanField(default=False)
 
     def __str__(self):
         return f"Message {self.id} - {self.status}"
 
     objects = MessageManager()
-    # def _get_template_variables(self, template):
-    #     required_vars = set()
-    #     for component in template['components']:
-    #         if 'parameters' in component:
-    #             for param in component['parameters']:
-    #                 if param['type'].upper() == 'TEXT':
-    #                     placeholder = param['text']
-    #                     if placeholder.startswith('{{') and placeholder.endswith('}}'):
-    #                         key = placeholder[2:-2].strip()  # Remove {{ and }} and whitespace
-    #                         required_vars.add(key)
-    #     return required_vars
-
-    # def _render_template(self, template):
-    #     # Check if all required variables are provided
-    #     required_vars = self._get_template_variables(template)
-    #     missing_vars = required_vars - set(self.variables.keys())
-        
-    #     if missing_vars:
-    #         raise ValueError(f"Missing required variables: {', '.join(missing_vars)}")
-
-    #     rendered = json.loads(json.dumps(template))  # Create a deep copy
-    #     values = self.variables
-
-    #     for component in rendered['components']:
-    #         if 'parameters' in component:
-    #             for param in component['parameters']:
-    #                 if param['type'].upper() == 'TEXT':
-    #                     placeholder = param['text']
-    #                     if placeholder.startswith('{{') and placeholder.endswith('}}'):
-    #                         key = placeholder[2:-2].strip()  # Remove {{ and }}
-    #                         param['text'] = values[key]
-    #     return rendered
 
     def get_rendered_message(self):
         return self.rendered_message
@@ -266,6 +330,12 @@ class Message(models.Model):
 
     def __str__(self):
         return f"Message {self.template.name} - {self.status}-{self.message_type}-{self.to_phone_number}-{self.from_phone_number}"
+
+    def delete(self, using=None, keep_parents=False):
+        """Soft delete the message instead of actually deleting it"""
+        self.is_deleted = True
+        self.save()
+
 
     class Meta:
         ordering = ["priority",'status','-created_at']

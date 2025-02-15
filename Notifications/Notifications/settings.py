@@ -62,6 +62,12 @@ LOGGING = {
             'class': 'logging.StreamHandler',
             'formatter': 'simple'
         },
+        'grpc_file': {
+            'level': 'DEBUG',
+            'class': 'logging.FileHandler',
+            'filename': BASE_DIR / 'logs/grpc_service.log',
+            'formatter': 'simple',
+        },
     },
     'loggers': {
         '': {
@@ -76,6 +82,11 @@ LOGGING = {
         },
         'worker': {
             'handlers': ['worker_file', 'console'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+        'grpc_service': {
+            'handlers': ['grpc_file', 'console'],
             'level': 'DEBUG',
             'propagate': False,
         }

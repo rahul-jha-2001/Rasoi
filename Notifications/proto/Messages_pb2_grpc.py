@@ -61,20 +61,10 @@ class MessageServiceStub(object):
                 request_serializer=Messages__pb2.ListMessageEventRequest.SerializeToString,
                 response_deserializer=Messages__pb2.ListMessageEventResponse.FromString,
                 _registered_method=True)
-        self.GetMessage = channel.unary_unary(
-                '/messaging_v1.MessageService/GetMessage',
-                request_serializer=Messages__pb2.GetMessageRequest.SerializeToString,
-                response_deserializer=Messages__pb2.GetMessageResponse.FromString,
-                _registered_method=True)
-        self.DeleteMessage = channel.unary_unary(
-                '/messaging_v1.MessageService/DeleteMessage',
-                request_serializer=Messages__pb2.DeleteMessageRequest.SerializeToString,
-                response_deserializer=Messages__pb2.DeleteMessageResponse.FromString,
-                _registered_method=True)
-        self.ListMessages = channel.unary_unary(
-                '/messaging_v1.MessageService/ListMessages',
-                request_serializer=Messages__pb2.ListMessageRequest.SerializeToString,
-                response_deserializer=Messages__pb2.ListMessageResponse.FromString,
+        self.ListInvalidMessageEvents = channel.unary_unary(
+                '/messaging_v1.MessageService/ListInvalidMessageEvents',
+                request_serializer=Messages__pb2.ListInvalidMessageEventRequest.SerializeToString,
+                response_deserializer=Messages__pb2.ListInvalidMessageEventResponse.FromString,
                 _registered_method=True)
 
 
@@ -134,27 +124,8 @@ class MessageServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
-    def GetMessage(self, request, context):
-        """Client Services
-
-        GetMessage retrieves a simplified view of a message
-        Suitable for client applications
-        """
-        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
-
-    def DeleteMessage(self, request, context):
-        """DeleteMessage removes a message (client version)
-        Only allows deletion of user's own messages
-        """
-        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
-
-    def ListMessages(self, request, context):
-        """ListMessages retrieves a paginated list of messages (client version)
-        Only returns messages relevant to the requesting user
+    def ListInvalidMessageEvents(self, request, context):
+        """InvalidMessageEvent retrieves a paginated list of invalid messages
         """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -188,20 +159,10 @@ def add_MessageServiceServicer_to_server(servicer, server):
                     request_deserializer=Messages__pb2.ListMessageEventRequest.FromString,
                     response_serializer=Messages__pb2.ListMessageEventResponse.SerializeToString,
             ),
-            'GetMessage': grpc.unary_unary_rpc_method_handler(
-                    servicer.GetMessage,
-                    request_deserializer=Messages__pb2.GetMessageRequest.FromString,
-                    response_serializer=Messages__pb2.GetMessageResponse.SerializeToString,
-            ),
-            'DeleteMessage': grpc.unary_unary_rpc_method_handler(
-                    servicer.DeleteMessage,
-                    request_deserializer=Messages__pb2.DeleteMessageRequest.FromString,
-                    response_serializer=Messages__pb2.DeleteMessageResponse.SerializeToString,
-            ),
-            'ListMessages': grpc.unary_unary_rpc_method_handler(
-                    servicer.ListMessages,
-                    request_deserializer=Messages__pb2.ListMessageRequest.FromString,
-                    response_serializer=Messages__pb2.ListMessageResponse.SerializeToString,
+            'ListInvalidMessageEvents': grpc.unary_unary_rpc_method_handler(
+                    servicer.ListInvalidMessageEvents,
+                    request_deserializer=Messages__pb2.ListInvalidMessageEventRequest.FromString,
+                    response_serializer=Messages__pb2.ListInvalidMessageEventResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -352,7 +313,7 @@ class MessageService(object):
             _registered_method=True)
 
     @staticmethod
-    def GetMessage(request,
+    def ListInvalidMessageEvents(request,
             target,
             options=(),
             channel_credentials=None,
@@ -365,63 +326,9 @@ class MessageService(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/messaging_v1.MessageService/GetMessage',
-            Messages__pb2.GetMessageRequest.SerializeToString,
-            Messages__pb2.GetMessageResponse.FromString,
-            options,
-            channel_credentials,
-            insecure,
-            call_credentials,
-            compression,
-            wait_for_ready,
-            timeout,
-            metadata,
-            _registered_method=True)
-
-    @staticmethod
-    def DeleteMessage(request,
-            target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
-        return grpc.experimental.unary_unary(
-            request,
-            target,
-            '/messaging_v1.MessageService/DeleteMessage',
-            Messages__pb2.DeleteMessageRequest.SerializeToString,
-            Messages__pb2.DeleteMessageResponse.FromString,
-            options,
-            channel_credentials,
-            insecure,
-            call_credentials,
-            compression,
-            wait_for_ready,
-            timeout,
-            metadata,
-            _registered_method=True)
-
-    @staticmethod
-    def ListMessages(request,
-            target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
-        return grpc.experimental.unary_unary(
-            request,
-            target,
-            '/messaging_v1.MessageService/ListMessages',
-            Messages__pb2.ListMessageRequest.SerializeToString,
-            Messages__pb2.ListMessageResponse.FromString,
+            '/messaging_v1.MessageService/ListInvalidMessageEvents',
+            Messages__pb2.ListInvalidMessageEventRequest.SerializeToString,
+            Messages__pb2.ListInvalidMessageEventResponse.FromString,
             options,
             channel_credentials,
             insecure,

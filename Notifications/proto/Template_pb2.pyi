@@ -129,10 +129,14 @@ class GetTemplateRequest(_message.Message):
     def __init__(self, id: _Optional[str] = ..., name: _Optional[str] = ..., whatsapp_template_id: _Optional[str] = ...) -> None: ...
 
 class GetTemplateResponse(_message.Message):
-    __slots__ = ("template",)
+    __slots__ = ("template", "error", "success")
     TEMPLATE_FIELD_NUMBER: _ClassVar[int]
+    ERROR_FIELD_NUMBER: _ClassVar[int]
+    SUCCESS_FIELD_NUMBER: _ClassVar[int]
     template: Template
-    def __init__(self, template: _Optional[_Union[Template, _Mapping]] = ...) -> None: ...
+    error: Error
+    success: bool
+    def __init__(self, template: _Optional[_Union[Template, _Mapping]] = ..., error: _Optional[_Union[Error, _Mapping]] = ..., success: bool = ...) -> None: ...
 
 class ListTemplatesRequest(_message.Message):
     __slots__ = ("category", "status", "language", "parameter_format", "page", "limit")
@@ -151,11 +155,23 @@ class ListTemplatesRequest(_message.Message):
     def __init__(self, category: _Optional[str] = ..., status: _Optional[str] = ..., language: _Optional[str] = ..., parameter_format: _Optional[str] = ..., page: _Optional[int] = ..., limit: _Optional[int] = ...) -> None: ...
 
 class ListTemplatesResponse(_message.Message):
-    __slots__ = ("templates", "next_page", "previous_page")
+    __slots__ = ("templates", "next_page", "previous_page", "error", "success")
     TEMPLATES_FIELD_NUMBER: _ClassVar[int]
     NEXT_PAGE_FIELD_NUMBER: _ClassVar[int]
     PREVIOUS_PAGE_FIELD_NUMBER: _ClassVar[int]
+    ERROR_FIELD_NUMBER: _ClassVar[int]
+    SUCCESS_FIELD_NUMBER: _ClassVar[int]
     templates: _containers.RepeatedCompositeFieldContainer[Template]
     next_page: int
     previous_page: int
-    def __init__(self, templates: _Optional[_Iterable[_Union[Template, _Mapping]]] = ..., next_page: _Optional[int] = ..., previous_page: _Optional[int] = ...) -> None: ...
+    error: Error
+    success: bool
+    def __init__(self, templates: _Optional[_Iterable[_Union[Template, _Mapping]]] = ..., next_page: _Optional[int] = ..., previous_page: _Optional[int] = ..., error: _Optional[_Union[Error, _Mapping]] = ..., success: bool = ...) -> None: ...
+
+class Error(_message.Message):
+    __slots__ = ("error", "error_code")
+    ERROR_FIELD_NUMBER: _ClassVar[int]
+    ERROR_CODE_FIELD_NUMBER: _ClassVar[int]
+    error: str
+    error_code: str
+    def __init__(self, error: _Optional[str] = ..., error_code: _Optional[str] = ...) -> None: ...

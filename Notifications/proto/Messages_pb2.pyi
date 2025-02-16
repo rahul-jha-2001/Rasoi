@@ -75,13 +75,13 @@ class Error(_message.Message):
     def __init__(self, error: _Optional[str] = ..., error_code: _Optional[str] = ...) -> None: ...
 
 class ShortMessage(_message.Message):
-    __slots__ = ("id", "to_phone_number", "from_phone_number", "template_name", "status", "rendered_message", "message_type", "created_at", "updated_at", "sent_at")
+    __slots__ = ("id", "to_phone_number", "from_phone_number", "template_name", "status", "variables", "message_type", "created_at", "updated_at", "sent_at")
     ID_FIELD_NUMBER: _ClassVar[int]
     TO_PHONE_NUMBER_FIELD_NUMBER: _ClassVar[int]
     FROM_PHONE_NUMBER_FIELD_NUMBER: _ClassVar[int]
     TEMPLATE_NAME_FIELD_NUMBER: _ClassVar[int]
     STATUS_FIELD_NUMBER: _ClassVar[int]
-    RENDERED_MESSAGE_FIELD_NUMBER: _ClassVar[int]
+    VARIABLES_FIELD_NUMBER: _ClassVar[int]
     MESSAGE_TYPE_FIELD_NUMBER: _ClassVar[int]
     CREATED_AT_FIELD_NUMBER: _ClassVar[int]
     UPDATED_AT_FIELD_NUMBER: _ClassVar[int]
@@ -91,12 +91,36 @@ class ShortMessage(_message.Message):
     from_phone_number: str
     template_name: str
     status: MessageStatus
-    rendered_message: str
+    variables: str
     message_type: MessagePriority
     created_at: _timestamp_pb2.Timestamp
     updated_at: _timestamp_pb2.Timestamp
     sent_at: _timestamp_pb2.Timestamp
-    def __init__(self, id: _Optional[str] = ..., to_phone_number: _Optional[str] = ..., from_phone_number: _Optional[str] = ..., template_name: _Optional[str] = ..., status: _Optional[_Union[MessageStatus, str]] = ..., rendered_message: _Optional[str] = ..., message_type: _Optional[_Union[MessagePriority, str]] = ..., created_at: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ..., sent_at: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+    def __init__(self, id: _Optional[str] = ..., to_phone_number: _Optional[str] = ..., from_phone_number: _Optional[str] = ..., template_name: _Optional[str] = ..., status: _Optional[_Union[MessageStatus, str]] = ..., variables: _Optional[str] = ..., message_type: _Optional[_Union[MessagePriority, str]] = ..., created_at: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ..., sent_at: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+
+class InvalidMessageEvent(_message.Message):
+    __slots__ = ("id", "to_phone_number", "from_phone_number", "template", "message_json", "rendered_message", "error_message", "variables", "created_at", "updated_at")
+    ID_FIELD_NUMBER: _ClassVar[int]
+    TO_PHONE_NUMBER_FIELD_NUMBER: _ClassVar[int]
+    FROM_PHONE_NUMBER_FIELD_NUMBER: _ClassVar[int]
+    TEMPLATE_FIELD_NUMBER: _ClassVar[int]
+    MESSAGE_JSON_FIELD_NUMBER: _ClassVar[int]
+    RENDERED_MESSAGE_FIELD_NUMBER: _ClassVar[int]
+    ERROR_MESSAGE_FIELD_NUMBER: _ClassVar[int]
+    VARIABLES_FIELD_NUMBER: _ClassVar[int]
+    CREATED_AT_FIELD_NUMBER: _ClassVar[int]
+    UPDATED_AT_FIELD_NUMBER: _ClassVar[int]
+    id: str
+    to_phone_number: str
+    from_phone_number: str
+    template: str
+    message_json: str
+    rendered_message: str
+    error_message: str
+    variables: str
+    created_at: _timestamp_pb2.Timestamp
+    updated_at: _timestamp_pb2.Timestamp
+    def __init__(self, id: _Optional[str] = ..., to_phone_number: _Optional[str] = ..., from_phone_number: _Optional[str] = ..., template: _Optional[str] = ..., message_json: _Optional[str] = ..., rendered_message: _Optional[str] = ..., error_message: _Optional[str] = ..., variables: _Optional[str] = ..., created_at: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
 
 class Message(_message.Message):
     __slots__ = ("id", "to_phone_number", "from_phone_number", "template_name", "status", "message_json", "rendered_message", "variables", "message_type", "created_at", "updated_at", "sent_at", "error_message")
@@ -293,3 +317,35 @@ class ListMessageResponse(_message.Message):
     next_page: int
     previous_page: int
     def __init__(self, messages: _Optional[_Iterable[_Union[ShortMessage, _Mapping]]] = ..., success: bool = ..., error: _Optional[_Union[Error, _Mapping]] = ..., next_page: _Optional[int] = ..., previous_page: _Optional[int] = ...) -> None: ...
+
+class ListInvalidMessageEventRequest(_message.Message):
+    __slots__ = ("template", "to_phone_number", "from_phone_number", "start_date", "end_date", "page", "limit")
+    TEMPLATE_FIELD_NUMBER: _ClassVar[int]
+    TO_PHONE_NUMBER_FIELD_NUMBER: _ClassVar[int]
+    FROM_PHONE_NUMBER_FIELD_NUMBER: _ClassVar[int]
+    START_DATE_FIELD_NUMBER: _ClassVar[int]
+    END_DATE_FIELD_NUMBER: _ClassVar[int]
+    PAGE_FIELD_NUMBER: _ClassVar[int]
+    LIMIT_FIELD_NUMBER: _ClassVar[int]
+    template: str
+    to_phone_number: str
+    from_phone_number: str
+    start_date: _timestamp_pb2.Timestamp
+    end_date: _timestamp_pb2.Timestamp
+    page: int
+    limit: int
+    def __init__(self, template: _Optional[str] = ..., to_phone_number: _Optional[str] = ..., from_phone_number: _Optional[str] = ..., start_date: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ..., end_date: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ..., page: _Optional[int] = ..., limit: _Optional[int] = ...) -> None: ...
+
+class ListInvalidMessageEventResponse(_message.Message):
+    __slots__ = ("invalid_messages", "success", "error", "next_page", "previous_page")
+    INVALID_MESSAGES_FIELD_NUMBER: _ClassVar[int]
+    SUCCESS_FIELD_NUMBER: _ClassVar[int]
+    ERROR_FIELD_NUMBER: _ClassVar[int]
+    NEXT_PAGE_FIELD_NUMBER: _ClassVar[int]
+    PREVIOUS_PAGE_FIELD_NUMBER: _ClassVar[int]
+    invalid_messages: _containers.RepeatedCompositeFieldContainer[InvalidMessageEvent]
+    success: bool
+    error: Error
+    next_page: int
+    previous_page: int
+    def __init__(self, invalid_messages: _Optional[_Iterable[_Union[InvalidMessageEvent, _Mapping]]] = ..., success: bool = ..., error: _Optional[_Union[Error, _Mapping]] = ..., next_page: _Optional[int] = ..., previous_page: _Optional[int] = ...) -> None: ...

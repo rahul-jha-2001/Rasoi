@@ -1,6 +1,6 @@
 from django.db import models,transaction
 import uuid
-from template.models import Template,Status,Category
+from template.models import Template,Status,Category,ParameterFormat
 from django.utils.translation import gettext_lazy as _
 from utils.logger import Logger
 import json
@@ -8,6 +8,7 @@ from django.utils import timezone
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from typing import Optional
 from django.db.models import QuerySet
+from collections import defaultdict
 from datetime import datetime
 import re  # Add this import at the top of the file
 logger = Logger(__name__)
@@ -115,11 +116,45 @@ class MessageManager(models.Manager):
         
         return rendered_json
 
-    def _readble_message(self, variables: dict):
+    # def _readble_message(self, template: Template, variables: dict) -> str:
 
-        
+    #     def _destructure_variables(variables: dict):
+    #         variable = defaultdict(list)
 
-        return message_json
+    #         for k, v in variables.items():
+    #             if k.startswith("BODY"):
+    #                 variable["BODY"].append((int(k.split("_")[1]), v))  # Convert to int for sorting
+    #             elif k.startswith("HEADER"):
+    #                 variable["HEADER"].append((int(k.split("_")[1]), v))
+    #             elif k.startswith("BUTTON"):
+    #                 variable["BUTTON"].append((int(k.split("_")[1]), v))
+
+    #         for i in variable:
+    #             variable[i] = [v for _, v in sorted(variable[i], key=lambda x: x[0])]
+            
+    #         return variable
+    #     if template.parameter_format == ParameterFormat.POSITIONAL:
+    #         variable = _destructure_variables(variables)
+    #         readable_message = {}
+    #         logger.info(f"Variable:{variable}")
+    #         for component in template.components.all():
+    #             logger.info(f"Looping through components: {component.type}")
+    #             if component.type == "BODY":
+    #                 logger.info(f"Variable:{variable['BODY']}")
+    #                 readable_message["BODY"] = component.text.format(0,*variable["BODY"])  # Use * for positional
+    #             elif component.type == "HEADER":
+    #                 readable_message["HEADER"] = component.text.format(0,*variable["HEADER"])
+    #             elif component.type == "BUTTON":
+    #                 readable_message["BUTTON"] = component.text.format(0,*variable["BUTTON"])
+    #     elif template.parameter_format == ParameterFormat.NAMED:
+    #         readable_message = {}
+    #         for component in template.components.all():
+    #             logger.info(f"Looping through components: {component.type}")
+    #             if component.type == "BODY":
+    #                 readable_message["BODY"] = component.text.format(**variable["BODY"])
+    #             elif component.type == "HEADER":
+    #                 readable_message["HEADER"] = component.text.format(**variable["HEADER"])
+    #     return readable_message
     
     @transaction.atomic
     def create_message(self, template_name: str, variables: dict, to_phone_number: str, from_phone_number: str):
@@ -137,6 +172,7 @@ class MessageManager(models.Manager):
             # Render the message
             message_json = template.to_message_format()
             rendered_message = self._render_template(message_json, variables)
+            # readable_message = self._readble_message(template, variables)
             # Create the message
             priority = self.PRIORITY_MAP.get(template.category, MessagePriority.AUTHENTICATION)
             
@@ -144,6 +180,7 @@ class MessageManager(models.Manager):
                 template=template,
                 message_json=message_json,
                 rendered_message=rendered_message,
+                # readable_message=readable_message,
                 variables=variables,
                 to_phone_number=to_phone_number,
                 from_phone_number=from_phone_number,
@@ -159,7 +196,7 @@ class MessageManager(models.Manager):
             invalid_message = InvalidMessage.objects.create_invalid_message(template, to_phone_number, from_phone_number, str(e), variables)
             invalid_message.save()
             logger.error(f"Invalid message: {invalid_message.id}")
-            return None
+            raise e
     
     @transaction.atomic
     def update_message(self, message_id: str, variables: dict=None, to_phone_number: str=None, from_phone_number: str=None):
@@ -167,10 +204,10 @@ class MessageManager(models.Manager):
             message = self.get(id=message_id)
         except Message.DoesNotExist:
             logger.error(f"Message not found: {message_id}")
-            return None
+            raise e
         except Exception as e:
             logger.error(f"Failed to update message: {e}")
-            return None
+            raise e
         
         try:
             if message.status == MessageStatus.PENDING:
@@ -199,7 +236,7 @@ class MessageManager(models.Manager):
                     logger.info(f"Updated variables: {message.variables}")
                     message.rendered_message = self._render_template(message.message_json, variables)
                     logger.info(f"Updated rendered message: {message.rendered_message}")
-                
+
                 message.updated_at = timezone.now()
                 message.save()
                 logger.info(f"Updated message: {message}")
@@ -209,7 +246,7 @@ class MessageManager(models.Manager):
                 return message
         except Exception as e:
             logger.error(f"Failed to update message: {e}")
-            return None
+            raise e
 
     @transaction.atomic
     def delete_message(self, message_id: str):
@@ -297,6 +334,7 @@ class Message(models.Model):
     status = models.CharField(max_length=20, choices=MessageStatus.choices, default=MessageStatus.PENDING)
     rendered_message = models.JSONField(default=dict)
     variables = models.JSONField(default=dict)
+    # readable_message = models.JSONField(default=dict)
     message_type = models.CharField(max_length=20, choices=Category.choices,null=True,blank=True)
     priority = models.IntegerField(choices=MessagePriority.choices,default=MessagePriority.AUTHENTICATION)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -349,7 +387,28 @@ class InvalidMessageManager(models.Manager):
         invalid_message = self.create(template=template, to_phone_number=to_phone_number, from_phone_number=from_phone_number, error_message=error_message, variables=variables)
         logger.error(f"Invalid Message created: {invalid_message}")
         return invalid_message
+    
+    def get_messages_by_filter(self,
+                               page: int = 1,
+                               limit: int = 10,
+                               **kwargs):
+        logger.debug(f"Start date: {kwargs.get('start_date')}")
+        logger.debug(f"End date: {kwargs.get('end_date')}")
 
+        
+
+        if page < 1:
+            page = 1
+        if limit < 1:
+            limit = 10
+        
+        messages = self.filter(**kwargs).order_by('-created_at')
+        paginator = Paginator(messages, limit)
+        page_messages = paginator.page(page)
+        next_page = page_messages.next_page_number() if page_messages.has_next() else None
+        previous_page = page_messages.previous_page_number() if page_messages.has_previous() else None
+        return page_messages, next_page, previous_page
+    
 class InvalidMessage(models.Model):
     id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True,primary_key=True)
     to_phone_number = models.CharField(max_length=20,null=True,blank=True)
@@ -378,4 +437,5 @@ class InvalidMessage(models.Model):
     
     def get_invalid_message_variables(self):
         return self.variables
+    
     

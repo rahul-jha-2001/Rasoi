@@ -8,8 +8,8 @@ from confluent_kafka.error import KafkaError
 # Setup Django environment
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'Notifications.settings')
 django.setup()
-
-from proto.Notifications_pb2 import NotificationMessage,recipient,Variables,MetaData
+import proto.Messages_pb2 as message_pb2
+from proto.Messages_pb2 import MessageEvent,Recipient,Variables,MetaData
 from message_service.models import Message
 from utils.logger import Logger
 from datetime import datetime
@@ -19,45 +19,36 @@ KAFKA_BOOTSTRAP_SERVERS = ['localhost:29092']
 TEST_TOPIC = 'notifications'
 
 
-Invalid_message = NotificationMessage(
+Invalid_message = MessageEvent(
     template_name="seasonal_promotion",
-    recipient=recipient(
+    recipient=Recipient(
         to_number="+919876543210",
         from_number="+919876543210",
     ),
     variables=Variables(
-        variables={"HEADER_0": "Test User",
+        variables={"HEADER_1": "Test User",
                     "BODY_0": "Test User_1",
                     "BODY_1": "Test User_2",
                     "BODY_2": "Test User_3",
                     "BUTTONS_0": "Test User_button_1",
                     }
-    ),
-    meta_data=MetaData(
-        request_id="1234567890",
-        source_service="Test Service",
-        created_at=datetime.now()
     )
 )
 
-message = NotificationMessage(
+message = MessageEvent(
     template_name="seasonal_promotion",
-    recipient=recipient(
-        to_number="+919876543210",
+    recipient=Recipient(
+        to_number="+919977636633",
         from_number="+919876543210",
     ),
     variables=Variables(variables = {
-    "HEADER_0": "Test User",
-                    "BODY_0": "Test User_1",
-                    "BODY_1": "Test User_2",
-                    "BODY_2": "Test User_3",
+                    "HEADER_1": "Test User",
+                    "BODY_1": "Test User_1",
+                    "BODY_2": "Test User_2",
+                    "BODY_3": "Test User_3",
                     "BUTTON_0": "Test User_button_1",
                     "BUTTON_1": "Test User_button_2",
-    }),
-    meta_data=MetaData(
-        request_id="1234567890",
-        source_service="Test Service",
-        created_at=datetime.now()
+    }
     )
 )
 
@@ -85,6 +76,7 @@ def test_send_valid_message():
         # Send message to Kafka
         producer.produce(TEST_TOPIC, serialized_message)
         producer.flush()
+
         print("\n✅ Test message sent to Kafka successfully!")
         print(f"Template: {message.template_name}")
         print(f"To: {message.recipient.to_number}")
@@ -92,7 +84,7 @@ def test_send_valid_message():
             
     except Exception as e:
         print(f"\n❌ Message sending failed: {str(e)}")
-        return False
+        raise e
 
 def test_send_invalid_message():
     """Test sending an invalid message to Kafka"""

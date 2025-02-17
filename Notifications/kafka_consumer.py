@@ -7,7 +7,7 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'Notifications.settings')
 django.setup()
 
 from confluent_kafka import Consumer, KafkaError
-from Notifications.proto.Messages_pb2 import MessageEvent
+from proto.Messages_pb2 import MessageEvent
 from typing import Optional, List
 from utils.logger import Logger
 
@@ -124,7 +124,6 @@ class NotificationKafkaConsumer:
             from_phone_number = message_event.recipient.from_number
             # Create and validate the message
             message = self.Message.objects.create_message(template_name, variables, to_phone_number, from_phone_number)
-            logger.info(f"MessageId:{message.id} record created successfully for Message Request id: {notification.meta_data.request_id}")
 
             return message
         except Exception as e:
@@ -144,10 +143,9 @@ class NotificationKafkaConsumer:
         try:
             message = self._create_message_record(message_event)
             if not message:
-                logger.error(f"Failed to create message record for Message Request id: {message_event.meta_data.request_id}")
+                logger.error(f"Failed to create message record for Message")
                 return None
-            
-            logger.info(f"MessageId:{message.id} record created successfully for Message Request id: {notification.meta_data.request_id}")
+            logger.info(f"MessageId:{message.id} record created successfully")
             return message
 
         except Exception as e:
@@ -210,9 +208,9 @@ class NotificationKafkaConsumer:
 
                         Message = self._process_message(notification)
                         if Message:
-                            logger.info(f"Successfully processed MessageId:{Message.id} for Message Request id: {notification.meta_data.request_id}")
+                            logger.info(f"Successfully processed MessageId:{Message.id}")
                         else:
-                            logger.error(f"Failed to process MessageId:{Message.id} for Message Request id: {notification.meta_data.request_id}")
+                            logger.error(f"Failed to process Message")
 
                 except Exception as e:
                     logger.error(f"Unexpected error in consumer loop: {str(e)}")

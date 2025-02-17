@@ -7,7 +7,7 @@ from typing import Optional
 from datetime import datetime
 from asgiref.sync import sync_to_async
 import asyncio
-
+import pytz
 # Setup Django environment
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'Notifications.settings')
 django.setup()
@@ -17,6 +17,7 @@ from utils.logger import Logger
 
 logger = Logger("worker")
 
+TIME_ZONE = pytz.timezone(settings.TIME_ZONE)
 WHATSAPP_ACCESS_TOKEN = settings.WHATSAPP_ACCESS_TOKEN
 WHATSAPP_API_URL = settings.WHATSAPP_API_URL
 WHATSAPP_PHONE_NUMBER_ID = settings.WHATSAPP_PHONE_NUMBER_ID
@@ -73,7 +74,7 @@ class Task:
                 logger.error(f"Error sending message (attempt {attempt + 1}): {e}")
                 if attempt < max_retries - 1:
                     await asyncio.sleep(backoff_time)
-                    backoff_time *= 2  # Exponential backoff
+                    backoff_time = min(backoff_time * 2, 60)  # Cap backoff time to 60 seconds
                 else:
                     logger.error("Max retries reached. Raising exception.")
                     raise  # Reraise the last exception after max retries
@@ -81,34 +82,35 @@ class Task:
     async def process_messages(self, batch_size: int = 10):
         try:
             next_page: int = 1
+            backoff_time = 1
             while self.running:
                 # Get a batch of pending messages
-                pending_messages, next_page = await self._get_pending_messages(batch_size=batch_size, page=next_page)
+                pending_messages,next_page = await self._get_pending_messages(batch_size=batch_size, page=next_page)
                 logger.info(f"Fetched {len(pending_messages)} messages from page {next_page}.")
 
-                if next_page is None:
-                    logger.info("No more pages found. Sleeping for 5 seconds.")
-                    await asyncio.sleep(5)
-                    next_page = 1
-                    continue
                 if not pending_messages:
                     logger.info("No pending messages found. Sleeping for 5 seconds.")
-                    await asyncio.sleep(5)
+                    await asyncio.sleep(backoff_time)
+                    backoff_time *= 2
                     continue
                 
+                backoff_time = 1
+                logger.info(f"Pending messages: {pending_messages}")
                 # Create a list to hold message bodies
                 message_bodies = [self._make_message_body(message) for message in pending_messages]
                 logger.info(f"Preparing to send {len(message_bodies)} messages.")
-
+                logger.info(f"Message bodies: {message_bodies}")
                 responses = await asyncio.gather(*(self._send_message(body) for body in message_bodies))
                 
                 for message, response in zip(pending_messages, responses):
                     if response.status_code == 200:
                         message.status = MessageStatus.SENT
+                        message.sent_at = datetime.now(tz=TIME_ZONE)
                         logger.info(f"Message to {message.to_phone_number} sent successfully.")
                     else:
                         message.status = MessageStatus.FAILED
                         message.error_message = response.text
+                        message.sent_at = datetime.now(tz=TIME_ZONE)
                         logger.error(f"Failed to send message to {message.to_phone_number}: {response.text}")
                     
                     await sync_to_async(message.save)()

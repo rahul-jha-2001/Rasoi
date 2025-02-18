@@ -103,7 +103,29 @@ services:
             backend:
                 ipv4_address: 10.10.10.12           
 
-    
+    notifications_kafka:
+        build:
+            context: ./
+            dockerfile: notifications_kafka.dockerfile
+        ports:
+            - "50056:50051"
+        depends_on:
+            notifications-database:
+                condition: service_healthy
+            kafka:
+                condition: service_healthy
+        healthcheck:
+            test: ["CMD-SHELL", "supervisorctl status | grep -q 'RUNNING' || exit 1"]
+            interval: 30s
+            timeout: 10s
+            retries: 3
+            start_period: 40s
+        restart: unless-stopped
+        networks:
+            backend:
+                ipv4_address: 10.10.10.13
+        env_file:
+            - notifications.env
     product-database:
         image: postgres:latest
         container_name: product_db
@@ -188,6 +210,23 @@ services:
                 ipv4_address : 10.10.10.9
         restart: unless-stopped                     
 
+    notifications-database:
+        image: postgres:latest
+        container_name: notifications-database
+        ports:
+            - "5432:5432"
+        volumes:
+            - notifications_db_data:/var/lib/postgresql/data
+        env_file: "notifications.env"
+        healthcheck:
+            test: ["CMD-SHELL", "pg_isready -U postgres"]
+            interval: 10s
+            timeout: 5s
+            retries: 5
+        networks:
+            backend:
+                ipv4_address : 10.10.10.16
+        restart: unless-stopped
 
     zookeeper:
         image: confluentinc/cp-zookeeper:7.5.1
@@ -259,14 +298,15 @@ services:
             backend:
                 ipv4_address : 10.10.10.15
 
-    redisinsight:
-        image: redislabs/redisinsight:latest
-        container_name: redisinsight
-        ports:
-            - "8001:8001"
-        networks:
-            backend:
-                ipv4_address : 10.10.10.16
+
+    # redisinsight:
+    #     image: redislabs/redisinsight:latest
+    #     container_name: redisinsight
+    #     ports:
+    #         - "8001:8001"
+    #     networks:
+    #         backend:
+    #             ipv4_address : 10.10.10.16
 
 
     # kafka-ui:
@@ -299,3 +339,4 @@ volumes:
     order_db_data:
     user_db_data:
     redis_data:
+    notifications_db_data:

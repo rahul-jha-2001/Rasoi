@@ -11,3 +11,4 @@ tenacity
 confluent-kafka
 celery
 httpx
+pytz

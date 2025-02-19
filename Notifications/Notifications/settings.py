@@ -30,6 +30,9 @@ POSTGRES_PORT = os.getenv("POSTGRES_PORT")
 POSTGRES_USER = os.getenv("POSTGRES_USER")
 POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD")
 POSTGRES_DB = os.getenv("POSTGRES_DB")
+KAFKA_HOST = os.getenv("KAFKA_HOST")
+KAFKA_PORT = os.getenv("KAFKA_PORT")
+LOG_LEVEL = os.getenv("LOG_LEVEL")
 
 # Logging Configuration
 LOGGING = {
@@ -48,61 +51,72 @@ LOGGING = {
     },
     'handlers': {
         'file': {
-            'level': 'DEBUG',
+            'level': LOG_LEVEL,
             'class': 'logging.FileHandler',
             'filename': BASE_DIR / 'logs/notifications.log',
             'formatter': 'detailed',
         },
         'console': {
-            'level': 'DEBUG',
+            'level': LOG_LEVEL,
             'class': 'logging.StreamHandler',
             'formatter': 'detailed'
         },
         'kafka_file': {
-            'level': 'INFO',
+            'level': LOG_LEVEL,
             'class': 'logging.FileHandler',
             'filename': BASE_DIR / 'logs/kafka_consumer.log',
-            'formatter': 'simple',
+            'formatter': 'detailed',
         },
         'worker_file': {
-            'level': 'DEBUG',
+            'level': LOG_LEVEL,
             'class': 'logging.FileHandler',
             'filename': BASE_DIR / 'logs/worker.log',
-            'formatter': 'simple',
+            'formatter': 'detailed',
         },  
         'kafka_console': {
-            'level': 'INFO',
+            'level': LOG_LEVEL,
             'class': 'logging.StreamHandler',
-            'formatter': 'simple'
+            'formatter': 'detailed'
         },
         'grpc_file': {
-            'level': 'DEBUG',
+            'level': LOG_LEVEL,
             'class': 'logging.FileHandler',
             'filename': BASE_DIR / 'logs/grpc_service.log',
-            'formatter': 'simple',
+            'formatter': 'detailed',
+        },
+        'cron_file': {
+            'level': LOG_LEVEL,
+            'class': 'logging.FileHandler',
+            'filename': BASE_DIR / 'logs/cron_job.log',
+            'formatter': 'detailed',
         },
     },
     'loggers': {
         '': {
             'handlers': ['file', 'console'],
-            'level': 'INFO',
+            'level': LOG_LEVEL,
             'propagate': True,
         },
         'kafka_consumer': {
-            'handlers': ['kafka_file', 'kafka_console'],
-            'level': 'INFO',
+            'handlers': ['kafka_file', 'console'],
+            'level': LOG_LEVEL,
             'propagate': False,
         },
         'worker': {
             'handlers': ['worker_file', 'console'],
-            'level': 'DEBUG',
+            'level': LOG_LEVEL,
             'propagate': False,
         },
         'grpc_service': {
             'handlers': ['grpc_file', 'console'],
-            'level': 'DEBUG',
+            'level': LOG_LEVEL,
             'propagate': False,
-        }
+        },
+        'cron_job': {
+            'handlers': ['cron_file', 'console'],
+            'level': LOG_LEVEL,
+            'propagate': False,
+        },
     }
 }
 
@@ -201,11 +215,11 @@ WSGI_APPLICATION = 'Notifications.wsgi.application'
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
 DATABASES = {
-    'default': {
+    'sqllite': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.sqlite3',
     },
-    'notifications': {
+    'default': {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': POSTGRES_DB,
         'USER': POSTGRES_USER,

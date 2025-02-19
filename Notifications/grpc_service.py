@@ -6,6 +6,7 @@ from django.db import transaction
 from django.utils import timezone
 from datetime import datetime, timedelta
 from google.protobuf.timestamp_pb2 import Timestamp
+
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'Notifications.settings')
 django.setup()
 

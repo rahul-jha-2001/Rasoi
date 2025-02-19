@@ -1,0 +1,41 @@
+{
+  "Order": {
+    "OrderUuid": "{{ faker.random.uuid }}",
+    "StoreUuid": "{{ faker.random.uuid }}",
+    "UserPhoneNo": "indigo deposit invoice",
+    "OrderType": "ORDER_TYPE_UNSPECIFIED",
+    "TableNo": "Borders Direct",
+    "VehicleNo": "transmit",
+    "VehicleDescription": "Refined Plastic Hat",
+    "CouponName": "Incredible Concrete Cheese",
+    "Items": [
+      {
+        "ProductUuid": "{{ faker.random.uuid }}",
+        "Price": 91.14584,
+        "Quantity": 181,
+        "Discount": 129.83319,
+        "SubTotal": 509.60995,
+        "TaxedAmount": 264.8386,
+        "DiscountAmount": 392.47754
+      },
+      {
+        "ProductUuid": "{{ faker.random.uuid }}",
+        "Price": 890.2065,
+        "Quantity": 356,
+        "Discount": 551.7943,
+        "SubTotal": 901.732,
+        "TaxedAmount": 965.9353,
+        "DiscountAmount": 719.99475
+      }
+    ],
+    "TotalAmount": 384.34433,
+    "DiscountAmount": 733.70404,
+    "FinalAmount": 303.4889,
+    "PaymentState": "PAYMENT_STATE_UNSPECIFIED",
+    "PaymentMethod": "embrace",
+    "SpecialInstruction": "bandwidth-monitored Handcrafted Plastic Bacon Quetzal",
+    "OrderStatus": "ORDER_STATE_UNSPECIFIED",
+    "CreatedAt": "1970-01-01T00:13:20.000000649Z",
+    "UpdatedAt": "1970-01-01T00:08:21.000000177Z"
+  }
+}

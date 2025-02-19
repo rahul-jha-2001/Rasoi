@@ -1,0 +1,9 @@
+{
+  "ProductUuid": "{{ faker.random.uuid }}",
+  "Name": "{{ faker.name.last_name }}",
+  "IsAvailable": true,
+  "Price": 971.0115,
+  "CategoryUuid": "{{ faker.random.uuid }}",
+  "Description": "e-enable Credit Card Account",
+  "ImageUrl": "wireless"
+}

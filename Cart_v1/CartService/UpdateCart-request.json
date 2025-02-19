@@ -1,0 +1,11 @@
+{
+  "Cart": {
+    "StoreUuid": "{{ faker.random.uuid }}",
+    "UserPhoneNo": "IB"
+  },
+  "OrderType": "DriveThru",
+  "TableNo": "Architect",
+  "VehicleNo": "SSL",
+  "VehicleDescription": "Utah knowledge base Fantastic Metal Chair",
+  "CouponName": "zero tolerance District"
+}

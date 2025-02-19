@@ -1,0 +1,3 @@
+{
+  "CategoryUuid": "{{ faker.random.uuid }}"
+}

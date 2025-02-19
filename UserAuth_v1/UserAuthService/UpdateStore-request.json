@@ -1,0 +1,8 @@
+{
+  "StoreUuid": "{{ faker.random.uuid }}",
+  "PhoneNumber": "{{ faker.phone.phone_number }}",
+  "StoreName": "Savings Account hard drive",
+  "StoreAddress": "Rubber",
+  "GSTNumber": "{{ faker.random.ushort }}",
+  "Email": "{{ faker.internet.example_email }}"
+}

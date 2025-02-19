@@ -1,0 +1,8 @@
+{
+  "Cart": {
+    "StoreUuid": "{{ faker.random.uuid }}",
+    "UserPhoneNo": "maximize Cambridgeshire"
+  },
+  "StoreUuid": "{{ faker.random.uuid }}",
+  "CouponCode": "flexibility Rustic"
+}

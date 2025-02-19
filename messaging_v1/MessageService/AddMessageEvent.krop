@@ -1,0 +1,13 @@
+{
+  "details": {
+    "methodFqn": "messaging_v1.MessageService.AddMessageEvent"
+  },
+  "requests": [
+    {
+      "location": "AddMessageEvent-request.json"
+    }
+  ],
+  "operationType": "unary",
+  "invokerName": "grpc",
+  "importStreamId": "13441147-3e63-46ae-9036-071285b1d6fc"
+}

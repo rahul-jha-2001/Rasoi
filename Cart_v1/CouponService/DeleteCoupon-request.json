@@ -1,0 +1,4 @@
+{
+  "StoreUuid": "{{ faker.random.uuid }}",
+  "CouponCode": "Tasty Practical Plastic Table haptic"
+}

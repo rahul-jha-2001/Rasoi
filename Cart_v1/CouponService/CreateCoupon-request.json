@@ -1,0 +1,10 @@
+{
+  "Coupon": {
+    "StoreUuid": "{{ faker.random.uuid }}",
+    "CouponCode": "Pennsylvania",
+    "VaildFrom": "1970-01-01T00:12:50.000000726Z",
+    "VaildTo": "1970-01-01T00:02:20.000000705Z",
+    "Discount": 705.8166,
+    "MinSpend": 404.33133
+  }
+}

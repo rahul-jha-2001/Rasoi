@@ -1,0 +1,9 @@
+{
+  "template": "parsing Awesome Steel Sausages port",
+  "toPhoneNumber": "{{ faker.random.ushort }}",
+  "fromPhoneNumber": "{{ faker.random.ushort }}",
+  "startDate": "1970-01-01T00:04:41.000000856Z",
+  "endDate": "1970-01-01T00:06:20.000000500Z",
+  "page": 222,
+  "limit": 634
+}

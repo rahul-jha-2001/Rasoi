@@ -1,0 +1,4 @@
+{
+  "StoreUuid": "{{ faker.random.uuid }}",
+  "UserPhoneNo": "copy cultivate"
+}

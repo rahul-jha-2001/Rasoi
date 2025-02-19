@@ -107,8 +107,6 @@ services:
         build:
             context: ./
             dockerfile: notifications_kafka.dockerfile
-        ports:
-            - "50056:50051"
         depends_on:
             notifications-database:
                 condition: service_healthy
@@ -126,6 +124,29 @@ services:
                 ipv4_address: 10.10.10.13
         env_file:
             - notifications.env
+    notifications_grpc:
+        build:
+            context: ./
+            dockerfile: notifications_grpc.dockerfile
+        ports:
+            - "50056:50051"
+        depends_on:
+            notifications-database:
+                condition: service_healthy
+            kafka:
+                condition: service_healthy
+        healthcheck:
+            test: ["CMD-SHELL", "supervisorctl status | grep -q 'RUNNING' || exit 1"]
+            interval: 30s
+            timeout: 10s
+            retries: 3
+            start_period: 40s
+        restart: unless-stopped
+        networks:
+            backend:
+                ipv4_address: 10.10.10.14
+        env_file:
+            - notifications.env        
     product-database:
         image: postgres:latest
         container_name: product_db
@@ -214,7 +235,7 @@ services:
         image: postgres:latest
         container_name: notifications-database
         ports:
-            - "5432:5432"
+            - "5436:5432"
         volumes:
             - notifications_db_data:/var/lib/postgresql/data
         env_file: "notifications.env"

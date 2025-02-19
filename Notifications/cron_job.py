@@ -22,7 +22,7 @@ def sync_templates():
 
 
 if __name__ == "__main__":
-    schedule.every(2).hours.do(sync_templates)
+    schedule.every(1).hours.do(sync_templates)
 
     try:
         while True:

@@ -1,0 +1,5 @@
+{
+  "PhoneNumber": "{{ faker.phone.phone_number }}",
+  "UserName": "{{ faker.internet.user_name }}",
+  "StoreUuid": "{{ faker.random.uuid }}"
+}

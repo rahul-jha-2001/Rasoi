@@ -10,5 +10,7 @@ pyjwt
 tenacity
 confluent-kafka
 celery
+requests
 httpx
 pytz
+schedule

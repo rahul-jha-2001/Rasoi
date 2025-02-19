@@ -1,0 +1,6 @@
+{
+  "CategoryUuid": "{{ faker.random.uuid }}",
+  "Name": "{{ faker.name.last_name }}",
+  "Description": "conglomeration",
+  "ParentCategoryUuid": "{{ faker.random.uuid }}"
+}

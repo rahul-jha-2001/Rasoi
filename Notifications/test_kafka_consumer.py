@@ -36,7 +36,7 @@ Invalid_message = MessageEvent(
 )
 
 message = MessageEvent(
-    template_name="seasonal_promotion",
+    template_name="seasonal_promoion",
     recipient=Recipient(
         to_number="+919977636633",
         from_number="+919876543210",

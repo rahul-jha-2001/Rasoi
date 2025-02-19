@@ -1,0 +1,5 @@
+{
+  "id": "{{ faker.random.uuid }}",
+  "name": "{{ faker.name.last_name }}",
+  "whatsappTemplateId": "{{ faker.random.uuid }}"
+}

@@ -1,0 +1,11 @@
+{
+  "Cart": {
+    "StoreUuid": "{{ faker.random.uuid }}",
+    "UserPhoneNo": "overriding Marketing Roads"
+  },
+  "OrderType": "DriveThru",
+  "TableNo": "Analyst",
+  "VehicleNo": "digital Idaho",
+  "VehicleDescription": "web-enabled Locks",
+  "CouponName": "mindshare"
+}

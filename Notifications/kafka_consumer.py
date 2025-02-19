@@ -1,10 +1,14 @@
 import os
+import sys
 import django
 from django.apps import apps
 from django.db import transaction
+from django.conf import settings
+
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'Notifications.settings')
 django.setup()
+
 
 from confluent_kafka import Consumer, KafkaError
 from proto.Messages_pb2 import MessageEvent
@@ -19,7 +23,7 @@ from message_service.models import Message
 from template.models import Template
 from dataclasses import dataclass
 
-logger = Logger("KafkaConsumer")
+logger = Logger("kafka_consumer")
 
 @dataclass
 class ConsumerConfig:
@@ -229,9 +233,12 @@ class NotificationKafkaConsumer:
 
 if __name__ == "__main__":
     
+    KAFKA_HOST = settings.KAFKA_HOST or "localhost"
+    KAFKA_PORT = settings.KAFKA_PORT or "29092"
     # Create and start consumer
+    logger.info(f"KAFKA_HOST:{KAFKA_HOST},KAFKA_PORT:{KAFKA_PORT}")
     consumer = NotificationKafkaConsumer(
-        bootstrap_servers=['localhost:29092'],
+        bootstrap_servers=[f'{KAFKA_HOST}:{KAFKA_PORT}'],
         topic='notifications',
         group_id='notification_processor'
     )

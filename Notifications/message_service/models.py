@@ -161,6 +161,7 @@ class MessageManager(models.Manager):
         try:
             logger.info(f"Creating message for template: {template_name}")
             template = Template.objects.get(name=template_name)
+            
             # Validate all inputs
             logger.info(f"Creating message for template: {template.name}")
             self._validate_phone_numbers(to_phone_number, from_phone_number)
@@ -190,10 +191,22 @@ class MessageManager(models.Manager):
             )
             logger.info(f"Message created successfully: {message}")
             return message
-
+        except Template.DoesNotExist:
+            invalid_message = InvalidMessage.objects.create_invalid_message(template=None,template_name=template_name,
+                                                                            to_phone_number= to_phone_number, 
+                                                                            from_phone_number=from_phone_number,
+                                                                            error_message = f"Template does not exist for name:{template_name}",
+                                                                            variables=variables)
+            invalid_message.save()
+            logger.error(f"Invalid message: {invalid_message.id}")
+            raise ValueError(f"Template does not exist for name:{template_name}")
         except Exception as e:
             
-            invalid_message = InvalidMessage.objects.create_invalid_message(template, to_phone_number, from_phone_number, str(e), variables)
+            invalid_message = InvalidMessage.objects.create_invalid_message(template=template,template_name=template_name,
+                                                                            to_phone_number= to_phone_number, 
+                                                                            from_phone_number=from_phone_number,
+                                                                            error_message = str(e),
+                                                                            variables=variables)
             invalid_message.save()
             logger.error(f"Invalid message: {invalid_message.id}")
             raise e
@@ -382,10 +395,15 @@ class Message(models.Model):
         ]
 class InvalidMessageManager(models.Manager):
     @transaction.atomic
-    def create_invalid_message(self, template:Template, to_phone_number:str, from_phone_number:str, error_message: str, variables: dict):
-        logger.error(f"Creating Invalid Message: {error_message}")
-        invalid_message = self.create(template=template, to_phone_number=to_phone_number, from_phone_number=from_phone_number, error_message=error_message, variables=variables)
-        logger.error(f"Invalid Message created: {invalid_message}")
+    def create_invalid_message(self, template:Template|None,template_name:str, to_phone_number:str, from_phone_number:str, error_message: str, variables: dict):
+        if not template is None:
+            logger.error(f"Creating Invalid Message: {error_message}")
+            invalid_message = self.create(template=template,template_name=template_name, to_phone_number=to_phone_number, from_phone_number=from_phone_number, error_message=error_message, variables=variables)
+            logger.error(f"Invalid Message created: {invalid_message}")
+        else:
+            logger.error(f"Creating Invalid Message: {error_message}")
+            invalid_message = self.create(template=None,template_name=template_name ,to_phone_number=to_phone_number, from_phone_number=from_phone_number, error_message=error_message, variables=variables)
+            logger.error(f"Invalid Message created: {invalid_message}")
         return invalid_message
     
     def get_messages_by_filter(self,
@@ -414,6 +432,7 @@ class InvalidMessage(models.Model):
     to_phone_number = models.CharField(max_length=20,null=True,blank=True)
     from_phone_number = models.CharField(max_length=20,null=True,blank=True)
     template = models.ForeignKey(Template, on_delete=models.SET_NULL, null=True)
+    template_name = models.CharField(max_length=255,null=True,blank=True)
     message_json = models.JSONField(default=dict)
     rendered_message = models.JSONField(default=dict)
     variables = models.JSONField(default=dict)

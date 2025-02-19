@@ -1,4 +1,4 @@
-FROM python:3.11-slim
+FROM python:3.12.3-slim
 
 # Combine RUN commands to reduce layers and optimize cache
 RUN apt-get update && \
@@ -6,6 +6,10 @@ RUN apt-get update && \
     mkdir -p /etc/supervisor/conf.d && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
+
+# Create a non-root user and set ownership
+RUN groupadd -r appgroup && useradd -r -g appgroup appuser
+
 
 WORKDIR /app
 
@@ -22,5 +26,11 @@ ENV PYTHONUNBUFFERED=1 \
     PYTHONPATH="${PYTHONPATH}:./proto"
 
 RUN chmod +x /usr/local/bin/entrypoint.sh
+
+# Change ownership of application files to non-root user
+RUN chown -R appuser:appgroup /app /usr/local/bin/entrypoint.sh /etc/supervisor
+
+# Switch to non-root user
+USER appuser
 
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]

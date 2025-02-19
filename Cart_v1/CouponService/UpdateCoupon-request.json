@@ -1,0 +1,12 @@
+{
+  "StoreUuid": "{{ faker.random.uuid }}",
+  "CouponCode": "Silver Product Inlet",
+  "Coupon": {
+    "StoreUuid": "{{ faker.random.uuid }}",
+    "CouponCode": "Botswana",
+    "VaildFrom": "1970-01-01T00:01:24.000000309Z",
+    "VaildTo": "1970-01-01T00:14:27.000000462Z",
+    "Discount": 837.0293,
+    "MinSpend": 81.585495
+  }
+}

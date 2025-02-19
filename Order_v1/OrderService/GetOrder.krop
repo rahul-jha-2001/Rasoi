@@ -1,0 +1,13 @@
+{
+  "details": {
+    "methodFqn": "Order_v1.OrderService.GetOrder"
+  },
+  "requests": [
+    {
+      "location": "GetOrder-request.json"
+    }
+  ],
+  "operationType": "unary",
+  "invokerName": "grpc",
+  "importStreamId": "13441147-3e63-46ae-9036-071285b1d6fc"
+}

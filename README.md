@@ -54,6 +54,7 @@ The platform follows a **microservices architecture**, with the following key co
    ```bash
    git checkout -b feature-branch
    ```
+
 3. Commit changes and push:
    ```bash
    git commit -m "Add new feature"
@@ -74,6 +75,5 @@ This project is licensed under the **MIT License**. See the `LICENSE` file for d
 🙌 **Need Help?**
 For any issues, please create a GitHub issue or reach out to the maintainers!
 
-
-
-![image](https://github.com/user-attachments/assets/e37fad03-0ea8-4d8c-8e32-9986059490bc)
+![Uploading diagram-export-22-2-2025-4_46_48-pm.svg…]()
+![diagram-export-22-2-2025-4_46_48-pm](https://github.com/user-attachments/assets/b7e8e976-2385-4ee5-8cb9-feb32fa76040)

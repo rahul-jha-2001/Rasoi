@@ -40,8 +40,8 @@ The platform follows a **microservices architecture**, with the following key co
 ### **Setup Instructions**
 1. Clone the repository:
    ```bash
-   git clone https://github.com/your-org/restaurant-marketplace.git
-   cd restaurant-marketplace
+   git clone https://github.com/rahul-jha-2001/Rasoi.git
+   cd rasoi
    ```
 2. Start services using Docker Compose:
    ```bash

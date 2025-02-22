@@ -2,12 +2,12 @@ from django.db import models,transaction
 from django.core.exceptions import ValidationError
 from django.conf import settings
 from django.core.paginator import Paginator
+from django.utils.translation import gettext_lazy as _
 import uuid 
 # from managers import TemplateManager, TemplateVersionManager, TemplateContentManager
 from collections import defaultdict
 from utils.logger import Logger
 import requests
-
 import urllib.parse
 
 logger = Logger(__name__)

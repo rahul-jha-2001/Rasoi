@@ -63,9 +63,15 @@ The platform follows a **microservices architecture**, with the following key co
 4. Submit a pull request for review.
 
 ## Roadmap
+- [ ] Create Order Service
+- [ ] Create Cart/Coupon Service
+- [ ] Create Notification Service
+- [ ] Create Menu GateWay
+- [ ] Create Checkout Service
+- [ ] Create User Auth and User Data Store
+- [ ] Create Restro/Dev Admin Gateway
 - [ ] Implement AI-based menu item recommendations.
 - [ ] Improve real-time order tracking.
-- [ ] Add support for payment integrations.
 - [ ] Expand multi-language support.
 
 ## License

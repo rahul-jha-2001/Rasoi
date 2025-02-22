@@ -74,6 +74,4 @@ This project is licensed under the **MIT License**. See the `LICENSE` file for d
 ---
 🙌 **Need Help?**
 For any issues, please create a GitHub issue or reach out to the maintainers!
-
-![Uploading diagram-export-22-2-2025-4_46_48-pm.svg…]()
-![diagram-export-22-2-2025-4_46_48-pm](https://github.com/user-attachments/assets/b7e8e976-2385-4ee5-8cb9-feb32fa76040)
+![diagram-export-22-2-2025-4_49_34-pm](https://github.com/user-attachments/assets/83386758-1e62-4445-89dd-11ddcedd2a87)

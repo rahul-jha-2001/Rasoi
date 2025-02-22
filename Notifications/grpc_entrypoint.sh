@@ -33,6 +33,19 @@ if ! PGPASSWORD=$POSTGRES_PASSWORD psql -h $POSTGRES_HOST -U $POSTGRES_USER -tc 
     echo "Database created successfully"
 fi
 
+echo "Entering proto folder..."
+cd proto || { echo "Error: proto directory not found!"; exit 1; }
+
+echo "Compiling Proto Files..."
+if ! python -m grpc_tools.protoc -I. --python_out=. --grpc_python_out=. --pyi_out=. *.proto; then
+    echo "Could Not Compile Proto Files"
+    cd ..
+    exit 1
+fi
+
+echo "Proto compilation successful!"
+cd ..
+echo "Returned to original directory"
 # Add error handling for migrations
 echo "Starting migrations..."
 if ! python -m manage makemigrations; then

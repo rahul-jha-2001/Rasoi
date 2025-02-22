@@ -36,18 +36,14 @@ Invalid_message = MessageEvent(
 )
 
 message = MessageEvent(
-    template_name="seasonal_promoion",
+    template_name="one_time_password",
     recipient=Recipient(
         to_number="+919977636633",
         from_number="+919876543210",
     ),
     variables=Variables(variables = {
-                    "HEADER_1": "Test User",
-                    "BODY_1": "Test User_1",
-                    "BODY_2": "Test User_2",
-                    "BODY_3": "Test User_3",
-                    "BUTTON_0": "Test User_button_1",
-                    "BUTTON_1": "Test User_button_2",
+                    "BODY_1": "997",
+                    "BUTTON_0": "997"
     }
     )
 )

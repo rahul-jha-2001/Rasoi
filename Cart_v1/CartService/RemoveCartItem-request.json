@@ -1,7 +1,0 @@
-{
-  "Cart": {
-    "StoreUuid": "{{ faker.random.uuid }}",
-    "UserPhoneNo": "Regional B2C Horizontal"
-  },
-  "ProductUuid": "{{ faker.random.uuid }}"
-}

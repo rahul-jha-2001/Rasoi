@@ -21,7 +21,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY ./Notifications .
 COPY ./Notifications/grpc_entrypoint.sh /usr/local/bin/entrypoint.sh
 COPY ./Notifications/grpc_supervisord.conf /etc/supervisor/conf.d/supervisord.conf
-
+COPY ./Proto  ./proto
 ENV PYTHONUNBUFFERED=1 \
     PYTHONPATH="${PYTHONPATH}:./proto"
 
@@ -29,6 +29,7 @@ RUN chmod +x /usr/local/bin/entrypoint.sh
 
 # Change ownership of application files to non-root user
 RUN chown -R appuser:appgroup /app /usr/local/bin/entrypoint.sh /etc/supervisor
+
 
 # Switch to non-root user
 USER appuser

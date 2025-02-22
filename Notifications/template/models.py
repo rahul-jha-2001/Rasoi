@@ -325,6 +325,8 @@ class TemplateManager(models.Manager):
         """
         return self.filter(status=Status.APPROVED)
     
+
+
     @transaction.atomic
     def sync_with_whatsapp(self):
         """
@@ -435,6 +437,7 @@ class Template(models.Model):
         parameter_format (str): Format for parameters (POSITIONAL/NAMED)
         message_send_ttl_seconds (int): Message time-to-live in seconds
         whatsapp_template_id (str): Associated WhatsApp template ID
+        is_deleted(bool):Is the Template has been soft deleted
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=255,unique=True)
@@ -444,6 +447,8 @@ class Template(models.Model):
     parameter_format = models.CharField(max_length=255, choices=ParameterFormat.choices, default=ParameterFormat.POSITIONAL)
     message_send_ttl_seconds = models.IntegerField(default=86400)
     whatsapp_template_id = models.CharField(max_length=255, null=True, blank=True, unique=True)
+    is_deleted = models.BooleanField(default=False,verbose_name=_("Is_deleted"))
+
 
     objects = TemplateManager()
 
@@ -510,6 +515,10 @@ class Template(models.Model):
                 template["components"].append(button.to_message_format())
         return template
 
+    @transaction.atomic
+    def delete(self):
+        self.is_deleted  = True
+        self.save()
         
 
 class ComponentManager(models.Manager):

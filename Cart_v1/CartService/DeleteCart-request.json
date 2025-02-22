@@ -1,6 +1,0 @@
-{
-  "Cart": {
-    "StoreUuid": "{{ faker.random.uuid }}",
-    "UserPhoneNo": "data-warehouse Road vortals"
-  }
-}

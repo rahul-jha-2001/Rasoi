@@ -218,7 +218,8 @@ DATABASES = {
     'sqllite': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.sqlite3',
-    },
+    }
+    ,
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': POSTGRES_DB,
@@ -227,6 +228,14 @@ DATABASES = {
         'HOST': POSTGRES_HOST,
         'PORT': POSTGRES_PORT,
     }
+    # ,'default': {
+    #     'ENGINE': 'django.db.backends.postgresql',
+    #     'NAME': POSTGRES_DB or "notifications_db" ,
+    #     'USER': POSTGRES_USER or "postgres",
+    #     'PASSWORD': POSTGRES_PASSWORD or "postgres",
+    #     'HOST': POSTGRES_HOST or "localhost",
+    #     'PORT': POSTGRES_PORT or 5432,
+    # }
 }
 
 

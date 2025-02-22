@@ -1,6 +1,0 @@
-{
-  "Cart": {
-    "StoreUuid": "{{ faker.random.uuid }}",
-    "UserPhoneNo": "Rubber Solomon Islands Dollar indigo"
-  }
-}

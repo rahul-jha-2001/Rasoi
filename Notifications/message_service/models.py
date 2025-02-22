@@ -156,52 +156,54 @@ class MessageManager(models.Manager):
     #                 readable_message["HEADER"] = component.text.format(**variable["HEADER"])
     #     return readable_message
     
-    @transaction.atomic
-    def create_message(self, template_name: str, variables: dict, to_phone_number: str, from_phone_number: str):
-        try:
-            logger.info(f"Creating message for template: {template_name}")
-            template = Template.objects.get(name=template_name)
-            
-            # Validate all inputs
-            logger.info(f"Creating message for template: {template.name}")
-            self._validate_phone_numbers(to_phone_number, from_phone_number)
-            self._validate_template(template)
 
-            self._validate_variables(template, variables)
-            self._validate_required_variables(template, variables)
-            self._validate_message_type(template)
-            # Render the message
-            message_json = template.to_message_format()
-            rendered_message = self._render_template(message_json, variables)
-            # readable_message = self._readble_message(template, variables)
-            # Create the message
-            priority = self.PRIORITY_MAP.get(template.category, MessagePriority.AUTHENTICATION)
-            
-            message = self.create(
-                template=template,
-                message_json=message_json,
-                rendered_message=rendered_message,
-                # readable_message=readable_message,
-                variables=variables,
-                to_phone_number=to_phone_number,
-                from_phone_number=from_phone_number,
-                status=MessageStatus.PENDING,
-                message_type=template.category,
-                priority=priority
-            )
-            logger.info(f"Message created successfully: {message}")
-            return message
+    def create_message(self, template_name: str, variables: dict, to_phone_number: str, from_phone_number: str):
+
+        try:
+            with transaction.atomic():
+                logger.info(f"Creating message for template: {template_name}")
+                template = Template.objects.get(name=template_name)
+                
+                # Validate all inputs
+                logger.info(f"Creating message for template: {template.name}")
+                self._validate_phone_numbers(to_phone_number, from_phone_number)
+                self._validate_template(template)
+
+                self._validate_variables(template, variables)
+                self._validate_required_variables(template, variables)
+                self._validate_message_type(template)
+                # Render the message
+                message_json = template.to_message_format()
+                rendered_message = self._render_template(message_json, variables)
+                # readable_message = self._readble_message(template, variables)
+                # Create the message
+                priority = self.PRIORITY_MAP.get(template.category, MessagePriority.AUTHENTICATION)
+                
+                message = self.create(
+                    template=template,
+                    message_json=message_json,
+                    rendered_message=rendered_message,
+                    # readable_message=readable_message,
+                    variables=variables,
+                    to_phone_number=to_phone_number,
+                    from_phone_number=from_phone_number,
+                    status=MessageStatus.PENDING,
+                    message_type=template.category,
+                    priority=priority
+                )
+                logger.info(f"Message created successfully: {message}")
+                return message
         except Template.DoesNotExist:
             invalid_message = InvalidMessage.objects.create_invalid_message(template=None,template_name=template_name,
                                                                             to_phone_number= to_phone_number, 
-                                                                            from_phone_number=from_phone_number,
+                                                                          from_phone_number=from_phone_number,
                                                                             error_message = f"Template does not exist for name:{template_name}",
                                                                             variables=variables)
             invalid_message.save()
             logger.error(f"Invalid message: {invalid_message.id}")
             raise ValueError(f"Template does not exist for name:{template_name}")
         except Exception as e:
-            
+            # with transaction.atomic():
             invalid_message = InvalidMessage.objects.create_invalid_message(template=template,template_name=template_name,
                                                                             to_phone_number= to_phone_number, 
                                                                             from_phone_number=from_phone_number,
@@ -382,6 +384,7 @@ class Message(models.Model):
     def __str__(self):
         return f"Message {self.template.name} - {self.status}-{self.message_type}-{self.to_phone_number}-{self.from_phone_number}"
 
+    @transaction.atomic
     def delete(self, using=None, keep_parents=False):
         """Soft delete the message instead of actually deleting it"""
         self.is_deleted = True
@@ -399,10 +402,12 @@ class InvalidMessageManager(models.Manager):
         if not template is None:
             logger.error(f"Creating Invalid Message: {error_message}")
             invalid_message = self.create(template=template,template_name=template_name, to_phone_number=to_phone_number, from_phone_number=from_phone_number, error_message=error_message, variables=variables)
+            invalid_message.save()
             logger.error(f"Invalid Message created: {invalid_message}")
         else:
             logger.error(f"Creating Invalid Message: {error_message}")
             invalid_message = self.create(template=None,template_name=template_name ,to_phone_number=to_phone_number, from_phone_number=from_phone_number, error_message=error_message, variables=variables)
+            invalid_message.save()
             logger.error(f"Invalid Message created: {invalid_message}")
         return invalid_message
     

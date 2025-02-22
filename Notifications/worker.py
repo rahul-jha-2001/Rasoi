@@ -76,8 +76,8 @@ class Task:
                     await asyncio.sleep(backoff_time)
                     backoff_time = min(backoff_time * 2, 60)  # Cap backoff time to 60 seconds
                 else:
-                    logger.error("Max retries reached. Raising exception.")
-                    raise  # Reraise the last exception after max retries
+                    logger.error("Max retries reached Marking Message as Failed with error.")
+                    return response
 
     async def process_messages(self, batch_size: int = 10):
         try:
@@ -91,7 +91,7 @@ class Task:
                 if not pending_messages:
                     logger.info("No pending messages found. Sleeping for 5 seconds.")
                     await asyncio.sleep(backoff_time)
-                    backoff_time *= 2
+                    backoff_time = min(backoff_time * 2,30)
                     continue
                 
                 backoff_time = 1

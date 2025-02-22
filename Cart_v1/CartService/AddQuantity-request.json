@@ -1,8 +1,0 @@
-{
-  "Cart": {
-    "StoreUuid": "{{ faker.random.uuid }}",
-    "UserPhoneNo": "teal"
-  },
-  "ProductUuid": "{{ faker.random.uuid }}",
-  "Quantity": 277
-}

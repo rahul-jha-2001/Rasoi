@@ -1,4 +1,0 @@
-{
-  "StoreUuid": "{{ faker.random.uuid }}",
-  "CouponCode": "Sports RSS"
-}

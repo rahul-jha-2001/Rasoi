@@ -1,12 +1,12 @@
-version: '3.8'
+
 
 services:
-    product:
+    product_grpc:
         build:
             context: ./  
             dockerfile: product.dockerfile
         ports:
-            - "50051:50051"
+            - "50052:50051"
         depends_on:
             - product-database
         healthcheck:
@@ -30,12 +30,12 @@ services:
     #     networks:
     #         backend:
     #             ipv4_address : 10.10.10.4        
-    cart:
+    cart_grpc:
         build:
             context: ./
             dockerfile: cart.dockerfile
         ports:
-            - "50052:50051"
+            - "50053:50051"
         depends_on:
             - cart-database
         healthcheck:
@@ -47,12 +47,12 @@ services:
         networks:
             backend:
                 ipv4_address : 10.10.10.6
-    user:
+    user_grpc:
         build:
             context: ./
             dockerfile: userauth.dockerfile
         ports:
-            - "50055:50051"
+            - "50054:50051"
         depends_on:
             - user-database
             - redis
@@ -70,8 +70,6 @@ services:
         build:
             context: ./
             dockerfile: order_kafka.dockerfile
-        ports:
-            - "50054:50051"
         depends_on:
             - order-database
             - kafka
@@ -131,7 +129,7 @@ services:
         ports:
             - "50056:50051"
         depends_on:
-            notifications-database:
+            notifications-database: 
                 condition: service_healthy
             kafka:
                 condition: service_healthy

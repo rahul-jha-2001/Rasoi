@@ -24,6 +24,9 @@ import proto.Messages_pb2 as message_pb2
 import proto.Messages_pb2_grpc as message_pb2_grpc
 from google.protobuf.empty_pb2 import Empty
 
+GRPC_HOST = "[::]"
+GRPC_PORT = 50051
+
 from proto.Template_pb2 import (
     TemplateCategory, 
     TemplateStatus, 
@@ -229,7 +232,16 @@ class TemplateService(template_pb2_grpc.TemplateServiceServicer):
             )
 
     def listTemplates(self, request, context):
+
         logger.info(f"Listing templates: {request}")
+        logger.info(f"")
+
+        if request.page == 0 or request.page is None:
+            request.page = 1
+        if request.limit == 0 or request.limit is None:
+            request.limit = 10    
+
+        
 
         # Verify incoming request
         if not self._verify_wire_format(request, template_pb2.ListTemplatesRequest):
@@ -730,17 +742,19 @@ class Server:
         self.server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
         template_pb2_grpc.add_TemplateServiceServicer_to_server(TemplateService(), self.server)
         message_pb2_grpc.add_MessageServiceServicer_to_server(MessageService(), self.server)
-        self.server.add_insecure_port('localhost:50051')
+        port = self.server.add_insecure_port(f'{GRPC_HOST}:{GRPC_PORT}')
         self.server.start()
-        logger.info(f"Server started on port 50051")
+        logger.info(f"Server started on port {port}")
 
     def run(self):
         self.server.wait_for_termination()
 
     def stop(self):
+        logger.info("Stopping GRPC Server")
         self.server.stop(0)
 
 if __name__ == '__main__':
+    logger.info("Starting GRPC Server")
     server = Server()
     server.run()
     server.stop()

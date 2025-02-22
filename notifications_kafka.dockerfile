@@ -21,6 +21,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY ./Notifications .
 COPY ./Notifications/kafka_entrypoint.sh /usr/local/bin/entrypoint.sh
 COPY ./Notifications/kafka_supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+COPY ./Proto  ./proto
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONPATH="${PYTHONPATH}:./proto"

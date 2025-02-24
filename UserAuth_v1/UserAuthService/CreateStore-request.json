@@ -1,8 +1,0 @@
-{
-  "Email": "{{ faker.internet.example_email }}",
-  "Password": "{{ faker.internet.password }}",
-  "PhoneNumber": "{{ faker.phone.phone_number }}",
-  "StoreName": "Specialist reintermediate",
-  "StoreAddress": "structure Lesotho Loti",
-  "GSTNumber": "{{ faker.random.ushort }}"
-}

@@ -1,6 +1,0 @@
-{
-  "StoreUuid": "{{ faker.random.uuid }}",
-  "Name": "{{ faker.name.last_name }}",
-  "Description": "Automotive, Garden & Shoes Diverse Awesome",
-  "ParentCategoryUuid": "{{ faker.random.uuid }}"
-}

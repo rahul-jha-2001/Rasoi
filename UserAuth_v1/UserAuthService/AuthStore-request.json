@@ -1,4 +1,0 @@
-{
-  "Email": "{{ faker.internet.example_email }}",
-  "Password": "{{ faker.internet.password }}"
-}

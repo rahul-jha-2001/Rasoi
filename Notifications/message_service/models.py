@@ -279,7 +279,7 @@ class MessageManager(models.Manager):
         page: int = 1,
         batch_size: int = 10) -> tuple[QuerySet, Optional[int]]:
         """
-                Retrieve pending messages ordered by priority and creation date with pagination.
+            Retrieve pending messages ordered by priority and creation date with pagination.
 
             Args:
                 page (int): The page number to retrieve (default: 1)

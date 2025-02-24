@@ -1,3 +1,0 @@
-{
-  "StoreUuid": "{{ faker.random.uuid }}"
-}

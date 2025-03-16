@@ -1,4 +1,0 @@
-{
-  "ProductUuid": "{{ faker.random.uuid }}",
-  "StoreUuid": "{{ faker.random.uuid }}"
-}

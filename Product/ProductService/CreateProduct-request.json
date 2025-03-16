@@ -1,9 +1,0 @@
-{
-  "StoreUuid": "{{ faker.random.uuid }}",
-  "Name": "{{ faker.name.last_name }}",
-  "IsAvailable": true,
-  "Price": 631.1142,
-  "CategoryUuid": "{{ faker.random.uuid }}",
-  "Description": "Direct",
-  "ImageUrl": "Wall Borders Finland"
-}

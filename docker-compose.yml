@@ -5,31 +5,24 @@ services:
         build:
             context: ./  
             dockerfile: product.dockerfile
+        container_name: product_grpc    
         ports:
             - "50052:50051"
         depends_on:
-            - product-database
+                product-database:
+                    condition: service_healthy
         healthcheck:
-            test: ["CMD", "grpc_health_probe", "-addr=:50051"]
-            interval: 10s
-            timeout: 5s
-            retries: 5
+            test: ["CMD-SHELL", "supervisorctl status | grep -q 'RUNNING' || exit 1"]
+            interval: 30s
+            timeout: 10s
+            retries: 3
+            start_period: 40s
         restart: unless-stopped                     
-        
         networks:
             backend:
                 ipv4_address : 10.10.10.2
-    # restro-admin:
-    #     build:
-    #         context: ./
-    #         dockerfile: RestroAdmin.dockerfile
-    #     ports:
-    #         - "8000:8000"
-    #     depends_on:
-    #         - restro-admin-database
-    #     networks:
-    #         backend:
-    #             ipv4_address : 10.10.10.4        
+        env_file:
+            - ./env/products.env           
     cart_grpc:
         build:
             context: ./
@@ -121,7 +114,7 @@ services:
             backend:
                 ipv4_address: 10.10.10.13
         env_file:
-            - notifications.env
+            - ./env/notifications.env
     notifications_grpc:
         build:
             context: ./
@@ -144,7 +137,7 @@ services:
             backend:
                 ipv4_address: 10.10.10.14
         env_file:
-            - notifications.env        
+            - ./env/notifications.env        
     product-database:
         image: postgres:latest
         container_name: product_db
@@ -152,10 +145,6 @@ services:
             - "5434:5432"
         volumes:
             - product_db_data:/var/lib/postgresql/data
-        environment:
-            - POSTGRES_USER=postgres
-            - POSTGRES_PASSWORD=postgres
-            - POSTGRES_DB=Product
         healthcheck:               # Adding healthcheck for database
             test: ["CMD-SHELL", "pg_isready -U postgres"]
             interval: 10s
@@ -236,7 +225,8 @@ services:
             - "5436:5432"
         volumes:
             - notifications_db_data:/var/lib/postgresql/data
-        env_file: "notifications.env"
+        env_file:
+            - ./env/notifications.env
         healthcheck:
             test: ["CMD-SHELL", "pg_isready -U postgres"]
             interval: 10s
@@ -317,31 +307,18 @@ services:
             backend:
                 ipv4_address : 10.10.10.15
 
-
-    # redisinsight:
-    #     image: redislabs/redisinsight:latest
-    #     container_name: redisinsight
-    #     ports:
-    #         - "8001:8001"
-    #     networks:
-    #         backend:
-    #             ipv4_address : 10.10.10.16
-
-
-    # kafka-ui:
-    #     container_name: kafka-ui
-    #     image: provectuslabs/kafka-ui:latest
-    #     ports: 
-    #         - "8090:8080"
-    #     environment:
-    #         KAFKA_CLUSTERS_0_NAME: local
-    #      # other properties, omitted
-    #         SPRING_CONFIG_ADDITIONAL-LOCATION: /config.yml
-    #     volumes:
-    #         - /config.yml:/config.yml
-    #     networks:
-    #         backend:
-    #             ipv4_address : 10.10.10.12
+    gateway:
+        build:
+            context: ./
+            dockerfile: api_gateway.dockerfile
+        container_name: gateway
+        ports:
+          - "8090:8090"                 
+        networks:
+            backend:
+                ipv4_address : 10.10.10.20
+        env_file:
+            - ./env/gateway.env
 
 networks:
     backend:

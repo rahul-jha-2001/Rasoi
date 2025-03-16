@@ -13,18 +13,98 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 from pathlib import Path
 import os
 import logging
-from dotenv import load_dotenv
-logging.basicConfig(level=logging.INFO)
+import dotenv
+import sys
 
-flag = load_dotenv()
-logging.info(f"envioment loaded {flag} ")
+
+SKIP_DIRS = {
+    '__pycache__',
+    'venv',
+    'env',
+    '.git',
+    '.idea',
+    '.vscode',
+    'logs',
+    'media',
+    'static',
+    'migrations',
+}
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# Create logs directory if it doesn't exist
+LOGS_DIR = BASE_DIR / 'logs'
+LOGS_DIR.mkdir(exist_ok=True)
 
+# Get all directories in BASE_DIR
+for item in BASE_DIR.iterdir():
+    if item.is_dir() and item.name not in SKIP_DIRS:
+        sys.path.append(str(item))
+
+dotenv.load_dotenv()
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
 
+
+
+POSTGRES_HOST = os.getenv("POSTGRES_HOST")
+POSTGRES_PORT = os.getenv("POSTGRES_PORT")
+POSTGRES_USER = os.getenv("POSTGRES_USER")
+POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD")
+POSTGRES_DB = os.getenv("POSTGRES_DB")
+LOG_LEVEL = os.getenv("LOG_LEVEL") or "DEBUG"
+
+
+
+LOGGING =  {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'detailed': {
+            'format': '{asctime} {levelname} [{name}] {message}',
+            'style': '{',
+            'datefmt': '%Y-%m-%d %H:%M:%S'
+        },
+        'simple': {
+            'format': '{levelname} {message}',
+            'style': '{'
+        },
+    },
+    'handlers': {
+        'file': {
+            'level': LOG_LEVEL,
+            'class': 'logging.FileHandler',
+            'filename': BASE_DIR / 'logs/notifications.log',
+            'formatter': 'detailed',
+        },
+        'console': {
+            'level': LOG_LEVEL,
+            'class': 'logging.StreamHandler',
+            'formatter': 'detailed'
+        },
+        'GRPC_file':{
+            'level': LOG_LEVEL,
+            'class': 'logging.FileHandler',
+            'filename': BASE_DIR / 'logs/GRPC_service.log',
+            'formatter': 'detailed',
+        }
+
+    },
+    'loggers': {
+        '': {
+            'handlers': ['file', 'console'],
+            'level': LOG_LEVEL,
+            'propagate': True,
+        },
+        'GRPC_service':{
+            'handlers':['GRPC_file','console'],
+            'level':LOG_LEVEL,
+            'propogate':True
+        }
+        
+    }
+}
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = 'django-insecure--g^b+6q-ahwohp3*al1w3@9+7un)p95baz%nkyg_(xd4@!ft%b'
 
@@ -44,7 +124,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    "apiv1"
+    "product_app"
 ]
 
 MIDDLEWARE = [
@@ -77,44 +157,21 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'Product.wsgi.application'
 
-
-# Database
-# https://docs.djangoproject.com/en/5.0/ref/settings/#databases
-
-# DATABASES =  {
-#         'default': {
-#         'ENGINE': 'django.db.backends.postgresql',
-#         'NAME': f'{os.environ("DATABASE_NAME")}',
-#         'USER': f"{os.environ("DATABASE_USER")}",
-#         'PASSWORD': f"{os.environ("DATABASE_PASSWORD")}",
-#         'HOST': 'product_db',
-#         'PORT': '5432',  # Default PostgreSQL port
-#     }
-# }
-logging.info(f"name {os.getenv("PRODUCT_DB_NAME")} user {os.getenv("PRODUCT_DB_USER")} pass {os.getenv("PRODUCT_DB_PASSWORD")}")
 DATABASES =  {
-        'default': 
-        {
-            'ENGINE': 'django.db.backends.postgresql',
-            'NAME': f'{os.getenv("PRODUCT_DB_NAME")}',
-            'USER': f'{os.getenv("PRODUCT_DB_USER")}',
-            'PASSWORD': f'{os.getenv("PRODUCT_DB_PASSWORD")}',
-            'HOST': '10.10.10.3',
-            'PORT': '5432',  # Default PostgreSQL port
-        }
+        'sqllite': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
+    }
+    ,
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': POSTGRES_DB,
+        'USER': POSTGRES_USER,
+        'PASSWORD': POSTGRES_PASSWORD,
+        'HOST': POSTGRES_HOST,
+        'PORT': POSTGRES_PORT,
+    }
 }
-
-
-#{
-#     'default': {
-#         'ENGINE': 'django.db.backends.sqlite3',
-#         'NAME': BASE_DIR / 'db.sqlite3',
-#     }
-# }
-
-
-# Password validation
-# https://docs.djangoproject.com/en/5.0/ref/settings/#auth-password-validators
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -148,6 +205,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.0/howto/static-files/
 
 STATIC_URL = 'static/'
+MEDIA = 'Media/'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field

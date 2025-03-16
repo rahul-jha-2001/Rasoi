@@ -15,3 +15,5 @@ httpx
 pytz
 schedule
 razorpay
+pillow
+googleapis-common-protos

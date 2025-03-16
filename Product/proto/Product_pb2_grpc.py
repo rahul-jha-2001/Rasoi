@@ -3,9 +3,9 @@
 import grpc
 import warnings
 
-from proto import Product_pb2 as proto_dot_Product__pb2
+import Product_pb2 as Product__pb2
 
-GRPC_GENERATED_VERSION = '1.66.2'
+GRPC_GENERATED_VERSION = '1.70.0'
 GRPC_VERSION = grpc.__version__
 _version_not_supported = False
 
@@ -18,7 +18,7 @@ except ImportError:
 if _version_not_supported:
     raise RuntimeError(
         f'The grpc package installed is at version {GRPC_VERSION},'
-        + f' but the generated code in proto/Product_pb2_grpc.py depends on'
+        + f' but the generated code in Product_pb2_grpc.py depends on'
         + f' grpcio>={GRPC_GENERATED_VERSION}.'
         + f' Please upgrade your grpc module to grpcio>={GRPC_GENERATED_VERSION}'
         + f' or downgrade your generated code using grpcio-tools<={GRPC_VERSION}.'
@@ -34,35 +34,115 @@ class ProductServiceStub(object):
         Args:
             channel: A grpc.Channel.
         """
+        self.CreateCategory = channel.unary_unary(
+                '/product_v1.ProductService/CreateCategory',
+                request_serializer=Product__pb2.CreateCategoryRequest.SerializeToString,
+                response_deserializer=Product__pb2.CategoryResponse.FromString,
+                _registered_method=True)
+        self.UpdateCategory = channel.unary_unary(
+                '/product_v1.ProductService/UpdateCategory',
+                request_serializer=Product__pb2.UpdateCategoryRequest.SerializeToString,
+                response_deserializer=Product__pb2.CategoryResponse.FromString,
+                _registered_method=True)
+        self.GetCategory = channel.unary_unary(
+                '/product_v1.ProductService/GetCategory',
+                request_serializer=Product__pb2.GetCategoryRequest.SerializeToString,
+                response_deserializer=Product__pb2.CategoryResponse.FromString,
+                _registered_method=True)
+        self.ListCategory = channel.unary_unary(
+                '/product_v1.ProductService/ListCategory',
+                request_serializer=Product__pb2.ListCategoryRequest.SerializeToString,
+                response_deserializer=Product__pb2.ListCategoryResponse.FromString,
+                _registered_method=True)
+        self.DeleteCategory = channel.unary_unary(
+                '/product_v1.ProductService/DeleteCategory',
+                request_serializer=Product__pb2.DeleteCategoryRequest.SerializeToString,
+                response_deserializer=Product__pb2.DeleteCategoryResponse.FromString,
+                _registered_method=True)
         self.CreateProduct = channel.unary_unary(
-                '/product.ProductService/CreateProduct',
-                request_serializer=proto_dot_Product__pb2.CreateProductRequest.SerializeToString,
-                response_deserializer=proto_dot_Product__pb2.ProductResponse.FromString,
+                '/product_v1.ProductService/CreateProduct',
+                request_serializer=Product__pb2.CreateProductRequest.SerializeToString,
+                response_deserializer=Product__pb2.ProductResponse.FromString,
                 _registered_method=True)
         self.GetProduct = channel.unary_unary(
-                '/product.ProductService/GetProduct',
-                request_serializer=proto_dot_Product__pb2.GetProductRequest.SerializeToString,
-                response_deserializer=proto_dot_Product__pb2.ProductResponse.FromString,
+                '/product_v1.ProductService/GetProduct',
+                request_serializer=Product__pb2.GetProductRequest.SerializeToString,
+                response_deserializer=Product__pb2.ProductResponse.FromString,
                 _registered_method=True)
         self.UpdateProduct = channel.unary_unary(
-                '/product.ProductService/UpdateProduct',
-                request_serializer=proto_dot_Product__pb2.UpdateProductRequest.SerializeToString,
-                response_deserializer=proto_dot_Product__pb2.ProductResponse.FromString,
+                '/product_v1.ProductService/UpdateProduct',
+                request_serializer=Product__pb2.UpdateProductRequest.SerializeToString,
+                response_deserializer=Product__pb2.ProductResponse.FromString,
                 _registered_method=True)
         self.DeleteProduct = channel.unary_unary(
-                '/product.ProductService/DeleteProduct',
-                request_serializer=proto_dot_Product__pb2.DeleteProductRequest.SerializeToString,
-                response_deserializer=proto_dot_Product__pb2.DeleteProductResponse.FromString,
+                '/product_v1.ProductService/DeleteProduct',
+                request_serializer=Product__pb2.DeleteProductRequest.SerializeToString,
+                response_deserializer=Product__pb2.DeleteProductResponse.FromString,
                 _registered_method=True)
         self.ListProducts = channel.unary_unary(
-                '/product.ProductService/ListProducts',
-                request_serializer=proto_dot_Product__pb2.ListProductsRequest.SerializeToString,
-                response_deserializer=proto_dot_Product__pb2.ListProductsResponse.FromString,
+                '/product_v1.ProductService/ListProducts',
+                request_serializer=Product__pb2.ListProductsRequest.SerializeToString,
+                response_deserializer=Product__pb2.ListProductsResponse.FromString,
+                _registered_method=True)
+        self.UpdateAddOn = channel.unary_unary(
+                '/product_v1.ProductService/UpdateAddOn',
+                request_serializer=Product__pb2.UpdateAddOnRequest.SerializeToString,
+                response_deserializer=Product__pb2.AddOnResponse.FromString,
+                _registered_method=True)
+        self.DeleteAddOn = channel.unary_unary(
+                '/product_v1.ProductService/DeleteAddOn',
+                request_serializer=Product__pb2.DeleteAddOnRequest.SerializeToString,
+                response_deserializer=Product__pb2.DeleteAddOnResponse.FromString,
+                _registered_method=True)
+        self.CreateAddOn = channel.unary_unary(
+                '/product_v1.ProductService/CreateAddOn',
+                request_serializer=Product__pb2.CreateAddOnRequest.SerializeToString,
+                response_deserializer=Product__pb2.AddOnResponse.FromString,
+                _registered_method=True)
+        self.GetAddOn = channel.unary_unary(
+                '/product_v1.ProductService/GetAddOn',
+                request_serializer=Product__pb2.GetAddOnRequest.SerializeToString,
+                response_deserializer=Product__pb2.AddOnResponse.FromString,
+                _registered_method=True)
+        self.ListAddOn = channel.unary_unary(
+                '/product_v1.ProductService/ListAddOn',
+                request_serializer=Product__pb2.ListAddOnRequest.SerializeToString,
+                response_deserializer=Product__pb2.ListAddOnResponse.FromString,
                 _registered_method=True)
 
 
 class ProductServiceServicer(object):
     """Missing associated documentation comment in .proto file."""
+
+    def CreateCategory(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def UpdateCategory(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def GetCategory(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def ListCategory(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def DeleteCategory(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
 
     def CreateProduct(self, request, context):
         """Missing associated documentation comment in .proto file."""
@@ -94,44 +174,259 @@ class ProductServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def UpdateAddOn(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def DeleteAddOn(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def CreateAddOn(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def GetAddOn(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def ListAddOn(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_ProductServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
+            'CreateCategory': grpc.unary_unary_rpc_method_handler(
+                    servicer.CreateCategory,
+                    request_deserializer=Product__pb2.CreateCategoryRequest.FromString,
+                    response_serializer=Product__pb2.CategoryResponse.SerializeToString,
+            ),
+            'UpdateCategory': grpc.unary_unary_rpc_method_handler(
+                    servicer.UpdateCategory,
+                    request_deserializer=Product__pb2.UpdateCategoryRequest.FromString,
+                    response_serializer=Product__pb2.CategoryResponse.SerializeToString,
+            ),
+            'GetCategory': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetCategory,
+                    request_deserializer=Product__pb2.GetCategoryRequest.FromString,
+                    response_serializer=Product__pb2.CategoryResponse.SerializeToString,
+            ),
+            'ListCategory': grpc.unary_unary_rpc_method_handler(
+                    servicer.ListCategory,
+                    request_deserializer=Product__pb2.ListCategoryRequest.FromString,
+                    response_serializer=Product__pb2.ListCategoryResponse.SerializeToString,
+            ),
+            'DeleteCategory': grpc.unary_unary_rpc_method_handler(
+                    servicer.DeleteCategory,
+                    request_deserializer=Product__pb2.DeleteCategoryRequest.FromString,
+                    response_serializer=Product__pb2.DeleteCategoryResponse.SerializeToString,
+            ),
             'CreateProduct': grpc.unary_unary_rpc_method_handler(
                     servicer.CreateProduct,
-                    request_deserializer=proto_dot_Product__pb2.CreateProductRequest.FromString,
-                    response_serializer=proto_dot_Product__pb2.ProductResponse.SerializeToString,
+                    request_deserializer=Product__pb2.CreateProductRequest.FromString,
+                    response_serializer=Product__pb2.ProductResponse.SerializeToString,
             ),
             'GetProduct': grpc.unary_unary_rpc_method_handler(
                     servicer.GetProduct,
-                    request_deserializer=proto_dot_Product__pb2.GetProductRequest.FromString,
-                    response_serializer=proto_dot_Product__pb2.ProductResponse.SerializeToString,
+                    request_deserializer=Product__pb2.GetProductRequest.FromString,
+                    response_serializer=Product__pb2.ProductResponse.SerializeToString,
             ),
             'UpdateProduct': grpc.unary_unary_rpc_method_handler(
                     servicer.UpdateProduct,
-                    request_deserializer=proto_dot_Product__pb2.UpdateProductRequest.FromString,
-                    response_serializer=proto_dot_Product__pb2.ProductResponse.SerializeToString,
+                    request_deserializer=Product__pb2.UpdateProductRequest.FromString,
+                    response_serializer=Product__pb2.ProductResponse.SerializeToString,
             ),
             'DeleteProduct': grpc.unary_unary_rpc_method_handler(
                     servicer.DeleteProduct,
-                    request_deserializer=proto_dot_Product__pb2.DeleteProductRequest.FromString,
-                    response_serializer=proto_dot_Product__pb2.DeleteProductResponse.SerializeToString,
+                    request_deserializer=Product__pb2.DeleteProductRequest.FromString,
+                    response_serializer=Product__pb2.DeleteProductResponse.SerializeToString,
             ),
             'ListProducts': grpc.unary_unary_rpc_method_handler(
                     servicer.ListProducts,
-                    request_deserializer=proto_dot_Product__pb2.ListProductsRequest.FromString,
-                    response_serializer=proto_dot_Product__pb2.ListProductsResponse.SerializeToString,
+                    request_deserializer=Product__pb2.ListProductsRequest.FromString,
+                    response_serializer=Product__pb2.ListProductsResponse.SerializeToString,
+            ),
+            'UpdateAddOn': grpc.unary_unary_rpc_method_handler(
+                    servicer.UpdateAddOn,
+                    request_deserializer=Product__pb2.UpdateAddOnRequest.FromString,
+                    response_serializer=Product__pb2.AddOnResponse.SerializeToString,
+            ),
+            'DeleteAddOn': grpc.unary_unary_rpc_method_handler(
+                    servicer.DeleteAddOn,
+                    request_deserializer=Product__pb2.DeleteAddOnRequest.FromString,
+                    response_serializer=Product__pb2.DeleteAddOnResponse.SerializeToString,
+            ),
+            'CreateAddOn': grpc.unary_unary_rpc_method_handler(
+                    servicer.CreateAddOn,
+                    request_deserializer=Product__pb2.CreateAddOnRequest.FromString,
+                    response_serializer=Product__pb2.AddOnResponse.SerializeToString,
+            ),
+            'GetAddOn': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetAddOn,
+                    request_deserializer=Product__pb2.GetAddOnRequest.FromString,
+                    response_serializer=Product__pb2.AddOnResponse.SerializeToString,
+            ),
+            'ListAddOn': grpc.unary_unary_rpc_method_handler(
+                    servicer.ListAddOn,
+                    request_deserializer=Product__pb2.ListAddOnRequest.FromString,
+                    response_serializer=Product__pb2.ListAddOnResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
-            'product.ProductService', rpc_method_handlers)
+            'product_v1.ProductService', rpc_method_handlers)
     server.add_generic_rpc_handlers((generic_handler,))
-    server.add_registered_method_handlers('product.ProductService', rpc_method_handlers)
+    server.add_registered_method_handlers('product_v1.ProductService', rpc_method_handlers)
 
 
  # This class is part of an EXPERIMENTAL API.
 class ProductService(object):
     """Missing associated documentation comment in .proto file."""
+
+    @staticmethod
+    def CreateCategory(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/product_v1.ProductService/CreateCategory',
+            Product__pb2.CreateCategoryRequest.SerializeToString,
+            Product__pb2.CategoryResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def UpdateCategory(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/product_v1.ProductService/UpdateCategory',
+            Product__pb2.UpdateCategoryRequest.SerializeToString,
+            Product__pb2.CategoryResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def GetCategory(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/product_v1.ProductService/GetCategory',
+            Product__pb2.GetCategoryRequest.SerializeToString,
+            Product__pb2.CategoryResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def ListCategory(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/product_v1.ProductService/ListCategory',
+            Product__pb2.ListCategoryRequest.SerializeToString,
+            Product__pb2.ListCategoryResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def DeleteCategory(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/product_v1.ProductService/DeleteCategory',
+            Product__pb2.DeleteCategoryRequest.SerializeToString,
+            Product__pb2.DeleteCategoryResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
 
     @staticmethod
     def CreateProduct(request,
@@ -147,9 +442,9 @@ class ProductService(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/product.ProductService/CreateProduct',
-            proto_dot_Product__pb2.CreateProductRequest.SerializeToString,
-            proto_dot_Product__pb2.ProductResponse.FromString,
+            '/product_v1.ProductService/CreateProduct',
+            Product__pb2.CreateProductRequest.SerializeToString,
+            Product__pb2.ProductResponse.FromString,
             options,
             channel_credentials,
             insecure,
@@ -174,9 +469,9 @@ class ProductService(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/product.ProductService/GetProduct',
-            proto_dot_Product__pb2.GetProductRequest.SerializeToString,
-            proto_dot_Product__pb2.ProductResponse.FromString,
+            '/product_v1.ProductService/GetProduct',
+            Product__pb2.GetProductRequest.SerializeToString,
+            Product__pb2.ProductResponse.FromString,
             options,
             channel_credentials,
             insecure,
@@ -201,9 +496,9 @@ class ProductService(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/product.ProductService/UpdateProduct',
-            proto_dot_Product__pb2.UpdateProductRequest.SerializeToString,
-            proto_dot_Product__pb2.ProductResponse.FromString,
+            '/product_v1.ProductService/UpdateProduct',
+            Product__pb2.UpdateProductRequest.SerializeToString,
+            Product__pb2.ProductResponse.FromString,
             options,
             channel_credentials,
             insecure,
@@ -228,9 +523,9 @@ class ProductService(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/product.ProductService/DeleteProduct',
-            proto_dot_Product__pb2.DeleteProductRequest.SerializeToString,
-            proto_dot_Product__pb2.DeleteProductResponse.FromString,
+            '/product_v1.ProductService/DeleteProduct',
+            Product__pb2.DeleteProductRequest.SerializeToString,
+            Product__pb2.DeleteProductResponse.FromString,
             options,
             channel_credentials,
             insecure,
@@ -255,9 +550,144 @@ class ProductService(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/product.ProductService/ListProducts',
-            proto_dot_Product__pb2.ListProductsRequest.SerializeToString,
-            proto_dot_Product__pb2.ListProductsResponse.FromString,
+            '/product_v1.ProductService/ListProducts',
+            Product__pb2.ListProductsRequest.SerializeToString,
+            Product__pb2.ListProductsResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def UpdateAddOn(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/product_v1.ProductService/UpdateAddOn',
+            Product__pb2.UpdateAddOnRequest.SerializeToString,
+            Product__pb2.AddOnResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def DeleteAddOn(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/product_v1.ProductService/DeleteAddOn',
+            Product__pb2.DeleteAddOnRequest.SerializeToString,
+            Product__pb2.DeleteAddOnResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def CreateAddOn(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/product_v1.ProductService/CreateAddOn',
+            Product__pb2.CreateAddOnRequest.SerializeToString,
+            Product__pb2.AddOnResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def GetAddOn(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/product_v1.ProductService/GetAddOn',
+            Product__pb2.GetAddOnRequest.SerializeToString,
+            Product__pb2.AddOnResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def ListAddOn(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/product_v1.ProductService/ListAddOn',
+            Product__pb2.ListAddOnRequest.SerializeToString,
+            Product__pb2.ListAddOnResponse.FromString,
             options,
             channel_credentials,
             insecure,

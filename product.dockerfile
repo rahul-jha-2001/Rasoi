@@ -1,17 +1,40 @@
-FROM python:latest
+
+
+
+
+FROM python:3.12.3-slim
+
+# Combine RUN commands to reduce layers and optimize cache
+RUN apt-get update && \
+    apt-get install -y supervisor postgresql-client && \
+    mkdir -p /etc/supervisor/conf.d && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# Create a non-root user and set ownership
+RUN groupadd -r appgroup && useradd -r -g appgroup appuser
+
 
 WORKDIR /app
 
-
-COPY ./Product .
-COPY ./Product/entrypoint.sh /usr/local/bin/entrypoint.sh
-
-ENV PYTHONUNBUFFERED 1
+# Copy requirements first to leverage Docker cache
+COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
-ENV PYTHONPATH="${PYTHONPATH}:./proto"
+
+# Copy application files after installing dependencies
+COPY ./Product .
+COPY ./Proto /app/proto
+COPY ./Product/entrypoint.sh /usr/local/bin/entrypoint.sh
+COPY ./Product/grpc_supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+# ENV PYTHONUNBUFFERED=1 \
+#     PYTHONPATH="${PYTHONPATH}:./proto"
 
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
-ENTRYPOINT ["entrypoint.sh"]
+# Change ownership of application files to non-root user
+RUN chown -R appuser:appgroup /app /usr/local/bin/entrypoint.sh /etc/supervisor
 
-EXPOSE 50051
+
+# Switch to non-root user
+USER appuser
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]

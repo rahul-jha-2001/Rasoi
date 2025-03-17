@@ -5,7 +5,8 @@ from concurrent import futures
 import grpc
 
 import django,os
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ValidationError,ObjectDoesNotExist,MultipleObjectsReturned,PermissionDenied
+from django.db import IntegrityError,DatabaseError
 from django.db import transaction
 from django.conf import settings
 
@@ -34,6 +35,80 @@ from datetime import datetime
 from utils.logger import Logger
 
 logger = Logger("GRPC_service")
+
+def handle_error(func):
+    def wrapper(self, request, context):
+        try:
+            return func(self, request, context)
+        except Product_model.DoesNotExist:
+            logger.warning(f"Product Not Found: {getattr(request, 'product_uuid', '')}")
+            context.abort(grpc.StatusCode.NOT_FOUND, "Product Not Found")
+
+        except Category.DoesNotExist:
+            logger.error(f"Category Not Found: {getattr(request, 'category_uuid', '')}")
+            context.abort(grpc.StatusCode.NOT_FOUND, "Category Not Found")
+            
+        except Add_on.DoesNotExist:
+            logger.error(f"Add-on Not Found: {getattr(request, 'add_on_uuid', '')}")
+            context.abort(grpc.StatusCode.NOT_FOUND, "Add-on Not Found")
+
+        except ObjectDoesNotExist:
+            logger.error("Requested object does not exist")
+            context.abort(grpc.StatusCode.NOT_FOUND, "Requested Object Not Found")
+
+        except MultipleObjectsReturned:
+            logger.error(f"Multiple objects found for request")
+            context.abort(grpc.StatusCode.FAILED_PRECONDITION, "Multiple matching objects found")
+
+        except ValidationError as e:
+            logger.error(f"Validation Error: {str(e)}")
+            context.abort(grpc.StatusCode.INVALID_ARGUMENT, f"Validation Error: {str(e)}")
+
+        except IntegrityError as e:
+            logger.error(f"Integrity Error: {str(e)}")
+            context.abort(grpc.StatusCode.ALREADY_EXISTS, "Integrity constraint violated")
+
+        except DatabaseError as e:
+            logger.error(f"Database Error: {str(e)}",e)
+            context.abort(grpc.StatusCode.INTERNAL, "Database Error")
+
+        except PermissionDenied as e:
+            logger.warning(f"Permission Denied: {str(e)}",e)
+            context.abort(grpc.StatusCode.PERMISSION_DENIED, "Permission Denied")
+
+        except ValueError as e:
+            logger.error(f"Invalid Value: {str(e)}")
+            context.abort(grpc.StatusCode.INVALID_ARGUMENT, f"Invalid Value: {str(e)}")
+
+        except TypeError as e:
+            logger.error(f"Type Error: {str(e)}")
+            context.abort(grpc.StatusCode.INVALID_ARGUMENT, f"Type Error: {str(e)}")
+
+        except TimeoutError as e:
+            logger.error(f"Timeout Error: {str(e)}")
+            context.abort(grpc.StatusCode.DEADLINE_EXCEEDED, "Request timed out")
+            
+        except PIL.UnidentifiedImageError as e:
+            logger.error(f"Image Error: {str(e)}")
+            context.abort(grpc.StatusCode.INVALID_ARGUMENT, f"Image Error: {str(e)}")
+            
+        except grpc.RpcError as e:
+            logger.error(f"RPC Error: {str(e)}")
+            # Don't re-abort as this is likely a propagated error
+            raise
+            
+        except AttributeError as e:
+            logger.error(f"Attribute Error: {str(e)}")
+            context.abort(grpc.StatusCode.INVALID_ARGUMENT, f"Attribute Error: {str(e)}")
+            
+        except transaction.TransactionManagementError as e:
+            logger.error(f"Transaction Error: {str(e)}")
+            context.abort(grpc.StatusCode.ABORTED, f"Transaction Error: {str(e)}")
+
+        except Exception as e:
+            logger.error(f"Unexpected Error: {str(e)}")
+            context.abort(grpc.StatusCode.INTERNAL, "Internal Server Error")
+    return wrapper
 
 class ProductService(Product_pb2_grpc.ProductServiceServicer):
 
@@ -309,17 +384,19 @@ class ProductService(Product_pb2_grpc.ProductServiceServicer):
         #     raise grpc.RpcError(grpc.StatusCode.INTERNAL, f"Failed to serialize category {Product_obj.product_uuid}")
         # return response
     
+    @handle_error
     def CreateProduct(self, request, context):
         try:
             category = Category.objects.get(category_uuid = request.product.category_uuid)
         except Category.DoesNotExist as e:
                 logger.error(f"Category does Not exist for category_uuid:{request.product.category_uuid}")
-                return Product_pb2.ProductResponse(
-                success= False,
-                error=Product_pb2.error(
-                    error_message=str(e),
-                    error_code="DATA_NOT_FOUND"
-                ))
+                context.abort(grpc.StatusCode.NOT_FOUND,f"Category does Not exist for category_uuid:{request.product.category_uuid}")
+                # return Product_pb2.ProductResponse(
+                # success= False,
+                # error=Product_pb2.error(
+                #     error_message=str(e),
+                #     error_code="DATA_NOT_FOUND"
+                # ))
         try:
             with transaction.atomic():
                 product = Product_model.objects.create(
@@ -343,6 +420,7 @@ class ProductService(Product_pb2_grpc.ProductServiceServicer):
        
         except ValidationError as e:
             logger.error(f"Validation error: {str(e)}",e)
+            context.abort(grpc.StatusCode.INVALID_ARGUMENT,f"Validation error: {str(e)}")
             return  Product_pb2.ProductResponse(
                 success= False,
                 error=Product_pb2.error(
@@ -351,7 +429,8 @@ class ProductService(Product_pb2_grpc.ProductServiceServicer):
                 ))
        
         except Exception as e:
-            logger.error(f"Error creating Product: {str(e)}",e)
+            logger.error(f"Error Creating Product for Category:{request.product.category_uuid} at Store:{request.product.store_uuid}",e)
+            context.abort(grpc.StatusCode.INTERNAL,f"Error Creating Product for Category:{request.product.category_uuid} at Store:{request.product.store_uuid}")
             return  Product_pb2.ProductResponse(
                 success= False,
                 error=Product_pb2.error(
@@ -369,6 +448,7 @@ class ProductService(Product_pb2_grpc.ProductServiceServicer):
         
         except Product_model.DoesNotExist as e:
             logger.error(f"Product Does Not Exists for Product ID: {request.product_uuid} at Store Id: {request.store_uuid}")
+            context.abort(grpc.StatusCode.NOT_FOUND,f"Product Does Not Exists for Product ID: {request.product_uuid} at Store Id: {request.store_uuid}")
             return Product_pb2.ProductResponse(
                 success= False,
                 error= Product_pb2.error(
@@ -379,6 +459,7 @@ class ProductService(Product_pb2_grpc.ProductServiceServicer):
         
         except Exception as e:
             logger.error(f"Error getting Product: {str(e)}")
+            context.abort(grpc.StatusCode.INTERNAL,f"Error getting Products")
             return Product_pb2.ProductResponse(
                 success= False,
                 error= Product_pb2.error(
@@ -405,8 +486,13 @@ class ProductService(Product_pb2_grpc.ProductServiceServicer):
 
             )
             return response
+        except ValidationError as e:
+            logger.error(f"Vaildation Error:{str(e)} ",e)
+            context.abort(grpc.StatusCode.INVALID_ARGUMENT,f"Validation Error:{str(e)}")
         except Exception as e:
-            logger.error(f"Error getting Product: {str(e)}")
+            logger.error(f"Error getting Product: {str(e)}",e)
+            context.abort(grpc.StatusCode.INTERNAL,f"Error Getting Products")
+
             return Product_pb2.ListProductsResponse(
                 success= False,
                 error=Product_pb2.error(
@@ -424,6 +510,7 @@ class ProductService(Product_pb2_grpc.ProductServiceServicer):
             product = Product_model.objects.get(product_uuid = product_uuid,store_uuid=store_uuid)         
         except Product_model.DoesNotExist as e:
             logger.warning(f"Product Does Not Exist for Product Uuid:{product_uuid}")
+            context.abort
             return Product_pb2.ProductResponse(
                 success= False,
                 error= Product_pb2.error(
@@ -698,44 +785,64 @@ class ProductService(Product_pb2_grpc.ProductServiceServicer):
                 )
             )
     
+    @handle_error
     def ListCategory(self, request, context):
-        try:
-            if request.page < 0:
-                request.page = 1
-            if request.limit < 0:
-                request.limit = 10
-            categories,next_page,prev_page = Category.objects.get_categories(
-                                                          store_uuid=request.store_uuid,
-                                                          limit=request.limit,
-                                                          page = request.page)
+        # try:
+        #     if request.page < 0:
+        #         request.page = 1
+        #     if request.limit < 0:
+        #         request.limit = 10
+        #     categories,next_page,prev_page = Category.objects.get_categories(
+        #                                                   store_uuid=request.store_uuid,
+        #                                                   limit=request.limit,
+        #                                                   page = request.page)
             
-            response = Product_pb2.ListCategoryResponse(
-                categories=[self._category_to_proto(x) for x in categories],
-                success= True,
-                next_page=next_page,
-                prev_page=prev_page
+        #     response = Product_pb2.ListCategoryResponse(
+        #         categories=[self._category_to_proto(x) for x in categories],
+        #         success= True,
+        #         next_page=next_page,
+        #         prev_page=prev_page
 
-            )
-            return response
-        except ValidationError as e:
-            logger.error(f"Validation Error For Listing store Id:{request.store_uuid}",e)
-            return Product_pb2.ListCategoryResponse(
-                success= False,
-                error=Product_pb2.error(
-                    error_message= str(e),
-                    error_code="INVAILD_DATA"
-                )
-                )
-        except Exception as e:
-            logger.error(f"Error getting Categories",e)
-            return Product_pb2.ListCategoryResponse(
-                success= False,
-                error=Product_pb2.error(
-                    error_message= str(e),
-                    error_code="INTERNAL_SERVER_ERROR"
-                )
-            )
- 
+        #     )
+        #     return response
+        # except ValidationError as e:
+        #     logger.error(f"Validation Error For Listing store Id:{request.store_uuid}",e)
+        #     context.abort(grpc.StatusCode.INVALID_ARGUMENT,"Store Uuid Invalid")
+        #     return Product_pb2.ListCategoryResponse(
+        #         success= False,
+        #         error=Product_pb2.error(
+        #             error_message= str(e),
+        #             error_code="INVAILD_DATA"
+        #         )
+        #         )
+        # except Exception as e:
+        #     logger.error(f"Error getting Categories",e)
+        #     context.abort(grpc.StatusCode.INTERNAL,"Error getting Categories")
+
+        #     return Product_pb2.ListCategoryResponse(
+        #         success= False,
+        #         error=Product_pb2.error(
+        #             error_message= str(e),
+        #             error_code="INTERNAL_SERVER_ERROR"
+        #         )
+        #     )
+        if request.page < 0:
+            request.page = 1
+        if request.limit < 0:
+            request.limit = 10
+        categories,next_page,prev_page = Category.objects.get_categories(
+                                                        store_uuid=request.store_uuid,
+                                                        limit=request.limit,
+                                                        page = request.page)
+        
+        response = Product_pb2.ListCategoryResponse(
+            categories=[self._category_to_proto(x) for x in categories],
+            success= True,
+            next_page=next_page,
+            prev_page=prev_page
+
+        )
+        return response 
     @transaction.atomic
     def CreateAddOn(self, request, context):
         try:
@@ -1000,7 +1107,7 @@ def serve():
     Product_pb2_grpc.add_ProductServiceServicer_to_server(ProductService(), server)
     
     # Get the port from environment variables
-    grpc_port = os.getenv('GRPC_SERVER_PORT', '50051')
+    grpc_port = os.getenv('GRPC_SERVER_PORT', '50052')
     
     # Bind the server to the specified port
     server.add_insecure_port(f'[::]:{grpc_port}')
@@ -1011,3 +1118,4 @@ def serve():
 
 if __name__ == '__main__':
     serve()
+

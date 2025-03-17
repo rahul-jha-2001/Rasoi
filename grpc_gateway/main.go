@@ -6,9 +6,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"io"
 	"time"
-	"fmt"
 
 
 
@@ -17,30 +15,9 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 
 	Productgw "Gateway/product"
+	Middleware "Gateway/middleware"
 )
-func LogRequestMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Check for query parameters
-	var str string = fmt.Sprintf("%s %s ",r.Method,r.URL.Path)
-	queryParams := r.URL.Query()
-	if len(queryParams) > 0 {
-		for key, value := range queryParams {
-			str += fmt.Sprintf("%s:%s ",key,value[0])
-		}
-	}
 
-	// Check for body (Content-Length > 0)
-	if r.ContentLength > 0{
-		body, err := io.ReadAll(r.Body)
-		if err  != nil{
-			str += "Error Reading The Body"
-		}
-		str += fmt.Sprintf("Body:%s",string(body))
-	}
-	log.Println((str))
-	next.ServeHTTP(w, r)
-	})
-}
 
 func main() {
 	// Read configuration from environment variables
@@ -76,7 +53,7 @@ func main() {
 	// Create an HTTP server for the gRPC Gateway
 	gwServer := &http.Server{
 		Addr:    gatewayAddr,
-		Handler: LogRequestMiddleware(gwmux),
+		Handler: Middleware.LogRequestMiddleware(gwmux),
 	}
 
 	// Start the gRPC Gateway server in a goroutine so we can gracefully shut it down

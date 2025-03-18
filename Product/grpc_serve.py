@@ -10,10 +10,8 @@ from django.db import IntegrityError,DatabaseError
 from django.db import transaction
 from django.conf import settings
 
-
 import PIL
-from PIL import Image
- 
+
 from dotenv import load_dotenv
 load_dotenv()   
 
@@ -21,7 +19,6 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'Product.settings')
 django.setup()
 
 from proto import Product_pb2,Product_pb2_grpc
-from proto import healthcheck_pb2_grpc,healthcheck_pb2
 from proto.Product_pb2 import (
     product,
     category,
@@ -37,8 +34,15 @@ from utils.logger import Logger
 
 import boto3
 from botocore.exceptions import ClientError
+from utils.image_handler import image_handler
 
 logger = Logger("GRPC_service")
+
+BUCKET_NAME = os.getenv("BUCKET_NAME")
+REGION_NAME = os.getenv("AWS_DEFAULT_REGION")
+AWS_ACCESS_KEY_ID= os.getenv("AWS_ACCESS_KEY_ID")
+AWS_SECRET_ACCESS_KEY= os.getenv("AWS_SECRET_ACCESS_KEY")
+
 
 def handle_error(func):
     def wrapper(self, request, context):
@@ -110,38 +114,14 @@ def handle_error(func):
             context.abort(grpc.StatusCode.ABORTED, f"Transaction Error: {str(e)}")
 
         except Exception as e:
-            logger.error(f"Unexpected Error: {str(e)}")
+            logger.error(f"Unexpected Error: {str(e)}",e)
             context.abort(grpc.StatusCode.INTERNAL, "Internal Server Error")
     return wrapper
 
-# class Image_handler:
-#     def _create_bucket_clinet(bucket_name):
-#         s3_client = boto3.client('s3')
-        
-#         try:
-#             # Attempt to get the bucket's metadata
-#             s3_client.head_bucket(Bucket=bucket_name)
-#             return s3_client  # The bucket exists
-#         except ClientError as e:
-#             # If a 404 error is returned, the bucket doesn't exist
-#             if e.response['Error']['Code'] == '404':
-#                 logger.error(f"{bucket_name} S3 Bucket does not exist")
-#                 return None  # The bucket does not exist
-#             else:
-#                 # Other errors (e.g., permission issues) can be handled here
-#                 raise
-
-#     def __init__(self):
-#         #LOAD envioremtn variables
-#         AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID")
-#         AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
-#         BUCKET_NAME = os.getenv("BUCKET_NAME")
-
 class ProductService(Product_pb2_grpc.ProductServiceServicer):
 
-    # def __init__(self):
-    #     image_handler = Image_handler()
-    #     super().__init__()
+    def __init__(self):
+        super().__init__()
 
 
     def _verify_wire_format(self,GRPC_message,GRPC_message_type,context_info = ""):
@@ -418,8 +398,16 @@ class ProductService(Product_pb2_grpc.ProductServiceServicer):
     
     @handle_error
     def CreateProduct(self, request, context):
+        
+
+        size = image_handler.check_size(request.Image)
+        if size > 5:
+            raise ValidationError(f"Image size:{size}mb exceeds 5mb")
+        ext = image_handler.check_extension(request.Image)
+        if ext not in ['.jpg','.png','.jpeg']:
+            logger.debug(ext)
+            raise ValidationError(f"Unspported File Type {ext}")
         category = Category.objects.get(category_uuid = request.category_uuid,store_uuid =request.store_uuid)
-    
         with transaction.atomic():
             product = Product_model.objects.create(
                 store_uuid = request.store_uuid,
@@ -436,6 +424,21 @@ class ProductService(Product_pb2_grpc.ProductServiceServicer):
             
             logger.info(f"Created Product: {product.product_uuid} in category {product.category.category_uuid} at store {product.store_uuid}")
             
+            image_name = f"{product.store_uuid}/{product.category.category_uuid}/{product.product_uuid}"
+
+            _,url = image_handler.upload_to_s3(
+                request.Image,
+                bucket_name=BUCKET_NAME,
+                object_name=image_name,
+                aws_access_key=AWS_ACCESS_KEY_ID,
+                aws_secret_key=AWS_SECRET_ACCESS_KEY,
+                region_name=REGION_NAME
+            )
+            if _:
+                product.image_url = url
+                product.save()
+        
+
             return Product_pb2.ProductResponse(
                 product=self._product_to_proto(product),
                 success= True)

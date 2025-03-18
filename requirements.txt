@@ -17,3 +17,4 @@ schedule
 razorpay
 pillow
 googleapis-common-protos
+boto3

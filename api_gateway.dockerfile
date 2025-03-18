@@ -6,8 +6,20 @@ RUN apt-get update && apt-get install -y \
     protobuf-compiler \
     && rm -rf /var/lib/apt/lists/*
 
+RUN go install github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-grpc-gateway@latest
+RUN go install github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-openapiv2@latest
+RUN go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+RUN go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+
+
+
+
+
 WORKDIR /app
+
 COPY ./grpc_gateway/ .
+RUN go mod tidy
+
 COPY ./Proto ./Proto 
 COPY ./grpc_gateway/builder.sh /usr/local/bin/builder.sh
 RUN chmod +x /usr/local/bin/builder.sh

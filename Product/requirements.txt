@@ -4,5 +4,5 @@ grpcio
 grpcio-tools
 djangorestframework-simplejwt
 python-dotenv
-
+boto3
 psycopg

@@ -31,6 +31,9 @@ fi
 #   fi
 # done
 
+
+
+
 # Checking for the main.go file
 echo "Starting build process..."
 
@@ -47,6 +50,12 @@ echo "Running go mod tidy..."
 go mod tidy
 echo "Go packages downloaded successfully."
 
+if protoc -I="$PROTO_DIR" --go-grpc_out=. --go_out=. --grpc-gateway_out=. Product.proto; then
+      echo "$filename Compiled Successfully"
+    else
+      echo "Error: Could Not Compile $filename"
+      exit 1
+fi
 # Build the Go program
 echo "Building Go program..."
 go build -ldflags "-s -w" -o server .

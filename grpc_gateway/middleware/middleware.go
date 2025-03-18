@@ -2,7 +2,6 @@ package middleware
 import (
 	"log"
 	"net/http"
-	"io"
 	"fmt"
 )
 
@@ -29,13 +28,13 @@ func LogRequestMiddleware(next http.Handler) http.Handler {
 	}
 
 	// Check for body (Content-Length > 0)
-	if r.ContentLength > 0{
-		body, err := io.ReadAll(r.Body)
-		if err  != nil{
-			str += "Error Reading The Body"
-		}
-		str += fmt.Sprintf("Body:%s",string(body))
-	}
+	// if r.ContentLength > 0{
+	// 	body, err := io.ReadAll(r.Body)
+	// 	if err  != nil{
+	// 		str += "Error Reading The Body"
+	// 	}
+	// 	str += fmt.Sprintf("Body:%s",string(body))
+	// }
 	log.Println((str))
 	next.ServeHTTP(w, r)
 	})

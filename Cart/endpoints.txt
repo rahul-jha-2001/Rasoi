@@ -1,0 +1,60 @@
+// """
+
+
+
+// Create Cart ->  Create or activate a cart if it exits
+//     post  v1/cart?Store_uuid,Phone_no
+// Get Cart -> Get Cart by store_uuid and phone_no
+//     get v1/cart?store_uuid,phone_o
+// update cart -> Update Cart
+//     put -> v1/cart?store_uuid,phone_no
+// delele cart -> delete Cart 
+//     delete v1/cart?store_uuid,phone_no
+
+// addcartitem -> add item to the cart 
+//     post v1/cart/{cart_uuid}/cartitem
+// removeCartItme -> 
+//     delete v1/cart/{cart_uuid}/cartitem/{cartitem_uuid}
+// updateCartItem 
+//     put v1/cart/{cart_uuid}/cartitem/{cartitem_uuid}
+// addQuantity
+//     put /v1/cart/{cart_uuid}/cartitem/{cartitem_uuid}/add_quantity
+// removequantity   
+//     put /vi/cart/{cart_uuid}/cartitem/{cartitem_uuid}/remove_quantity
+
+// create addon 
+//     post /vi/cart/{cart_uuid}/cartitem/{cartitem_uuid}/addon
+// update addon 
+//     put /vi/cart/{cart_uuid}/cartitem/{cartitem_uuid}/addon/{addonUUid}
+// delete
+//     delete /vi/cart/{cart_uuid}/cartitem/{cartitem_uuid}/addon/{addonUUid}     
+// addQuantity
+//     put /v1/cart/{cart_uuid}/cartitem/{cartitem_uuid}/addon/{addonUUid}/add_quantity
+// removequantity   
+//     put /vi/cart/{cart_uuid}/cartitem/{cartitem_uuid}/addon/{addonUUid}/remove_quantity
+
+
+// validate coupon
+//     get v1/cart/{cart_uuid}?Couponname
+
+// add  coupon
+//     post v1/cart/{cartuuid}/addCoupon
+// remove coupon
+//     put v1/cart/{cartuuid}/removecoupon
+
+// create coupon
+//     post v1/coupon?store_uuid
+// update coupon
+//     put v1/coupon?store_uuid
+// delete coupon 
+//     delete v1/coupon/{Coupon_uuid}
+// list coupon
+//     get v1/coupon/{coupon_uuid}/list
+// get coupon
+//     get v1/coupn/{coup_uuid}
+// get coupon usage
+//     get v1/coupon/{coupn_uuid}/usaage
+
+
+
+// """

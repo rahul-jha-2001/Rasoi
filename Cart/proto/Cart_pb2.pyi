@@ -240,6 +240,16 @@ class UpdateAddOnRequest(_message.Message):
     add_on: AddOn
     def __init__(self, cart_uuid: _Optional[str] = ..., cart_item_uuid: _Optional[str] = ..., add_on_uuid: _Optional[str] = ..., add_on: _Optional[_Union[AddOn, _Mapping]] = ...) -> None: ...
 
+class RemoveAddOnRequest(_message.Message):
+    __slots__ = ("cart_uuid", "cart_item_uuid", "add_on_uuid")
+    CART_UUID_FIELD_NUMBER: _ClassVar[int]
+    CART_ITEM_UUID_FIELD_NUMBER: _ClassVar[int]
+    ADD_ON_UUID_FIELD_NUMBER: _ClassVar[int]
+    cart_uuid: str
+    cart_item_uuid: str
+    add_on_uuid: str
+    def __init__(self, cart_uuid: _Optional[str] = ..., cart_item_uuid: _Optional[str] = ..., add_on_uuid: _Optional[str] = ...) -> None: ...
+
 class IncreaseAddOnQuantityRequest(_message.Message):
     __slots__ = ("cart_uuid", "cart_item_uuid", "add_on_uuid")
     CART_UUID_FIELD_NUMBER: _ClassVar[int]

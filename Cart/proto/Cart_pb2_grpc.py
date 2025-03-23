@@ -3,7 +3,7 @@
 import grpc
 import warnings
 
-import Cart_pb2 as Cart__pb2
+import cart_pb2 as cart__pb2
 from google.protobuf import empty_pb2 as google_dot_protobuf_dot_empty__pb2
 
 GRPC_GENERATED_VERSION = '1.70.0'
@@ -19,7 +19,7 @@ except ImportError:
 if _version_not_supported:
     raise RuntimeError(
         f'The grpc package installed is at version {GRPC_VERSION},'
-        + f' but the generated code in Cart_pb2_grpc.py depends on'
+        + f' but the generated code in cart_pb2_grpc.py depends on'
         + f' grpcio>={GRPC_GENERATED_VERSION}.'
         + f' Please upgrade your grpc module to grpcio>={GRPC_GENERATED_VERSION}'
         + f' or downgrade your generated code using grpcio-tools<={GRPC_VERSION}.'
@@ -37,78 +37,83 @@ class CartServiceStub(object):
         """
         self.CreateCart = channel.unary_unary(
                 '/Cart_v1.CartService/CreateCart',
-                request_serializer=Cart__pb2.CreateCartRequest.SerializeToString,
-                response_deserializer=Cart__pb2.CartResponse.FromString,
+                request_serializer=cart__pb2.CreateCartRequest.SerializeToString,
+                response_deserializer=cart__pb2.CartResponse.FromString,
                 _registered_method=True)
         self.GetCart = channel.unary_unary(
                 '/Cart_v1.CartService/GetCart',
-                request_serializer=Cart__pb2.GetCartRequest.SerializeToString,
-                response_deserializer=Cart__pb2.CartResponse.FromString,
+                request_serializer=cart__pb2.GetCartRequest.SerializeToString,
+                response_deserializer=cart__pb2.CartResponse.FromString,
                 _registered_method=True)
         self.UpdateCart = channel.unary_unary(
                 '/Cart_v1.CartService/UpdateCart',
-                request_serializer=Cart__pb2.UpdateCartRequest.SerializeToString,
-                response_deserializer=Cart__pb2.CartResponse.FromString,
+                request_serializer=cart__pb2.UpdateCartRequest.SerializeToString,
+                response_deserializer=cart__pb2.CartResponse.FromString,
                 _registered_method=True)
         self.DeleteCart = channel.unary_unary(
                 '/Cart_v1.CartService/DeleteCart',
-                request_serializer=Cart__pb2.DeleteCartRequest.SerializeToString,
+                request_serializer=cart__pb2.DeleteCartRequest.SerializeToString,
                 response_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
                 _registered_method=True)
         self.AddCartItem = channel.unary_unary(
                 '/Cart_v1.CartService/AddCartItem',
-                request_serializer=Cart__pb2.AddCartItemRequest.SerializeToString,
-                response_deserializer=Cart__pb2.CartResponse.FromString,
+                request_serializer=cart__pb2.AddCartItemRequest.SerializeToString,
+                response_deserializer=cart__pb2.CartResponse.FromString,
                 _registered_method=True)
         self.RemoveCartItem = channel.unary_unary(
                 '/Cart_v1.CartService/RemoveCartItem',
-                request_serializer=Cart__pb2.RemoveCartItemRequest.SerializeToString,
-                response_deserializer=Cart__pb2.CartResponse.FromString,
+                request_serializer=cart__pb2.RemoveCartItemRequest.SerializeToString,
+                response_deserializer=cart__pb2.CartResponse.FromString,
                 _registered_method=True)
         self.AddQuantity = channel.unary_unary(
                 '/Cart_v1.CartService/AddQuantity',
-                request_serializer=Cart__pb2.AddQuantityRequest.SerializeToString,
-                response_deserializer=Cart__pb2.CartResponse.FromString,
+                request_serializer=cart__pb2.AddQuantityRequest.SerializeToString,
+                response_deserializer=cart__pb2.CartResponse.FromString,
                 _registered_method=True)
         self.RemoveQuantity = channel.unary_unary(
                 '/Cart_v1.CartService/RemoveQuantity',
-                request_serializer=Cart__pb2.RemoveQuantityRequest.SerializeToString,
-                response_deserializer=Cart__pb2.CartResponse.FromString,
+                request_serializer=cart__pb2.RemoveQuantityRequest.SerializeToString,
+                response_deserializer=cart__pb2.CartResponse.FromString,
                 _registered_method=True)
         self.CreateAddOn = channel.unary_unary(
                 '/Cart_v1.CartService/CreateAddOn',
-                request_serializer=Cart__pb2.CreateAddOnRequest.SerializeToString,
-                response_deserializer=Cart__pb2.CartResponse.FromString,
+                request_serializer=cart__pb2.CreateAddOnRequest.SerializeToString,
+                response_deserializer=cart__pb2.CartResponse.FromString,
                 _registered_method=True)
         self.UpdateAddOn = channel.unary_unary(
                 '/Cart_v1.CartService/UpdateAddOn',
-                request_serializer=Cart__pb2.UpdateAddOnRequest.SerializeToString,
-                response_deserializer=Cart__pb2.CartResponse.FromString,
+                request_serializer=cart__pb2.UpdateAddOnRequest.SerializeToString,
+                response_deserializer=cart__pb2.CartResponse.FromString,
+                _registered_method=True)
+        self.RemoveAddOn = channel.unary_unary(
+                '/Cart_v1.CartService/RemoveAddOn',
+                request_serializer=cart__pb2.RemoveAddOnRequest.SerializeToString,
+                response_deserializer=cart__pb2.CartResponse.FromString,
                 _registered_method=True)
         self.IncreaseAddOnQuantity = channel.unary_unary(
                 '/Cart_v1.CartService/IncreaseAddOnQuantity',
-                request_serializer=Cart__pb2.IncreaseAddOnQuantityRequest.SerializeToString,
-                response_deserializer=Cart__pb2.CartResponse.FromString,
+                request_serializer=cart__pb2.IncreaseAddOnQuantityRequest.SerializeToString,
+                response_deserializer=cart__pb2.CartResponse.FromString,
                 _registered_method=True)
         self.RemoveAddOnQuantity = channel.unary_unary(
                 '/Cart_v1.CartService/RemoveAddOnQuantity',
-                request_serializer=Cart__pb2.RemoveAddOnQuantityRequest.SerializeToString,
-                response_deserializer=Cart__pb2.CartResponse.FromString,
+                request_serializer=cart__pb2.RemoveAddOnQuantityRequest.SerializeToString,
+                response_deserializer=cart__pb2.CartResponse.FromString,
                 _registered_method=True)
         self.ValidateCoupon = channel.unary_unary(
                 '/Cart_v1.CartService/ValidateCoupon',
-                request_serializer=Cart__pb2.ValidCouponResquest.SerializeToString,
-                response_deserializer=Cart__pb2.ValidCouponResponse.FromString,
+                request_serializer=cart__pb2.ValidCouponResquest.SerializeToString,
+                response_deserializer=cart__pb2.ValidCouponResponse.FromString,
                 _registered_method=True)
         self.AddCoupon = channel.unary_unary(
                 '/Cart_v1.CartService/AddCoupon',
-                request_serializer=Cart__pb2.AddCouponRequest.SerializeToString,
-                response_deserializer=Cart__pb2.CartResponse.FromString,
+                request_serializer=cart__pb2.AddCouponRequest.SerializeToString,
+                response_deserializer=cart__pb2.CartResponse.FromString,
                 _registered_method=True)
         self.RemoveCoupon = channel.unary_unary(
                 '/Cart_v1.CartService/RemoveCoupon',
-                request_serializer=Cart__pb2.RemoveCouponRequest.SerializeToString,
-                response_deserializer=Cart__pb2.CartResponse.FromString,
+                request_serializer=cart__pb2.RemoveCouponRequest.SerializeToString,
+                response_deserializer=cart__pb2.CartResponse.FromString,
                 _registered_method=True)
 
 
@@ -177,6 +182,12 @@ class CartServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def RemoveAddOn(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
     def IncreaseAddOnQuantity(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
@@ -212,78 +223,83 @@ def add_CartServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
             'CreateCart': grpc.unary_unary_rpc_method_handler(
                     servicer.CreateCart,
-                    request_deserializer=Cart__pb2.CreateCartRequest.FromString,
-                    response_serializer=Cart__pb2.CartResponse.SerializeToString,
+                    request_deserializer=cart__pb2.CreateCartRequest.FromString,
+                    response_serializer=cart__pb2.CartResponse.SerializeToString,
             ),
             'GetCart': grpc.unary_unary_rpc_method_handler(
                     servicer.GetCart,
-                    request_deserializer=Cart__pb2.GetCartRequest.FromString,
-                    response_serializer=Cart__pb2.CartResponse.SerializeToString,
+                    request_deserializer=cart__pb2.GetCartRequest.FromString,
+                    response_serializer=cart__pb2.CartResponse.SerializeToString,
             ),
             'UpdateCart': grpc.unary_unary_rpc_method_handler(
                     servicer.UpdateCart,
-                    request_deserializer=Cart__pb2.UpdateCartRequest.FromString,
-                    response_serializer=Cart__pb2.CartResponse.SerializeToString,
+                    request_deserializer=cart__pb2.UpdateCartRequest.FromString,
+                    response_serializer=cart__pb2.CartResponse.SerializeToString,
             ),
             'DeleteCart': grpc.unary_unary_rpc_method_handler(
                     servicer.DeleteCart,
-                    request_deserializer=Cart__pb2.DeleteCartRequest.FromString,
+                    request_deserializer=cart__pb2.DeleteCartRequest.FromString,
                     response_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
             ),
             'AddCartItem': grpc.unary_unary_rpc_method_handler(
                     servicer.AddCartItem,
-                    request_deserializer=Cart__pb2.AddCartItemRequest.FromString,
-                    response_serializer=Cart__pb2.CartResponse.SerializeToString,
+                    request_deserializer=cart__pb2.AddCartItemRequest.FromString,
+                    response_serializer=cart__pb2.CartResponse.SerializeToString,
             ),
             'RemoveCartItem': grpc.unary_unary_rpc_method_handler(
                     servicer.RemoveCartItem,
-                    request_deserializer=Cart__pb2.RemoveCartItemRequest.FromString,
-                    response_serializer=Cart__pb2.CartResponse.SerializeToString,
+                    request_deserializer=cart__pb2.RemoveCartItemRequest.FromString,
+                    response_serializer=cart__pb2.CartResponse.SerializeToString,
             ),
             'AddQuantity': grpc.unary_unary_rpc_method_handler(
                     servicer.AddQuantity,
-                    request_deserializer=Cart__pb2.AddQuantityRequest.FromString,
-                    response_serializer=Cart__pb2.CartResponse.SerializeToString,
+                    request_deserializer=cart__pb2.AddQuantityRequest.FromString,
+                    response_serializer=cart__pb2.CartResponse.SerializeToString,
             ),
             'RemoveQuantity': grpc.unary_unary_rpc_method_handler(
                     servicer.RemoveQuantity,
-                    request_deserializer=Cart__pb2.RemoveQuantityRequest.FromString,
-                    response_serializer=Cart__pb2.CartResponse.SerializeToString,
+                    request_deserializer=cart__pb2.RemoveQuantityRequest.FromString,
+                    response_serializer=cart__pb2.CartResponse.SerializeToString,
             ),
             'CreateAddOn': grpc.unary_unary_rpc_method_handler(
                     servicer.CreateAddOn,
-                    request_deserializer=Cart__pb2.CreateAddOnRequest.FromString,
-                    response_serializer=Cart__pb2.CartResponse.SerializeToString,
+                    request_deserializer=cart__pb2.CreateAddOnRequest.FromString,
+                    response_serializer=cart__pb2.CartResponse.SerializeToString,
             ),
             'UpdateAddOn': grpc.unary_unary_rpc_method_handler(
                     servicer.UpdateAddOn,
-                    request_deserializer=Cart__pb2.UpdateAddOnRequest.FromString,
-                    response_serializer=Cart__pb2.CartResponse.SerializeToString,
+                    request_deserializer=cart__pb2.UpdateAddOnRequest.FromString,
+                    response_serializer=cart__pb2.CartResponse.SerializeToString,
+            ),
+            'RemoveAddOn': grpc.unary_unary_rpc_method_handler(
+                    servicer.RemoveAddOn,
+                    request_deserializer=cart__pb2.RemoveAddOnRequest.FromString,
+                    response_serializer=cart__pb2.CartResponse.SerializeToString,
             ),
             'IncreaseAddOnQuantity': grpc.unary_unary_rpc_method_handler(
                     servicer.IncreaseAddOnQuantity,
-                    request_deserializer=Cart__pb2.IncreaseAddOnQuantityRequest.FromString,
-                    response_serializer=Cart__pb2.CartResponse.SerializeToString,
+                    request_deserializer=cart__pb2.IncreaseAddOnQuantityRequest.FromString,
+                    response_serializer=cart__pb2.CartResponse.SerializeToString,
             ),
             'RemoveAddOnQuantity': grpc.unary_unary_rpc_method_handler(
                     servicer.RemoveAddOnQuantity,
-                    request_deserializer=Cart__pb2.RemoveAddOnQuantityRequest.FromString,
-                    response_serializer=Cart__pb2.CartResponse.SerializeToString,
+                    request_deserializer=cart__pb2.RemoveAddOnQuantityRequest.FromString,
+                    response_serializer=cart__pb2.CartResponse.SerializeToString,
             ),
             'ValidateCoupon': grpc.unary_unary_rpc_method_handler(
                     servicer.ValidateCoupon,
-                    request_deserializer=Cart__pb2.ValidCouponResquest.FromString,
-                    response_serializer=Cart__pb2.ValidCouponResponse.SerializeToString,
+                    request_deserializer=cart__pb2.ValidCouponResquest.FromString,
+                    response_serializer=cart__pb2.ValidCouponResponse.SerializeToString,
             ),
             'AddCoupon': grpc.unary_unary_rpc_method_handler(
                     servicer.AddCoupon,
-                    request_deserializer=Cart__pb2.AddCouponRequest.FromString,
-                    response_serializer=Cart__pb2.CartResponse.SerializeToString,
+                    request_deserializer=cart__pb2.AddCouponRequest.FromString,
+                    response_serializer=cart__pb2.CartResponse.SerializeToString,
             ),
             'RemoveCoupon': grpc.unary_unary_rpc_method_handler(
                     servicer.RemoveCoupon,
-                    request_deserializer=Cart__pb2.RemoveCouponRequest.FromString,
-                    response_serializer=Cart__pb2.CartResponse.SerializeToString,
+                    request_deserializer=cart__pb2.RemoveCouponRequest.FromString,
+                    response_serializer=cart__pb2.CartResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -311,8 +327,8 @@ class CartService(object):
             request,
             target,
             '/Cart_v1.CartService/CreateCart',
-            Cart__pb2.CreateCartRequest.SerializeToString,
-            Cart__pb2.CartResponse.FromString,
+            cart__pb2.CreateCartRequest.SerializeToString,
+            cart__pb2.CartResponse.FromString,
             options,
             channel_credentials,
             insecure,
@@ -338,8 +354,8 @@ class CartService(object):
             request,
             target,
             '/Cart_v1.CartService/GetCart',
-            Cart__pb2.GetCartRequest.SerializeToString,
-            Cart__pb2.CartResponse.FromString,
+            cart__pb2.GetCartRequest.SerializeToString,
+            cart__pb2.CartResponse.FromString,
             options,
             channel_credentials,
             insecure,
@@ -365,8 +381,8 @@ class CartService(object):
             request,
             target,
             '/Cart_v1.CartService/UpdateCart',
-            Cart__pb2.UpdateCartRequest.SerializeToString,
-            Cart__pb2.CartResponse.FromString,
+            cart__pb2.UpdateCartRequest.SerializeToString,
+            cart__pb2.CartResponse.FromString,
             options,
             channel_credentials,
             insecure,
@@ -392,7 +408,7 @@ class CartService(object):
             request,
             target,
             '/Cart_v1.CartService/DeleteCart',
-            Cart__pb2.DeleteCartRequest.SerializeToString,
+            cart__pb2.DeleteCartRequest.SerializeToString,
             google_dot_protobuf_dot_empty__pb2.Empty.FromString,
             options,
             channel_credentials,
@@ -419,8 +435,8 @@ class CartService(object):
             request,
             target,
             '/Cart_v1.CartService/AddCartItem',
-            Cart__pb2.AddCartItemRequest.SerializeToString,
-            Cart__pb2.CartResponse.FromString,
+            cart__pb2.AddCartItemRequest.SerializeToString,
+            cart__pb2.CartResponse.FromString,
             options,
             channel_credentials,
             insecure,
@@ -446,8 +462,8 @@ class CartService(object):
             request,
             target,
             '/Cart_v1.CartService/RemoveCartItem',
-            Cart__pb2.RemoveCartItemRequest.SerializeToString,
-            Cart__pb2.CartResponse.FromString,
+            cart__pb2.RemoveCartItemRequest.SerializeToString,
+            cart__pb2.CartResponse.FromString,
             options,
             channel_credentials,
             insecure,
@@ -473,8 +489,8 @@ class CartService(object):
             request,
             target,
             '/Cart_v1.CartService/AddQuantity',
-            Cart__pb2.AddQuantityRequest.SerializeToString,
-            Cart__pb2.CartResponse.FromString,
+            cart__pb2.AddQuantityRequest.SerializeToString,
+            cart__pb2.CartResponse.FromString,
             options,
             channel_credentials,
             insecure,
@@ -500,8 +516,8 @@ class CartService(object):
             request,
             target,
             '/Cart_v1.CartService/RemoveQuantity',
-            Cart__pb2.RemoveQuantityRequest.SerializeToString,
-            Cart__pb2.CartResponse.FromString,
+            cart__pb2.RemoveQuantityRequest.SerializeToString,
+            cart__pb2.CartResponse.FromString,
             options,
             channel_credentials,
             insecure,
@@ -527,8 +543,8 @@ class CartService(object):
             request,
             target,
             '/Cart_v1.CartService/CreateAddOn',
-            Cart__pb2.CreateAddOnRequest.SerializeToString,
-            Cart__pb2.CartResponse.FromString,
+            cart__pb2.CreateAddOnRequest.SerializeToString,
+            cart__pb2.CartResponse.FromString,
             options,
             channel_credentials,
             insecure,
@@ -554,8 +570,35 @@ class CartService(object):
             request,
             target,
             '/Cart_v1.CartService/UpdateAddOn',
-            Cart__pb2.UpdateAddOnRequest.SerializeToString,
-            Cart__pb2.CartResponse.FromString,
+            cart__pb2.UpdateAddOnRequest.SerializeToString,
+            cart__pb2.CartResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def RemoveAddOn(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/Cart_v1.CartService/RemoveAddOn',
+            cart__pb2.RemoveAddOnRequest.SerializeToString,
+            cart__pb2.CartResponse.FromString,
             options,
             channel_credentials,
             insecure,
@@ -581,8 +624,8 @@ class CartService(object):
             request,
             target,
             '/Cart_v1.CartService/IncreaseAddOnQuantity',
-            Cart__pb2.IncreaseAddOnQuantityRequest.SerializeToString,
-            Cart__pb2.CartResponse.FromString,
+            cart__pb2.IncreaseAddOnQuantityRequest.SerializeToString,
+            cart__pb2.CartResponse.FromString,
             options,
             channel_credentials,
             insecure,
@@ -608,8 +651,8 @@ class CartService(object):
             request,
             target,
             '/Cart_v1.CartService/RemoveAddOnQuantity',
-            Cart__pb2.RemoveAddOnQuantityRequest.SerializeToString,
-            Cart__pb2.CartResponse.FromString,
+            cart__pb2.RemoveAddOnQuantityRequest.SerializeToString,
+            cart__pb2.CartResponse.FromString,
             options,
             channel_credentials,
             insecure,
@@ -635,8 +678,8 @@ class CartService(object):
             request,
             target,
             '/Cart_v1.CartService/ValidateCoupon',
-            Cart__pb2.ValidCouponResquest.SerializeToString,
-            Cart__pb2.ValidCouponResponse.FromString,
+            cart__pb2.ValidCouponResquest.SerializeToString,
+            cart__pb2.ValidCouponResponse.FromString,
             options,
             channel_credentials,
             insecure,
@@ -662,8 +705,8 @@ class CartService(object):
             request,
             target,
             '/Cart_v1.CartService/AddCoupon',
-            Cart__pb2.AddCouponRequest.SerializeToString,
-            Cart__pb2.CartResponse.FromString,
+            cart__pb2.AddCouponRequest.SerializeToString,
+            cart__pb2.CartResponse.FromString,
             options,
             channel_credentials,
             insecure,
@@ -689,8 +732,8 @@ class CartService(object):
             request,
             target,
             '/Cart_v1.CartService/RemoveCoupon',
-            Cart__pb2.RemoveCouponRequest.SerializeToString,
-            Cart__pb2.CartResponse.FromString,
+            cart__pb2.RemoveCouponRequest.SerializeToString,
+            cart__pb2.CartResponse.FromString,
             options,
             channel_credentials,
             insecure,
@@ -713,33 +756,33 @@ class CouponServiceStub(object):
         """
         self.CreateCoupon = channel.unary_unary(
                 '/Cart_v1.CouponService/CreateCoupon',
-                request_serializer=Cart__pb2.CreateCouponRequest.SerializeToString,
-                response_deserializer=Cart__pb2.Coupon.FromString,
+                request_serializer=cart__pb2.CreateCouponRequest.SerializeToString,
+                response_deserializer=cart__pb2.Coupon.FromString,
                 _registered_method=True)
         self.GetCoupon = channel.unary_unary(
                 '/Cart_v1.CouponService/GetCoupon',
-                request_serializer=Cart__pb2.GetCouponRequest.SerializeToString,
-                response_deserializer=Cart__pb2.Coupon.FromString,
+                request_serializer=cart__pb2.GetCouponRequest.SerializeToString,
+                response_deserializer=cart__pb2.Coupon.FromString,
                 _registered_method=True)
         self.UpdateCoupon = channel.unary_unary(
                 '/Cart_v1.CouponService/UpdateCoupon',
-                request_serializer=Cart__pb2.UpdateCouponRequest.SerializeToString,
-                response_deserializer=Cart__pb2.Coupon.FromString,
+                request_serializer=cart__pb2.UpdateCouponRequest.SerializeToString,
+                response_deserializer=cart__pb2.Coupon.FromString,
                 _registered_method=True)
         self.DeleteCoupon = channel.unary_unary(
                 '/Cart_v1.CouponService/DeleteCoupon',
-                request_serializer=Cart__pb2.DeleteCouponRequest.SerializeToString,
+                request_serializer=cart__pb2.DeleteCouponRequest.SerializeToString,
                 response_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
                 _registered_method=True)
         self.listCoupon = channel.unary_unary(
                 '/Cart_v1.CouponService/listCoupon',
-                request_serializer=Cart__pb2.listCouponRequest.SerializeToString,
-                response_deserializer=Cart__pb2.listCouponResponse.FromString,
+                request_serializer=cart__pb2.listCouponRequest.SerializeToString,
+                response_deserializer=cart__pb2.listCouponResponse.FromString,
                 _registered_method=True)
         self.GetCouponUsage = channel.unary_unary(
                 '/Cart_v1.CouponService/GetCouponUsage',
-                request_serializer=Cart__pb2.GetCouponUsageRequest.SerializeToString,
-                response_deserializer=Cart__pb2.GetCouponUsageResponse.FromString,
+                request_serializer=cart__pb2.GetCouponUsageRequest.SerializeToString,
+                response_deserializer=cart__pb2.GetCouponUsageResponse.FromString,
                 _registered_method=True)
 
 
@@ -788,33 +831,33 @@ def add_CouponServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
             'CreateCoupon': grpc.unary_unary_rpc_method_handler(
                     servicer.CreateCoupon,
-                    request_deserializer=Cart__pb2.CreateCouponRequest.FromString,
-                    response_serializer=Cart__pb2.Coupon.SerializeToString,
+                    request_deserializer=cart__pb2.CreateCouponRequest.FromString,
+                    response_serializer=cart__pb2.Coupon.SerializeToString,
             ),
             'GetCoupon': grpc.unary_unary_rpc_method_handler(
                     servicer.GetCoupon,
-                    request_deserializer=Cart__pb2.GetCouponRequest.FromString,
-                    response_serializer=Cart__pb2.Coupon.SerializeToString,
+                    request_deserializer=cart__pb2.GetCouponRequest.FromString,
+                    response_serializer=cart__pb2.Coupon.SerializeToString,
             ),
             'UpdateCoupon': grpc.unary_unary_rpc_method_handler(
                     servicer.UpdateCoupon,
-                    request_deserializer=Cart__pb2.UpdateCouponRequest.FromString,
-                    response_serializer=Cart__pb2.Coupon.SerializeToString,
+                    request_deserializer=cart__pb2.UpdateCouponRequest.FromString,
+                    response_serializer=cart__pb2.Coupon.SerializeToString,
             ),
             'DeleteCoupon': grpc.unary_unary_rpc_method_handler(
                     servicer.DeleteCoupon,
-                    request_deserializer=Cart__pb2.DeleteCouponRequest.FromString,
+                    request_deserializer=cart__pb2.DeleteCouponRequest.FromString,
                     response_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
             ),
             'listCoupon': grpc.unary_unary_rpc_method_handler(
                     servicer.listCoupon,
-                    request_deserializer=Cart__pb2.listCouponRequest.FromString,
-                    response_serializer=Cart__pb2.listCouponResponse.SerializeToString,
+                    request_deserializer=cart__pb2.listCouponRequest.FromString,
+                    response_serializer=cart__pb2.listCouponResponse.SerializeToString,
             ),
             'GetCouponUsage': grpc.unary_unary_rpc_method_handler(
                     servicer.GetCouponUsage,
-                    request_deserializer=Cart__pb2.GetCouponUsageRequest.FromString,
-                    response_serializer=Cart__pb2.GetCouponUsageResponse.SerializeToString,
+                    request_deserializer=cart__pb2.GetCouponUsageRequest.FromString,
+                    response_serializer=cart__pb2.GetCouponUsageResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -842,8 +885,8 @@ class CouponService(object):
             request,
             target,
             '/Cart_v1.CouponService/CreateCoupon',
-            Cart__pb2.CreateCouponRequest.SerializeToString,
-            Cart__pb2.Coupon.FromString,
+            cart__pb2.CreateCouponRequest.SerializeToString,
+            cart__pb2.Coupon.FromString,
             options,
             channel_credentials,
             insecure,
@@ -869,8 +912,8 @@ class CouponService(object):
             request,
             target,
             '/Cart_v1.CouponService/GetCoupon',
-            Cart__pb2.GetCouponRequest.SerializeToString,
-            Cart__pb2.Coupon.FromString,
+            cart__pb2.GetCouponRequest.SerializeToString,
+            cart__pb2.Coupon.FromString,
             options,
             channel_credentials,
             insecure,
@@ -896,8 +939,8 @@ class CouponService(object):
             request,
             target,
             '/Cart_v1.CouponService/UpdateCoupon',
-            Cart__pb2.UpdateCouponRequest.SerializeToString,
-            Cart__pb2.Coupon.FromString,
+            cart__pb2.UpdateCouponRequest.SerializeToString,
+            cart__pb2.Coupon.FromString,
             options,
             channel_credentials,
             insecure,
@@ -923,7 +966,7 @@ class CouponService(object):
             request,
             target,
             '/Cart_v1.CouponService/DeleteCoupon',
-            Cart__pb2.DeleteCouponRequest.SerializeToString,
+            cart__pb2.DeleteCouponRequest.SerializeToString,
             google_dot_protobuf_dot_empty__pb2.Empty.FromString,
             options,
             channel_credentials,
@@ -950,8 +993,8 @@ class CouponService(object):
             request,
             target,
             '/Cart_v1.CouponService/listCoupon',
-            Cart__pb2.listCouponRequest.SerializeToString,
-            Cart__pb2.listCouponResponse.FromString,
+            cart__pb2.listCouponRequest.SerializeToString,
+            cart__pb2.listCouponResponse.FromString,
             options,
             channel_credentials,
             insecure,
@@ -977,8 +1020,8 @@ class CouponService(object):
             request,
             target,
             '/Cart_v1.CouponService/GetCouponUsage',
-            Cart__pb2.GetCouponUsageRequest.SerializeToString,
-            Cart__pb2.GetCouponUsageResponse.FromString,
+            cart__pb2.GetCouponUsageRequest.SerializeToString,
+            cart__pb2.GetCouponUsageResponse.FromString,
             options,
             channel_credentials,
             insecure,

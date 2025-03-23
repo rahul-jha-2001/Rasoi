@@ -98,7 +98,7 @@ LOGGING =  {
             'propagate': True,
         },
         'GRPC_service':{
-            'handlers':['GRPC_file','console'],
+            'handlers':['GRPC_file'],
             'level':LOG_LEVEL,
             'propogate':True
         }
@@ -110,17 +110,12 @@ LOGGING =  {
 
 DATABASES =  {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
-    ,
-    'postgres': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': POSTGRES_DB,
-        'USER': POSTGRES_USER,
-        'PASSWORD': POSTGRES_PASSWORD,
-        'HOST': POSTGRES_HOST,
-        'PORT': POSTGRES_PORT,
+        'NAME': POSTGRES_DB or "Cart",
+        'USER': POSTGRES_USER or "postgres",
+        'PASSWORD': POSTGRES_PASSWORD or "rahul" ,
+        'HOST': POSTGRES_HOST or "localhost",
+        'PORT': POSTGRES_PORT or "5432",
     }
 }
 
@@ -129,7 +124,7 @@ DATABASES =  {
 SECRET_KEY = 'django-insecure-32$(zu@vhwkjjc0y-yw1yxb*evfu2g*8gbbctgqa+5-(4l9ka_'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
 ALLOWED_HOSTS = []
 

@@ -19,14 +19,16 @@ import traceback
 from decimal import Decimal as DecimalType
 from dotenv import load_dotenv
 
+import google.protobuf.json_format as json_format
 
 from google.protobuf import empty_pb2 
 from api.models import Cart,CartItem,AddOn,Coupon,CouponUsage,Coupon_Validator
-from Proto import Cart_pb2,Cart_pb2_grpc
-from Proto.Cart_pb2 import (
+from Proto import cart_pb2_grpc as Cart_pb2_grpc
+from Proto import cart_pb2 as Cart_pb2
+from Proto.cart_pb2 import (
     ORDERTYPE,
     DISCOUNTTYPE,
-    CARTSTATE
+    CARTSTATE,
 )
 
 from google.protobuf import empty_pb2
@@ -111,24 +113,15 @@ def handle_error(func):
 
 class CartService(Cart_pb2_grpc.CartServiceServicer):
 
-    def _verify_wire_format(self,GRPC_message,GRPC_message_type,context_info = ""):
-        """
-        Helper to verify protobuf wire format
-        Args:
-            GRPC_message: The protobuf message to verify
-            GRPC_message_type:The Protobuf message class type
-            context_info: Additional context for logging 
-        Returns:
-            bool:True if Verifications Succeeds
-
-        """
+    def _verify_wire_format(self, GRPC_message, GRPC_message_type, context_info=""):
         try:
             serialized = GRPC_message.SerializeToString()
-            logger.debug(f"Serialized Message Size: {len(serialized)} bytes")
-            logger.debug(f"Message before serializtion: {GRPC_message}")
-
             test_msg = GRPC_message_type()
             test_msg.ParseFromString(serialized)
+
+            logger.debug(f"Message before serialization: {GRPC_message}")
+            logger.debug(f"Serialized Message Size: {len(serialized)} bytes ")
+            logger.debug(f"Serialized data (hex): {serialized.hex()}")
 
             original_fields = GRPC_message.ListFields()
             test_fields = test_msg.ListFields()
@@ -137,22 +130,26 @@ class CartService(Cart_pb2_grpc.CartServiceServicer):
                 logger.error(f"Field count mismatch - Original: {len(original_fields)}, Deserialized: {len(test_fields)}")
                 logger.error(f"Original fields: {[f[0].name for f in original_fields]}")
                 logger.error(f"Deserialized fields: {[f[0].name for f in test_fields]}")
-            
+
+            # Log field values for debugging
+            logger.debug("Original field values:")
+            for (field1, value1), (field2, value2) in zip(original_fields, test_fields):
+                logger.debug(f"Field: {field1.name}, Og_Value: {value1} Test_Value: {value2}")
+
+            # logger.debug("Deserialized field values:")
+            # for field2, value2 in test_fields:
+            #     logger.debug(f"Field: {field.name}, Value: {value}")
+
             return True
         except Exception as e:
-            logger.error(f"Wire Format verifications failed for {GRPC_message_type.__name__}{context_info}: {str(e)}")
-            logger.error(f"Message Contents: {GRPC_message}")
-            try:
-                logger.error(f"Serialized hex: {serialized.hex()}")
-            except:
-                pass
+            logger.error(f"Wire Format verification failed for {GRPC_message_type.__name__} {context_info}: {str(e)}")
+            logger.error(f"Serialized data (hex): {serialized.hex()}")
             return False
 
 
     def _AddOn_to_response(self, add_on: AddOn) -> Cart_pb2.AddOn:
         try:
             response = Cart_pb2.AddOn()
-
             try:
                 response.cart_item_uuid = str(add_on.cart_item.cart_item_uuid)
             except (AttributeError, TypeError, ValueError) as e:
@@ -191,6 +188,8 @@ class CartService(Cart_pb2_grpc.CartServiceServicer):
             
             if not self._verify_wire_format(response, Cart_pb2.AddOn, f"Addon_id={add_on.add_on_uuid}"):
                 raise grpc.RpcError(grpc.StatusCode.INTERNAL, f"Failed to serialize Add On {add_on.add_on_uuid}")
+            
+            
             return response
         
         except Exception as e:
@@ -201,7 +200,6 @@ class CartService(Cart_pb2_grpc.CartServiceServicer):
     def _CartItem_to_response(self,cart_item:CartItem) -> Cart_pb2.CartItem:
         try:
             response = Cart_pb2.CartItem()
-
             try:
                 response.cart_item_uuid = str(cart_item.cart_item_uuid)
             except (AttributeError, TypeError, ValueError) as e:
@@ -249,7 +247,7 @@ class CartService(Cart_pb2_grpc.CartServiceServicer):
 
             # Handling repeated field `add_ons`
             try:
-                response.add_ons = [self._AddOn_to_response(add_on) for add_on in cart_item.get_add_on()]
+                response.add_ons.extend([self._AddOn_to_response(add_on) for add_on in cart_item.get_add_on()])
             except (AttributeError, TypeError, ValueError) as e:
                 logger.warning(f"Failed to convert add_ons: {e}")
                 raise
@@ -262,10 +260,10 @@ class CartService(Cart_pb2_grpc.CartServiceServicer):
             raise
 
 
-    def _Cart_to_response(self,cart:Cart) -> Cart_pb2.Cart:
+    def _Cart_to_response(self, cart: Cart) -> Cart_pb2.Cart:
         try:
-            response = Cart_pb2.Cart()
-
+            response = Cart_pb2.Cart()  # Add this line first
+            
             try:
                 response.store_uuid = str(cart.store_uuid)
             except (AttributeError, TypeError, ValueError) as e:
@@ -286,44 +284,45 @@ class CartService(Cart_pb2_grpc.CartServiceServicer):
                 raise
 
             try:
-                response.order_type = ORDERTYPE.Name(cart.order_type)
+                response.order_type = int(ORDERTYPE.Value(cart.order_type))
             except (AttributeError, TypeError, ValueError) as e:
                 logger.warning(f"Failed to convert order_type: {e}")
                 raise
 
             try:
-                response.table_no = cart.table_no or ""
+                response.table_no = str(cart.table_no) or ""
             except (AttributeError, TypeError, ValueError) as e:
                 logger.warning(f"Failed to convert table_no: {e}")
                 raise
 
             try:
-                response.vehicle_no = cart.vehicle_no or ""
+                response.vehicle_no = str(cart.vehicle_no) or ""
             except (AttributeError, TypeError, ValueError) as e:
                 logger.warning(f"Failed to convert vehicle_no: {e}")
                 raise
 
             try:
-                response.vehicle_description = cart.vehicle_description or ""
+                response.vehicle_description = str(cart.vehicle_description) or ""
             except (AttributeError, TypeError, ValueError) as e:
                 logger.warning(f"Failed to convert vehicle_description: {e}")
                 raise
 
             try:
-                response.coupon_code = cart.coupon_code or ""
+                response.coupon_code = str(cart.coupon_code) or ""
             except (AttributeError, TypeError, ValueError) as e:
                 logger.warning(f"Failed to convert coupon_code: {e}")
                 raise
 
             try:
-                response.speacial_instructions = cart.speacial_instructions or ""
+                response.speacial_instructions = str(cart.speacial_instructions) or ""
             except (AttributeError, TypeError, ValueError) as e:
                 logger.warning(f"Failed to convert special_instructions: {e}")
                 raise
 
             # Handling repeated field `items`
             try:
-                response.items.extend(self._CartItem_to_response(item) for item in cart.get_items())
+                ITEMS = [self._CartItem_to_response(item) for item in cart.get_items()]
+                response.items.extend(ITEMS or [])
             except (AttributeError, TypeError, ValueError) as e:
                 logger.warning(f"Failed to convert items: {e}")
                 raise
@@ -357,7 +356,8 @@ class CartService(Cart_pb2_grpc.CartServiceServicer):
 
             if not self._verify_wire_format(response, Cart_pb2.Cart, f"Cart_id={cart.cart_uuid}"):
                 raise grpc.RpcError(grpc.StatusCode.INTERNAL, f"Failed to serialize Cart {cart.cart_uuid}")
-            return response
+            logger.info(f"{response}")
+            return Cart_pb2.CartResponse(cart=response)
         except Exception as e:
             logger.error(f"Unexpected error in _Cart_to_response: {e}",e)
             raise
@@ -368,7 +368,7 @@ class CartService(Cart_pb2_grpc.CartServiceServicer):
     def CreateCart(self, request, context):
         try:
             cart = Cart.objects.get(store_uuid =  request.store_uuid ,user_phone_no = request.user_phone_no)
-            cart.order_type = request.order_type
+            cart.order_type = ORDERTYPE.Name(request.order_type)
             cart.table_no = request.table_no or ""
             cart.vehicle_no = request.vehicle_no or ""
             cart.vehicle_description = request.vehicle_description or ""
@@ -377,7 +377,7 @@ class CartService(Cart_pb2_grpc.CartServiceServicer):
         except Cart.DoesNotExist:
             cart = Cart.objects.create(store_uuid = request.store_uuid,
                 user_phone_no = request.user_phone_no,
-                order_type = request.order_type,
+                order_type = ORDERTYPE.Name(request.order_type),
                 table_no = request.table_no or "",
                 vehicle_no = request.vehicle_no or "",
                 vehicle_description = request.vehicle_description or "")
@@ -387,39 +387,55 @@ class CartService(Cart_pb2_grpc.CartServiceServicer):
         
     @handle_error    
     def GetCart(self, request, context):
+        # Check for cart_uuid first since it's more specific
+        if request.cart_uuid:
+            cart = Cart.objects.get(cart_uuid=request.cart_uuid)
+            return self._Cart_to_response(cart)
+        
+        # Fall back to store_uuid + user_phone_no combination
+        elif request.store_uuid and request.user_phone_no:
+            cart = Cart.objects.get(
+                store_uuid=request.store_uuid,
+                user_phone_no=request.user_phone_no
+            )
+            return self._Cart_to_response(cart)
+        
+        else:
+            raise ValueError("Must provide either cart_uuid or both store_uuid and user_phone_no")
 
-        if request.HasField("cart_uuid"):
-            cart = Cart.objects.get(cart_uuid = request.cart_uuid)
-        
-        if request.HasField("store_uuid") and request.HasField("user_phone_no"):
-            cart = Cart.objects.get(store_uuid = request.store_uuid,user_phone_no = request.user_phone_no)
-        
-        return self._Cart_to_response(cart)
         
     @handle_error    
     @transaction.atomic
     def UpdateCart(self, request, context):
-        if request.HasField("cart_uuid"):
-            cart = Cart.objects.get(cart_uuid = request.cart_uuid)
+        if request.cart_uuid:
+            cart = Cart.objects.get(cart_uuid=request.cart_uuid)
         
-        if request.HasField("store_uuid") and request.HasField("user_phone_no"):
-            cart = Cart.objects.get(store_uuid = request.store_uuid,user_phone_no = request.user_phone_no)
+        # Fall back to store_uuid + user_phone_no combination
+        elif request.store_uuid and request.user_phone_no:
+            cart = Cart.objects.get(
+                store_uuid=request.store_uuid,
+                user_phone_no=request.user_phone_no
+            )
+        else:
+            raise ValueError("Must provide either cart_uuid or both store_uuid and user_phone_no")
         
-        if request.HasField("order_type"):
-            cart.order_type = request.cart.order_type
-        if request.HasField('TableNo'):
-            cart.table_no = request.cart.table_no
-        if request.HasField('vehicle_no'):
-            cart.vehicle_no = request.vehicle_no    
-        if request.HasField('vehicle_description'):
-            cart.vehicle_description = request.vehicle_description
-        if request.HasField('VehicleDescription'):
-            cart.VehicleDescription = request.VehicleDescription
-        if request.HasField('speacial_instructions'):
-            cart.speacial_instructions = request.speacial_instructions
+        logger.debug(f"Before Update:{cart}")
+        if request.cart.order_type:
+            cart.order_type = ORDERTYPE.Name(request.cart.order_type)
+        if request.cart.table_no:
+            cart.cart.table_no = request.cart.table_no
+        if request.cart.vehicle_no:
+            cart.vehicle_no = request.cart.vehicle_no    
+        if request.cart.vehicle_description:
+            cart.vehicle_description = request.cart.vehicle_description
+        if request.cart.speacial_instructions:
+            cart.speacial_instructions = request.cart.speacial_instructions
         
+        logger.debug(f"After Update:{cart}")
         cart.full_clean()
         cart.save() 
+        
+
         logger.info(f"Cart:{cart.cart_uuid} Updated for {cart.store_uuid} and {cart.user_phone_no}")
         return self._Cart_to_response(cart)
 
@@ -446,12 +462,12 @@ class CartService(Cart_pb2_grpc.CartServiceServicer):
 
         cart_item = CartItem.objects.create(
             cart = cart,
-            product_name = request.product_name,
-            product_uuid = request.product_uuid,
-            tax_percentage = request.tax_percentage,
-            packaging_cost = request.packaging_cost,
-            unit_price = request.unit_price,
-            quantity = request.quantity
+            product_name = request.cart_item.product_name,
+            product_uuid = request.cart_item.product_uuid,
+            tax_percentage = request.cart_item.tax_percentage,
+            packaging_cost = request.cart_item.packaging_cost,
+            unit_price = request.cart_item.unit_price,
+            quantity = request.cart_item.quantity
         )
 
         logger.info(f"Cart-Item:{cart_item.cart_item_uuid} added to cart:{cart_item.cart.cart_uuid}")
@@ -466,7 +482,55 @@ class CartService(Cart_pb2_grpc.CartServiceServicer):
 
         cart_item.delete()
         logger.info(f"Cart_item:{cart_item.cart_item_uuid} in Cart:{cart.cart_uuid}")
+        return self._Cart_to_response(cart)
 
+
+    @handle_error
+    @transaction.atomic
+    def CreateAddOn(self, request, context):
+        cart = Cart.objects.get(cart_uuid = request.cart_uuid)
+        cart_item = CartItem.objects.get(cart = cart,cart_item_uuid = request.cart_item_uuid)
+
+        add_on = AddOn.objects.create(
+            cart_item = cart_item,
+            add_on_name = request.add_on.add_on_name,
+            add_on_uuid = request.add_on.add_on_uuid,
+            quantity = request.add_on.quantity,
+            unit_price = request.add_on.unit_price,
+            is_free = request.add_on.is_free
+        )
+        logger.info(f"Add-on:{add_on.add_on_uuid} to Cart_item:{cart_item.cart_item_uuid} in Cart:{cart.cart_uuid}")
+        return self._Cart_to_response(cart)
+
+    @handle_error
+    @transaction.atomic
+    def UpdateAddOn(self, request, context):
+        cart = Cart.objects.get(cart_uuid = request.cart_uuid)
+        cart_item = CartItem.objects.get(cart = cart,cart_item_uuid = request.cart_item_uuid)
+        add_on = AddOn.objects.get(cart_item = cart_item,add_on_uuid = request.add_on_uuid)
+
+        if request.add_on.add_on_name:
+            add_on.add_on_name = request.add_on.add_on_name
+        if request.add_on.quantity:
+            add_on.quantity = request.add_on.quantity
+        if request.add_on.unit_price:
+            add_on.unit_price = request.add_on.unit_price
+        if request.add_on.is_free:
+            add_on.is_free = request.add_on.is_free
+
+        add_on.save()
+        logger.info(f"Updated Add-on:{add_on.add_on_uuid} in Cart_item:{cart_item.cart_item_uuid} in Cart:{cart.cart_uuid}")
+        return self._Cart_to_response(cart)
+
+    @handle_error
+    @transaction.atomic
+    def RemoveAddOn(self, request, context):
+        cart = Cart.objects.get(cart_uuid = request.cart_uuid)
+        cart_item = CartItem.objects.get(cart = cart,cart_item_uuid = request.cart_item_uuid)
+        add_on = AddOn.objects.get(cart_item = cart_item,add_on_uuid = request.add_on_uuid)
+        add_on.delete()
+        logger.info(f"Removed Add-on:{add_on.add_on_uuid} from Cart_item:{cart_item.cart_item_uuid} in Cart:{cart.cart_uuid}")
+        return self._Cart_to_response(cart)
 
     @handle_error
     @transaction.atomic
@@ -477,16 +541,46 @@ class CartService(Cart_pb2_grpc.CartServiceServicer):
 
         cart_item.add_quantity(1)
         logger.info(f"Add Quantity t0 Cart_item:{cart_item.cart_item_uuid} in Cart:{cart.cart_uuid}")
-        
+        return self._Cart_to_response(cart)
+
     @handle_error
     @transaction.atomic
     def RemoveQuantity(self, request, context):
         cart = Cart.objects.get(cart_uuid = request.cart_uuid)
 
         cart_item = CartItem.objects.get(cart = cart,cart_item_uuid = request.cart_item_uuid)
-
+        if cart_item.quantity == 1:
+            cart_item.delete()
+            logger.info(f"Deleted Cart_item:{cart_item.cart_item_uuid} in Cart:{cart.cart_uuid}")
+            return self._Cart_to_response(cart)
         cart_item.remove_quantity(1)
         logger.info(f"Removed Quantity t0 Cart_item:{cart_item.cart_item_uuid} in Cart:{cart.cart_uuid}")
+        return self._Cart_to_response(cart)
+
+    @handle_error
+    @transaction.atomic
+    def IncreaseAddOnQuantity(self, request, context):
+        cart = Cart.objects.get(cart_uuid = request.cart_uuid)
+        cart_item = CartItem.objects.get(cart = cart,cart_item_uuid = request.cart_item_uuid)
+        add_on = AddOn.objects.get(cart_item = cart_item,add_on_uuid = request.add_on_uuid)
+        add_on.add_quantity(1)
+        logger.info(f"Increased Quantity to Add-on:{add_on.add_on_uuid} in Cart_item:{cart_item.cart_item_uuid} in Cart:{cart.cart_uuid}")
+        return self._Cart_to_response(cart)
+
+    @handle_error
+    @transaction.atomic
+    def RemoveAddOnQuantity(self, request, context):
+        cart = Cart.objects.get(cart_uuid = request.cart_uuid)
+        cart_item = CartItem.objects.get(cart = cart,cart_item_uuid = request.cart_item_uuid)
+        add_on = AddOn.objects.get(cart_item = cart_item,add_on_uuid = request.add_on_uuid)
+        if add_on.quantity == 1:
+            add_on.delete()
+            logger.info(f"Deleted Add-on:{add_on.add_on_uuid} in Cart_item:{cart_item.cart_item_uuid} in Cart:{cart.cart_uuid}")
+            return self._Cart_to_response(cart)
+        add_on.remove_quantity(1)
+        logger.info(f"Removed Quantity to Add-on:{add_on.add_on_uuid} in Cart_item:{cart_item.cart_item_uuid} in Cart:{cart.cart_uuid}")
+        return self._Cart_to_response(cart)
+
    
     @handle_error
     def ValidateCoupon(self, request, context):
@@ -550,7 +644,7 @@ class CouponService(Cart_pb2_grpc.CouponServiceServicer):
                 raise
 
             try:
-                response.discount_type = DISCOUNTTYPE.Name(coupon.discount_type)
+                response.discount_type = DISCOUNTTYPE.Value(coupon.discount_type)
             except (AttributeError, TypeError, ValueError) as e:
                 logger.warning(f"Failed to convert discount_type: {e}")
                 raise

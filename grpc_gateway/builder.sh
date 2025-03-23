@@ -12,7 +12,7 @@ else
   exit 1
 fi
 
-# # Compiling grpc-gateway files
+# Compiling grpc-gateway files
 # for file in "$PROTO_DIR"/*.proto; do
 #   if [ -f "$file" ]; then
 #     filename=$(basename "$file")  # Get the base file name
@@ -50,7 +50,13 @@ echo "Running go mod tidy..."
 go mod tidy
 echo "Go packages downloaded successfully."
 
-if protoc -I="$PROTO_DIR" --go-grpc_out=. --go_out=. --grpc-gateway_out=. Product.proto; then
+if protoc -I="$PROTO_DIR" --go-grpc_out=. --go_out=. --grpc-gateway_out=. product.proto; then
+      echo "$filename Compiled Successfully"
+    else
+      echo "Error: Could Not Compile $filename"
+      exit 1
+fi
+if protoc -I="$PROTO_DIR" --go-grpc_out=. --go_out=. --grpc-gateway_out=. cart.proto; then
       echo "$filename Compiled Successfully"
     else
       echo "Error: Could Not Compile $filename"

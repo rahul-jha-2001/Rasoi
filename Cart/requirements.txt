@@ -1,7 +1,0 @@
-django
-djangorestframework
-grpcio
-grpcio-tools
-djangorestframework-simplejwt
-python-dotenv
-psycopg

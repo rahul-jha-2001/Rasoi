@@ -46,27 +46,27 @@ class coupon_usage_manager(models.Manager) :
         return paginated_data.object_list, next_page, prev_page
 class Cart(models.Model):
     class order_types(models.TextChoices):
-        Unspecified = "UNSPECIFIED",_("Unspecified")
-        DineIn ="DINEIN",_("DineIn")
-        TakeAway = "TAKEAWAY",_("TakeAway")
-        DriveThru = "DRIVETHRU",_("DriveThru")
+        UNSPECIFIED = "UNSPECIFIED",_("Unspecified")
+        DINEIN ="DINEIN",_("DineIn")
+        TAKEAWAY = "TAKEAWAY",_("TakeAway")
+        DRIVETHRU = "DRIVETHRU",_("DriveThru")
     
     class cart_state(models.TextChoices):
-        Unspecified_State = "UNSPECIFIED_STATE",_("Unspecified_State")
-        Active = "ACTIVE",_("Active")
-        Completed = "COMPLETED",_("Completed")
-        Abandoned = "ABANDONED",_("Abandoned")
+        UNSPECIFIED_STATE = "UNSPECIFIED_STATE",_("Unspecified_State")
+        ACTIVE = "ACTIVE",_("Active")
+        COMPLETED = "COMPLETED",_("Completed")
+        ABANDONED = "ABANDONED",_("Abandoned")
 
     store_uuid = models.UUIDField(db_index=True)
-    cart_uuid = models.UUIDField(default=uuid.uuid4,db_index=True)
+    cart_uuid = models.UUIDField(primary_key= True,default=uuid.uuid4,db_index=True)
     user_phone_no = models.CharField(max_length = 12,null=False,blank= False,verbose_name=_("Phone Number"))
-    order_type = models.CharField(max_length=15,choices=order_types.choices,default=order_types.DineIn,verbose_name=_("Order type"))
+    order_type = models.CharField(max_length=15,choices=order_types.choices,default=order_types.DINEIN,verbose_name=_("Order type"))
     table_no = models.CharField(max_length=4,null=True,blank=True,verbose_name=_("Table No"))
     vehicle_no = models.CharField(max_length=10,null=True,blank=True,verbose_name=_("Vehicle No"))
     vehicle_description = models.CharField(max_length=50,null=True,blank=True,verbose_name=_("Vehicle Description"))
     coupon_code = models.CharField(max_length=20,null=True,blank= True,verbose_name=_("coupone"))
     speacial_instructions = models.TextField(verbose_name="speacial instructions",null=True,blank=True)
-    state = models.CharField(max_length=20,verbose_name = "State",choices = cart_state.choices,default = cart_state.Active)
+    state = models.CharField(max_length=20,verbose_name = "State",choices = cart_state.choices,default = cart_state.ACTIVE)
     # TotalAmount = TextChoices.DecimalField(max_digits=6,decimal_places=2,blank= True,default=Decimal("0.00"),verbose_name= _("Total Amount"))
     
     created_at = models.DateTimeField(auto_now_add=True)
@@ -90,15 +90,17 @@ class Cart(models.Model):
 
     @property
     def total_price_before_tax(self) -> Decimal:
-        return Decimal(sum(item.discount_amount for item in self.items.all()))
+        return Decimal(sum(item.price_before_tax for item in self.items.all()))
 
     @property
     def tax_amount(self) -> Decimal:
-        return Decimal(sum(item.discount_amount for item in self.items.all()))
+        return Decimal(sum(item.tax_amount for item in self.items.all()))
 
     @property
     def packaging_cost(self) -> Decimal:
-        return Decimal(sum(item.packing_cost for item in self.items.all()))
+        if self.order_type == self.order_types.DINEIN:
+            return Decimal(0.00)
+        return Decimal(sum(item.packaging_cost for item in self.items.all()))
     
     @property
     def final_amount(self) -> Decimal:
@@ -125,11 +127,27 @@ class Cart(models.Model):
             models.Index(fields=["store_uuid","user_phone_no","cart_uuid"])
         ]
 
+    def clean(self):
+
+        if self.order_type == self.order_types.DINEIN and self.table_no:
+            self.vehicle_description = ""
+            self.vehicle_no = "" 
+        if self.order_type == self.order_types.DRIVETHRU and self.vehicle_no:
+            self.table_no = ""
+
+
+        if self.order_type == self.order_types.DINEIN and not self.table_no:
+            raise ValueError("Table number is required for DineIn orders.")
+        if self.order_type == self.order_types.DRIVETHRU and not self.vehicle_no:
+            raise ValueError("Vehicle number is required for DriveThru orders.")
+        if self.total_subtotal < Decimal("0.00"):
+            raise ValueError("Total subtotal cannot be negative.")
+
 class CartItem(models.Model):
     
-    cart_item_uuid = models.UUIDField(default=uuid.uuid4,editable=False, unique=True)
+    cart_item_uuid = models.UUIDField(primary_key= True,default=uuid.uuid4,editable=False, unique=True)
     cart = models.ForeignKey(
-        "Cart", on_delete=models.CASCADE, related_name="items"
+        Cart, on_delete=models.CASCADE, related_name="items"
     )
     product_name = models.TextField(verbose_name="Product Name")
     product_uuid = models.UUIDField(verbose_name=_("Product UUID"), db_index=True)
@@ -137,7 +155,7 @@ class CartItem(models.Model):
         verbose_name="Tax", max_digits=5, decimal_places=2, default=Decimal("0.00")
     )
     packaging_cost = models.DecimalField(
-        verbose_name="Packing Cost", max_digits=10, decimal_places=2, default=Decimal("0.00")
+        verbose_name="Packaging Cost", max_digits=10, decimal_places=2, default=Decimal("0.00")
     )
 
     unit_price = models.DecimalField(max_digits=10, decimal_places=2)
@@ -175,7 +193,7 @@ class CartItem(models.Model):
     @property
     def price_before_tax(self) -> Decimal:
         """Price before tax but after discount"""
-        return self.subtotal_amount - self.discount_amount + self.packing_cost
+        return (self.subtotal_amount - self.discount_amount + self.packaging_cost) if self.cart.order_type == Cart.order_types.DRIVETHRU else (self.subtotal_amount - self.discount_amount)
 
     @property
     def tax_amount(self) -> Decimal:
@@ -219,13 +237,20 @@ class CartItem(models.Model):
     def get_add_on(self) -> models.QuerySet: 
         return self.add_ons.all()
 
+    def clean(self):
+        if self.unit_price < Decimal("0.00"):
+            raise ValueError("Unit price cannot be negative.")
+        if self.quantity <= 0:
+            raise ValueError("Quantity must be greater than zero.")
+        if self.tax_percentage < Decimal("0.00") or self.tax_percentage > Decimal("100.00"):
+            raise ValueError("Tax percentage must be between 0 and 100.")
 
 
 class AddOn(models.Model):
 
     cart_item = models.ForeignKey(CartItem, verbose_name=_("Cart"), on_delete=models.CASCADE,related_name="add_ons")
     add_on_name = models.TextField(verbose_name="AddOn Name")
-    add_on_uuid = models.UUIDField(default=uuid.uuid4,verbose_name="AddOn Id")
+    add_on_uuid = models.UUIDField(primary_key= True,default=uuid.uuid4,verbose_name="AddOn Id")
     quantity =  models.PositiveIntegerField(verbose_name="AddOn Quantity",default=0)
     unit_price = models.DecimalField(decimal_places=2,max_digits=6,verbose_name="AddOn Price",default=0)
     is_free = models.BooleanField(_("Is Free"),default=False)
@@ -245,13 +270,37 @@ class AddOn(models.Model):
             return Decimal("0.0")
         """Total price of this add-on for the given quantity."""
         return Decimal(self.unit_price * self.quantity)
+    
+    def add_quantity(self, increment=1):
+        if increment < 1:
+            raise ValueError("Increment must be positive")
+        self.quantity += increment
+        self.save()
+    
+    def remove_quantity(self,decrement = 1):
+        if decrement < 1:
+            raise ValueError("Decrement must be positive")
+        self.quantity -= decrement
+        self.save()
 
+
+    def clean(self):
+        if self.unit_price < Decimal("0.00"):
+            raise ValueError("Unit price cannot be negative.")
+        if self.quantity < 0:
+            raise ValueError("Quantity cannot be negative.")
+        if self.is_free:
+            if self.unit_price > Decimal("0.00"):
+                raise ValueError("Free add-ons cannot have a price greater than zero.")
+            if self.quantity > 0:
+                raise ValueError("Free add-ons cannot have a quantity greater than zero.")
+            
 class Coupon(models.Model):
     class DiscountType(models.TextChoices):
         PERCENTAGE = "PERCENTAGE",_("Percentage")
         FIXED = "FIXED",_("FIXED")
     
-    coupon_uuid = models.UUIDField(default=uuid.uuid4,verbose_name = _("Coupon Uuid"))
+    coupon_uuid = models.UUIDField(primary_key= True,default=uuid.uuid4,verbose_name = _("Coupon Uuid"))
     store_uuid = models.UUIDField()
     coupon_code = models.CharField(max_length= 10)
     discount_type = models.CharField(max_length=15,choices=DiscountType.choices,default=DiscountType.PERCENTAGE)
@@ -275,11 +324,18 @@ class Coupon(models.Model):
     def __str__(self):
         return self.coupon_code
 
+    def clean(self):
+        if self.discount <= Decimal("0.00"):
+            raise ValueError("Discount must be greater than zero.")
+        if self.min_spend < Decimal("0.00"):
+            raise ValueError("Minimum spend cannot be negative.")
+        if self.max_cart_value and self.max_cart_value < self.min_spend:
+            raise ValueError("Maximum cart value must be greater than or equal to minimum spend.")
 
 
 class CouponUsage(models.Model):
 
-    usage_uuid = models.UUIDField(default=uuid.uuid4,verbose_name="Usage Uuid")
+    usage_uuid = models.UUIDField(primary_key= True,default=uuid.uuid4,verbose_name="Usage Uuid")
     coupon = models.ForeignKey(Coupon, on_delete=models.DO_NOTHING, related_name="usages")
     user_phone_no = models.CharField(max_length=12, verbose_name=_("User Phone Number"))
     used_at = models.DateTimeField(auto_now_add=True, verbose_name=_("Used At"))

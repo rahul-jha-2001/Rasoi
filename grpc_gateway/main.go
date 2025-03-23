@@ -14,6 +14,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
+	Cartgw "Gateway/cart"
 	Productgw "Gateway/product"
 	Middleware "Gateway/middleware"
 )
@@ -24,6 +25,10 @@ func main() {
 	productServiceAddr := os.Getenv("PRODUCT_SERVICE_ADDR")
 	if productServiceAddr == "" {
 		productServiceAddr = "localhost:50052" // Default address
+	}
+	cartServiceAddr := os.Getenv("CART_SERVICE_ADDR")
+	if cartServiceAddr == "" {
+		cartServiceAddr = "localhost:50051" // Default address
 	}
 
 	gatewayAddr := os.Getenv("GATEWAY_ADDR")
@@ -39,8 +44,20 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to dial Product gRPC server at %s: %v", productServiceAddr, err)
 	}
+
+	// Create a client connection to the existing Cart gRPC server
+	conn, err = grpc.NewClient(
+		cartServiceAddr,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	if err != nil {
+		log.Fatalf("Failed to dial Cart gRPC server at %s: %v", cartServiceAddr, err)
+	}
+
 	defer conn.Close()
-	log.Printf("gRPC server present at %s", productServiceAddr)
+	log.Printf("Product_service server present at %s", productServiceAddr)
+	log.Printf("Cart_service server present at %s", cartServiceAddr)
+
 
 	// Create a new gRPC Gateway mux
 	gwmux := runtime.NewServeMux()
@@ -49,6 +66,11 @@ func main() {
 	if err := Productgw.RegisterProductServiceHandler(context.Background(), gwmux, conn); err != nil {
 		log.Fatalf("Failed to register Product gateway: %v", err)
 	}
+
+	if err := Cartgw.RegisterCartServiceHandler(context.Background(), gwmux, conn); err != nil {
+		log.Fatalf("Failed to register Cart gateway: %v", err)
+	}	
+		
 
 	// Create an HTTP server for the gRPC Gateway
 	gwServer := &http.Server{

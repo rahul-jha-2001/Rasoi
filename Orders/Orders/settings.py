@@ -11,111 +11,25 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
 from pathlib import Path
-import os
+import os 
+from dotenv import load_dotenv
 import logging
-import dotenv
-import sys
-
-
-SKIP_DIRS = {
-    '__pycache__',
-    'venv',
-    'env',
-    '.git',
-    '.idea',
-    '.vscode',
-    'logs',
-    'media',
-    'static',
-    'migrations',
-}
-
+logger = logging.getLogger(__name__)
+logging.basicConfig(
+    level=logging.DEBUG,  # Change to DEBUG for most detailed logs
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(),  # Output to console
+        logging.FileHandler('order_service.log')  # Optional: log to file
+    ]
+)
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+logger.info(f"Enviroment loaded in Setting {load_dotenv()}")
 
-# Create logs directory if it doesn't exist
-LOGS_DIR = BASE_DIR / 'logs'
-LOGS_DIR.mkdir(exist_ok=True)
-
-# Get all directories in BASE_DIR
-for item in BASE_DIR.iterdir():
-    if item.is_dir() and item.name not in SKIP_DIRS:
-        sys.path.append(str(item))
-
-dotenv.load_dotenv()
 # Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
+# See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
-
-
-POSTGRES_HOST = os.getenv("POSTGRES_HOST")
-POSTGRES_PORT = os.getenv("POSTGRES_PORT")
-POSTGRES_USER = os.getenv("POSTGRES_USER")
-POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD")
-POSTGRES_DB = os.getenv("POSTGRES_DB")
-LOG_LEVEL = os.getenv("LOG_LEVEL") or "DEBUG"
-
-
-
-LOGGING =  {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'formatters': {
-        'detailed': {
-            'format': '{asctime} {levelname} [{name}] {message}',
-            'style': '{',
-            'datefmt': '%Y-%m-%d %H:%M:%S'
-        },
-        'simple': {
-            'format': '{levelname} {message}',
-            'style': '{'
-        },
-    },
-    'handlers': {
-        'file': {
-            'level': LOG_LEVEL,
-            'class': 'logging.FileHandler',
-            'filename': BASE_DIR / 'logs/notifications.log',
-            'formatter': 'detailed',
-        },
-        'console': {
-            'level': LOG_LEVEL,
-            'class': 'logging.StreamHandler',
-            'formatter': 'detailed'
-        },
-        'GRPC_file':{
-            'level': LOG_LEVEL,
-            'class': 'logging.FileHandler',
-            'filename': BASE_DIR / 'logs/GRPC_service.log',
-            'formatter': 'detailed',
-        },
-        'KAFKA_file':{
-            'level': LOG_LEVEL,
-            'class': 'logging.FileHandler',
-            'filename': BASE_DIR / 'logs/KAFKA_service.log',
-            'formatter': 'detailed',
-        }
-
-    },
-    'loggers': {
-        '': {
-            'handlers': ['file', 'console'],
-            'level': LOG_LEVEL,
-            'propagate': True,
-        },
-        'GRPC_service':{
-            'handlers':['GRPC_file','console'],
-            'level':LOG_LEVEL,
-            'propogate':True
-        },
-        'KAFKA_service':{
-            'handlers':['KAFKA_file','console'],
-            'level':LOG_LEVEL,
-            'propogate':True
-        }
-        
-    }
-}
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = 'django-insecure-!(n#c47aq7onde1dn4(7#fz@h_7^8m0-p32%*p%rr+g7jowydd'
 

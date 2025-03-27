@@ -46,16 +46,16 @@ class coupon_usage_manager(models.Manager) :
         return paginated_data.object_list, next_page, prev_page
 class Cart(models.Model):
     class order_types(models.TextChoices):
-        UNSPECIFIED = "UNSPECIFIED",_("Unspecified")
-        DINEIN ="DINEIN",_("DineIn")
-        TAKEAWAY = "TAKEAWAY",_("TakeAway")
-        DRIVETHRU = "DRIVETHRU",_("DriveThru")
+        ORDER_TYPE_UNSPECIFIED = "ORDER_TYPE_UNSPECIFIED",_("ORDER_TYPE_UNSPECIFIED")
+        ORDER_TYPE_DINE_IN ="ORDER_TYPE_DINE_IN",_("ORDER_TYPE_DINE_IN")
+        ORDER_TYPE_TAKE_AWAY = "ORDER_TYPE_TAKE_AWAY",_("ORDER_TYPE_TAKE_AWAY")
+        ORDER_TYPE_DRIVE_THRU = "ORDER_TYPE_DRIVE_THRU",_("ORDER_TYPE_DRIVE_THRU")
     
     class cart_state(models.TextChoices):
-        UNSPECIFIED_STATE = "UNSPECIFIED_STATE",_("Unspecified_State")
-        ACTIVE = "ACTIVE",_("Active")
-        COMPLETED = "COMPLETED",_("Completed")
-        ABANDONED = "ABANDONED",_("Abandoned")
+        CART_STATE_UNSPECIFIED_STATE = "UNSPECIFIED_STATE",_("Unspecified_State")
+        CART_STATE_ACTIVE = "ACTIVE",_("Active")
+        CART_STATE_LOCKED = "COMPLETED",_("Completed")
+        CART_STATE_ABANDONED = "ABANDONED",_("Abandoned")
 
     store_uuid = models.UUIDField(db_index=True)
     cart_uuid = models.UUIDField(primary_key= True,default=uuid.uuid4,db_index=True)
@@ -66,7 +66,7 @@ class Cart(models.Model):
     vehicle_description = models.CharField(max_length=50,null=True,blank=True,verbose_name=_("Vehicle Description"))
     coupon_code = models.CharField(max_length=20,null=True,blank= True,verbose_name=_("coupone"))
     speacial_instructions = models.TextField(verbose_name="speacial instructions",null=True,blank=True)
-    state = models.CharField(max_length=20,verbose_name = "State",choices = cart_state.choices,default = cart_state.ACTIVE)
+    state = models.CharField(max_length=20,verbose_name = "State",choices = cart_state.choices,default = cart_state.CART_STATE_ACTIVE)
     # TotalAmount = TextChoices.DecimalField(max_digits=6,decimal_places=2,blank= True,default=Decimal("0.00"),verbose_name= _("Total Amount"))
     
     created_at = models.DateTimeField(auto_now_add=True)

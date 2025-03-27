@@ -1,6 +1,5 @@
 import sys
 import os
-import jwt
 from  datetime import datetime
 import logging
 from concurrent import futures
@@ -10,7 +9,6 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.core.exceptions import ValidationError,ObjectDoesNotExist,MultipleObjectsReturned,PermissionDenied
 from django.db import IntegrityError,DatabaseError
-import jwt.utils
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'Cart.settings')
 django.setup()
@@ -368,7 +366,6 @@ class CartService(Cart_pb2_grpc.CartServiceServicer):
     @handle_error
     @transaction.atomic
     def CreateCart(self, request, context):
-        
         try:
             cart = Cart.objects.get(store_uuid =  request.store_uuid ,user_phone_no = request.user_phone_no)
             cart.order_type = ORDERTYPE.Name(request.order_type)

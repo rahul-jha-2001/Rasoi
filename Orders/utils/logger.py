@@ -80,7 +80,7 @@ class Logger:
             ])
             
             message = f"""{message}
-                            Error Details:
+                            Error Details:{str(error)}
                             Type: {error_info['error_type']}
                             Message: {error_info['error_message']}
                             

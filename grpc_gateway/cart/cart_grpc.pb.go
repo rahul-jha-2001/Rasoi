@@ -36,6 +36,7 @@ const (
 	CartService_ValidateCoupon_FullMethodName        = "/Cart_v1.CartService/ValidateCoupon"
 	CartService_AddCoupon_FullMethodName             = "/Cart_v1.CartService/AddCoupon"
 	CartService_RemoveCoupon_FullMethodName          = "/Cart_v1.CartService/RemoveCoupon"
+	CartService_ValidateCart_FullMethodName          = "/Cart_v1.CartService/ValidateCart"
 )
 
 // CartServiceClient is the client API for CartService service.
@@ -60,6 +61,7 @@ type CartServiceClient interface {
 	ValidateCoupon(ctx context.Context, in *ValidCouponResquest, opts ...grpc.CallOption) (*ValidCouponResponse, error)
 	AddCoupon(ctx context.Context, in *AddCouponRequest, opts ...grpc.CallOption) (*CartResponse, error)
 	RemoveCoupon(ctx context.Context, in *RemoveCouponRequest, opts ...grpc.CallOption) (*CartResponse, error)
+	ValidateCart(ctx context.Context, in *ValidateCartRequest, opts ...grpc.CallOption) (*CartResponse, error)
 }
 
 type cartServiceClient struct {
@@ -230,6 +232,16 @@ func (c *cartServiceClient) RemoveCoupon(ctx context.Context, in *RemoveCouponRe
 	return out, nil
 }
 
+func (c *cartServiceClient) ValidateCart(ctx context.Context, in *ValidateCartRequest, opts ...grpc.CallOption) (*CartResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CartResponse)
+	err := c.cc.Invoke(ctx, CartService_ValidateCart_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // CartServiceServer is the server API for CartService service.
 // All implementations must embed UnimplementedCartServiceServer
 // for forward compatibility.
@@ -252,6 +264,7 @@ type CartServiceServer interface {
 	ValidateCoupon(context.Context, *ValidCouponResquest) (*ValidCouponResponse, error)
 	AddCoupon(context.Context, *AddCouponRequest) (*CartResponse, error)
 	RemoveCoupon(context.Context, *RemoveCouponRequest) (*CartResponse, error)
+	ValidateCart(context.Context, *ValidateCartRequest) (*CartResponse, error)
 	mustEmbedUnimplementedCartServiceServer()
 }
 
@@ -309,6 +322,9 @@ func (UnimplementedCartServiceServer) AddCoupon(context.Context, *AddCouponReque
 }
 func (UnimplementedCartServiceServer) RemoveCoupon(context.Context, *RemoveCouponRequest) (*CartResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RemoveCoupon not implemented")
+}
+func (UnimplementedCartServiceServer) ValidateCart(context.Context, *ValidateCartRequest) (*CartResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ValidateCart not implemented")
 }
 func (UnimplementedCartServiceServer) mustEmbedUnimplementedCartServiceServer() {}
 func (UnimplementedCartServiceServer) testEmbeddedByValue()                     {}
@@ -619,6 +635,24 @@ func _CartService_RemoveCoupon_Handler(srv interface{}, ctx context.Context, dec
 	return interceptor(ctx, in, info, handler)
 }
 
+func _CartService_ValidateCart_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ValidateCartRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CartServiceServer).ValidateCart(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CartService_ValidateCart_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CartServiceServer).ValidateCart(ctx, req.(*ValidateCartRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // CartService_ServiceDesc is the grpc.ServiceDesc for CartService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -689,6 +723,10 @@ var CartService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "RemoveCoupon",
 			Handler:    _CartService_RemoveCoupon_Handler,
+		},
+		{
+			MethodName: "ValidateCart",
+			Handler:    _CartService_ValidateCart_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

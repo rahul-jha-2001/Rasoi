@@ -11,37 +11,37 @@ DESCRIPTOR: _descriptor.FileDescriptor
 
 class ORDERTYPE(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     __slots__ = ()
-    UNSPECIFIED: _ClassVar[ORDERTYPE]
-    DINEIN: _ClassVar[ORDERTYPE]
-    TAKEAWAY: _ClassVar[ORDERTYPE]
-    DRIVETHRU: _ClassVar[ORDERTYPE]
+    ORDER_TYPE_UNSPECIFIED: _ClassVar[ORDERTYPE]
+    ORDER_TYPE_DINE_IN: _ClassVar[ORDERTYPE]
+    ORDER_TYPE_TAKE_AWAY: _ClassVar[ORDERTYPE]
+    ORDER_TYPE_DRIVE_THRU: _ClassVar[ORDERTYPE]
 
 class CARTSTATE(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     __slots__ = ()
-    UNSPECIFIED_STATE: _ClassVar[CARTSTATE]
-    ACTIVE: _ClassVar[CARTSTATE]
-    COMPLETED: _ClassVar[CARTSTATE]
-    ABANDONED: _ClassVar[CARTSTATE]
+    CART_STATE_UNSPECIFIED_STATE: _ClassVar[CARTSTATE]
+    CART_STATE_ACTIVE: _ClassVar[CARTSTATE]
+    CART_STATE_LOCKED: _ClassVar[CARTSTATE]
+    CART_STATE_ABANDONED: _ClassVar[CARTSTATE]
 
 class DISCOUNTTYPE(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     __slots__ = ()
     UNSPCIFIED_DISCOUNT: _ClassVar[DISCOUNTTYPE]
-    PERCENTAGE: _ClassVar[DISCOUNTTYPE]
-    FIXED: _ClassVar[DISCOUNTTYPE]
-UNSPECIFIED: ORDERTYPE
-DINEIN: ORDERTYPE
-TAKEAWAY: ORDERTYPE
-DRIVETHRU: ORDERTYPE
-UNSPECIFIED_STATE: CARTSTATE
-ACTIVE: CARTSTATE
-COMPLETED: CARTSTATE
-ABANDONED: CARTSTATE
+    PERCENTAGE_DISCOUNT: _ClassVar[DISCOUNTTYPE]
+    FIXED_DISCOUNT: _ClassVar[DISCOUNTTYPE]
+ORDER_TYPE_UNSPECIFIED: ORDERTYPE
+ORDER_TYPE_DINE_IN: ORDERTYPE
+ORDER_TYPE_TAKE_AWAY: ORDERTYPE
+ORDER_TYPE_DRIVE_THRU: ORDERTYPE
+CART_STATE_UNSPECIFIED_STATE: CARTSTATE
+CART_STATE_ACTIVE: CARTSTATE
+CART_STATE_LOCKED: CARTSTATE
+CART_STATE_ABANDONED: CARTSTATE
 UNSPCIFIED_DISCOUNT: DISCOUNTTYPE
-PERCENTAGE: DISCOUNTTYPE
-FIXED: DISCOUNTTYPE
+PERCENTAGE_DISCOUNT: DISCOUNTTYPE
+FIXED_DISCOUNT: DISCOUNTTYPE
 
 class Cart(_message.Message):
-    __slots__ = ("store_uuid", "cart_uuid", "user_phone_no", "order_type", "table_no", "vehicle_no", "vehicle_description", "coupon_code", "speacial_instructions", "items", "total_subtotal", "total_discount", "total_price_before_tax", "total_tax", "packaging_cost", "final_amount", "cart_state", "created_at", "updated_at")
+    __slots__ = ("store_uuid", "cart_uuid", "user_phone_no", "order_type", "table_no", "vehicle_no", "vehicle_description", "coupon_code", "special_instructions", "items", "sub_total", "total_discount", "total_price_before_tax", "total_tax", "packaging_cost", "final_amount", "cart_state", "created_at", "updated_at")
     STORE_UUID_FIELD_NUMBER: _ClassVar[int]
     CART_UUID_FIELD_NUMBER: _ClassVar[int]
     USER_PHONE_NO_FIELD_NUMBER: _ClassVar[int]
@@ -50,9 +50,9 @@ class Cart(_message.Message):
     VEHICLE_NO_FIELD_NUMBER: _ClassVar[int]
     VEHICLE_DESCRIPTION_FIELD_NUMBER: _ClassVar[int]
     COUPON_CODE_FIELD_NUMBER: _ClassVar[int]
-    SPEACIAL_INSTRUCTIONS_FIELD_NUMBER: _ClassVar[int]
+    SPECIAL_INSTRUCTIONS_FIELD_NUMBER: _ClassVar[int]
     ITEMS_FIELD_NUMBER: _ClassVar[int]
-    TOTAL_SUBTOTAL_FIELD_NUMBER: _ClassVar[int]
+    SUB_TOTAL_FIELD_NUMBER: _ClassVar[int]
     TOTAL_DISCOUNT_FIELD_NUMBER: _ClassVar[int]
     TOTAL_PRICE_BEFORE_TAX_FIELD_NUMBER: _ClassVar[int]
     TOTAL_TAX_FIELD_NUMBER: _ClassVar[int]
@@ -69,9 +69,9 @@ class Cart(_message.Message):
     vehicle_no: str
     vehicle_description: str
     coupon_code: str
-    speacial_instructions: str
+    special_instructions: str
     items: _containers.RepeatedCompositeFieldContainer[CartItem]
-    total_subtotal: float
+    sub_total: float
     total_discount: float
     total_price_before_tax: float
     total_tax: float
@@ -80,15 +80,16 @@ class Cart(_message.Message):
     cart_state: CARTSTATE
     created_at: _timestamp_pb2.Timestamp
     updated_at: _timestamp_pb2.Timestamp
-    def __init__(self, store_uuid: _Optional[str] = ..., cart_uuid: _Optional[str] = ..., user_phone_no: _Optional[str] = ..., order_type: _Optional[_Union[ORDERTYPE, str]] = ..., table_no: _Optional[str] = ..., vehicle_no: _Optional[str] = ..., vehicle_description: _Optional[str] = ..., coupon_code: _Optional[str] = ..., speacial_instructions: _Optional[str] = ..., items: _Optional[_Iterable[_Union[CartItem, _Mapping]]] = ..., total_subtotal: _Optional[float] = ..., total_discount: _Optional[float] = ..., total_price_before_tax: _Optional[float] = ..., total_tax: _Optional[float] = ..., packaging_cost: _Optional[float] = ..., final_amount: _Optional[float] = ..., cart_state: _Optional[_Union[CARTSTATE, str]] = ..., created_at: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+    def __init__(self, store_uuid: _Optional[str] = ..., cart_uuid: _Optional[str] = ..., user_phone_no: _Optional[str] = ..., order_type: _Optional[_Union[ORDERTYPE, str]] = ..., table_no: _Optional[str] = ..., vehicle_no: _Optional[str] = ..., vehicle_description: _Optional[str] = ..., coupon_code: _Optional[str] = ..., special_instructions: _Optional[str] = ..., items: _Optional[_Iterable[_Union[CartItem, _Mapping]]] = ..., sub_total: _Optional[float] = ..., total_discount: _Optional[float] = ..., total_price_before_tax: _Optional[float] = ..., total_tax: _Optional[float] = ..., packaging_cost: _Optional[float] = ..., final_amount: _Optional[float] = ..., cart_state: _Optional[_Union[CARTSTATE, str]] = ..., created_at: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
 
 class CartItem(_message.Message):
-    __slots__ = ("cart_item_uuid", "cart_uuid", "product_name", "product_uuid", "tax_percentage", "unit_price", "quantity", "add_ons_total", "subtotal_amount", "discount_amount", "price_before_tax", "tax_amount", "final_price", "packaging_cost", "add_ons")
+    __slots__ = ("cart_item_uuid", "cart_uuid", "product_name", "product_uuid", "tax_percentage", "discount", "unit_price", "quantity", "add_ons_total", "subtotal_amount", "discount_amount", "price_before_tax", "tax_amount", "final_price", "packaging_cost", "add_ons")
     CART_ITEM_UUID_FIELD_NUMBER: _ClassVar[int]
     CART_UUID_FIELD_NUMBER: _ClassVar[int]
     PRODUCT_NAME_FIELD_NUMBER: _ClassVar[int]
     PRODUCT_UUID_FIELD_NUMBER: _ClassVar[int]
     TAX_PERCENTAGE_FIELD_NUMBER: _ClassVar[int]
+    DISCOUNT_FIELD_NUMBER: _ClassVar[int]
     UNIT_PRICE_FIELD_NUMBER: _ClassVar[int]
     QUANTITY_FIELD_NUMBER: _ClassVar[int]
     ADD_ONS_TOTAL_FIELD_NUMBER: _ClassVar[int]
@@ -104,6 +105,7 @@ class CartItem(_message.Message):
     product_name: str
     product_uuid: str
     tax_percentage: float
+    discount: float
     unit_price: float
     quantity: int
     add_ons_total: float
@@ -114,23 +116,25 @@ class CartItem(_message.Message):
     final_price: float
     packaging_cost: float
     add_ons: _containers.RepeatedCompositeFieldContainer[AddOn]
-    def __init__(self, cart_item_uuid: _Optional[str] = ..., cart_uuid: _Optional[str] = ..., product_name: _Optional[str] = ..., product_uuid: _Optional[str] = ..., tax_percentage: _Optional[float] = ..., unit_price: _Optional[float] = ..., quantity: _Optional[int] = ..., add_ons_total: _Optional[float] = ..., subtotal_amount: _Optional[float] = ..., discount_amount: _Optional[float] = ..., price_before_tax: _Optional[float] = ..., tax_amount: _Optional[float] = ..., final_price: _Optional[float] = ..., packaging_cost: _Optional[float] = ..., add_ons: _Optional[_Iterable[_Union[AddOn, _Mapping]]] = ...) -> None: ...
+    def __init__(self, cart_item_uuid: _Optional[str] = ..., cart_uuid: _Optional[str] = ..., product_name: _Optional[str] = ..., product_uuid: _Optional[str] = ..., tax_percentage: _Optional[float] = ..., discount: _Optional[float] = ..., unit_price: _Optional[float] = ..., quantity: _Optional[int] = ..., add_ons_total: _Optional[float] = ..., subtotal_amount: _Optional[float] = ..., discount_amount: _Optional[float] = ..., price_before_tax: _Optional[float] = ..., tax_amount: _Optional[float] = ..., final_price: _Optional[float] = ..., packaging_cost: _Optional[float] = ..., add_ons: _Optional[_Iterable[_Union[AddOn, _Mapping]]] = ...) -> None: ...
 
 class AddOn(_message.Message):
-    __slots__ = ("cart_item_uuid", "add_on_name", "add_on_uuid", "quantity", "unit_price", "is_free")
+    __slots__ = ("cart_item_uuid", "add_on_name", "add_on_uuid", "quantity", "unit_price", "is_free", "subtotal_amount")
     CART_ITEM_UUID_FIELD_NUMBER: _ClassVar[int]
     ADD_ON_NAME_FIELD_NUMBER: _ClassVar[int]
     ADD_ON_UUID_FIELD_NUMBER: _ClassVar[int]
     QUANTITY_FIELD_NUMBER: _ClassVar[int]
     UNIT_PRICE_FIELD_NUMBER: _ClassVar[int]
     IS_FREE_FIELD_NUMBER: _ClassVar[int]
+    SUBTOTAL_AMOUNT_FIELD_NUMBER: _ClassVar[int]
     cart_item_uuid: str
     add_on_name: str
     add_on_uuid: str
     quantity: int
     unit_price: float
     is_free: bool
-    def __init__(self, cart_item_uuid: _Optional[str] = ..., add_on_name: _Optional[str] = ..., add_on_uuid: _Optional[str] = ..., quantity: _Optional[int] = ..., unit_price: _Optional[float] = ..., is_free: bool = ...) -> None: ...
+    subtotal_amount: float
+    def __init__(self, cart_item_uuid: _Optional[str] = ..., add_on_name: _Optional[str] = ..., add_on_uuid: _Optional[str] = ..., quantity: _Optional[int] = ..., unit_price: _Optional[float] = ..., is_free: bool = ..., subtotal_amount: _Optional[float] = ...) -> None: ...
 
 class CreateCartRequest(_message.Message):
     __slots__ = ("store_uuid", "user_phone_no", "order_type", "table_no", "vehicle_no", "vehicle_description")
@@ -300,8 +304,16 @@ class RemoveCouponRequest(_message.Message):
     cart_uuid: str
     def __init__(self, cart_uuid: _Optional[str] = ...) -> None: ...
 
+class ValidateCartRequest(_message.Message):
+    __slots__ = ("cart_uuid", "store_uuid")
+    CART_UUID_FIELD_NUMBER: _ClassVar[int]
+    STORE_UUID_FIELD_NUMBER: _ClassVar[int]
+    cart_uuid: str
+    store_uuid: str
+    def __init__(self, cart_uuid: _Optional[str] = ..., store_uuid: _Optional[str] = ...) -> None: ...
+
 class Coupon(_message.Message):
-    __slots__ = ("coupon_uuid", "store_uuid", "coupon_code", "discount_type", "valid_from", "valid_to", "usage_limit_per_user", "total_usage_limit", "discount", "min_spend", "is_for_new_users", "description", "max_cart_value", "is_active")
+    __slots__ = ("coupon_uuid", "store_uuid", "coupon_code", "discount_type", "valid_from", "valid_to", "usage_limit_per_user", "total_usage_limit", "discount", "min_spend", "is_for_new_users", "description", "max_cart_value", "is_active", "max_discount")
     COUPON_UUID_FIELD_NUMBER: _ClassVar[int]
     STORE_UUID_FIELD_NUMBER: _ClassVar[int]
     COUPON_CODE_FIELD_NUMBER: _ClassVar[int]
@@ -316,6 +328,7 @@ class Coupon(_message.Message):
     DESCRIPTION_FIELD_NUMBER: _ClassVar[int]
     MAX_CART_VALUE_FIELD_NUMBER: _ClassVar[int]
     IS_ACTIVE_FIELD_NUMBER: _ClassVar[int]
+    MAX_DISCOUNT_FIELD_NUMBER: _ClassVar[int]
     coupon_uuid: str
     store_uuid: str
     coupon_code: str
@@ -330,7 +343,8 @@ class Coupon(_message.Message):
     description: str
     max_cart_value: float
     is_active: bool
-    def __init__(self, coupon_uuid: _Optional[str] = ..., store_uuid: _Optional[str] = ..., coupon_code: _Optional[str] = ..., discount_type: _Optional[_Union[DISCOUNTTYPE, str]] = ..., valid_from: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ..., valid_to: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ..., usage_limit_per_user: _Optional[int] = ..., total_usage_limit: _Optional[int] = ..., discount: _Optional[float] = ..., min_spend: _Optional[float] = ..., is_for_new_users: bool = ..., description: _Optional[str] = ..., max_cart_value: _Optional[float] = ..., is_active: bool = ...) -> None: ...
+    max_discount: float
+    def __init__(self, coupon_uuid: _Optional[str] = ..., store_uuid: _Optional[str] = ..., coupon_code: _Optional[str] = ..., discount_type: _Optional[_Union[DISCOUNTTYPE, str]] = ..., valid_from: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ..., valid_to: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ..., usage_limit_per_user: _Optional[int] = ..., total_usage_limit: _Optional[int] = ..., discount: _Optional[float] = ..., min_spend: _Optional[float] = ..., is_for_new_users: bool = ..., description: _Optional[str] = ..., max_cart_value: _Optional[float] = ..., is_active: bool = ..., max_discount: _Optional[float] = ...) -> None: ...
 
 class CouponUsage(_message.Message):
     __slots__ = ("usage_uuid", "Coupon_uuid", "user_phone_no", "used_at", "order_uuid")

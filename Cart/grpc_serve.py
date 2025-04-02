@@ -1,5 +1,6 @@
 import sys
 import os
+import jwt
 from  datetime import datetime
 import logging
 from concurrent import futures
@@ -9,6 +10,7 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.core.exceptions import ValidationError,ObjectDoesNotExist,MultipleObjectsReturned,PermissionDenied
 from django.db import IntegrityError,DatabaseError
+import jwt.utils
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'Cart.settings')
 django.setup()
@@ -38,6 +40,30 @@ from utils.logger import Logger
 load_dotenv()
 
 logger = Logger("GRPC_service")
+
+
+class CartVaildator:
+
+    # def __init__(self):
+    #     # Connect to the product and store gRPC services
+    #     self.product_channel = grpc.insecure_channel('product-service:50051')
+    #     self.store_channel = grpc.insecure_channel('store-service:50052')
+
+    #     self.product_stub = product_pb2_grpc.ProductServiceStub(self.product_channel)
+    #     self.store_stub = store_pb2_grpc.StoreServiceStub(self.store_channel)
+    @staticmethod
+    def validate_cart(cart:Cart, coupon:Coupon|None):
+
+        errors = []
+        total_price = 0
+
+        if coupon is not None:
+            flag,msg = Coupon_Validator.validate(coupon=coupon,cart=cart)
+            if not flag:
+                return {"valid": flag, "messeage": msg}
+
+        return {"valid": flag, "messeage": "Cart is Valid"}
+    
 
 def handle_error(func):
     def wrapper(self, request, context):
@@ -185,6 +211,12 @@ class CartService(Cart_pb2_grpc.CartServiceServicer):
             except (AttributeError, TypeError, ValueError) as e:
                 logger.warning(f"Failed to convert is_free: {e}")
                 raise
+
+            try:
+                response.subtotal_amount = float(add_on.sub_total)
+            except (AttributeError, TypeError, ValueError) as e:
+                logger.warning(f"Failed to convert subtotal_amount: {e}")
+                raise
             
             if not self._verify_wire_format(response, Cart_pb2.AddOn, f"Addon_id={add_on.add_on_uuid}"):
                 raise grpc.RpcError(grpc.StatusCode.INTERNAL, f"Failed to serialize Add On {add_on.add_on_uuid}")
@@ -217,6 +249,11 @@ class CartService(Cart_pb2_grpc.CartServiceServicer):
             except (AttributeError, TypeError, ValueError) as e:
                 logger.warning(f"Failed to convert product_name: {e}")
                 raise
+            try:
+                response.discount = float(cart_item.discount)
+            except (AttributeError, TypeError, ValueError) as e:
+                logger.warning(f"Failed to convert discount: {e}")
+                raise
 
             try:
                 response.product_uuid = str(cart_item.product_uuid)
@@ -235,7 +272,7 @@ class CartService(Cart_pb2_grpc.CartServiceServicer):
                 response.unit_price = float(cart_item.unit_price)
                 response.quantity = int(cart_item.quantity)
                 response.add_ons_total = float(cart_item.add_ons_total)
-                response.subtotal_amount = float(cart_item.subtotal_amount)
+                response.subtotal_amount = float(cart_item.sub_total)
                 response.discount_amount = float(cart_item.discount_amount)
                 response.price_before_tax = float(cart_item.price_before_tax)
                 response.tax_amount = float(cart_item.tax_amount)
@@ -314,7 +351,7 @@ class CartService(Cart_pb2_grpc.CartServiceServicer):
                 raise
 
             try:
-                response.speacial_instructions = str(cart.speacial_instructions) or ""
+                response.special_instructions = str(cart.special_instructions) or ""
             except (AttributeError, TypeError, ValueError) as e:
                 logger.warning(f"Failed to convert special_instructions: {e}")
                 raise
@@ -329,7 +366,7 @@ class CartService(Cart_pb2_grpc.CartServiceServicer):
 
             # Handling float fields with default 0.0
             try:
-                response.total_subtotal = float(cart.total_subtotal)
+                response.sub_total = float(cart.sub_total)
                 response.total_discount = float(cart.total_discount)
                 response.total_price_before_tax = float(cart.total_price_before_tax)
                 response.total_tax = float(cart.tax_amount)
@@ -366,8 +403,9 @@ class CartService(Cart_pb2_grpc.CartServiceServicer):
     @handle_error
     @transaction.atomic
     def CreateCart(self, request, context):
+        
         try:
-            cart = Cart.objects.get(store_uuid =  request.store_uuid ,user_phone_no = request.user_phone_no)
+            cart = Cart.objects.get_active_cart(store_uuid =  request.store_uuid ,user_phone_no = request.user_phone_no)
             cart.order_type = ORDERTYPE.Name(request.order_type)
             cart.table_no = request.table_no or ""
             cart.vehicle_no = request.vehicle_no or ""
@@ -389,12 +427,12 @@ class CartService(Cart_pb2_grpc.CartServiceServicer):
     def GetCart(self, request, context):
         # Check for cart_uuid first since it's more specific
         if request.cart_uuid:
-            cart = Cart.objects.get(cart_uuid=request.cart_uuid)
+            cart = Cart.objects.get_active_cart(cart_uuid=request.cart_uuid)
             return self._Cart_to_response(cart)
         
         # Fall back to store_uuid + user_phone_no combination
         elif request.store_uuid and request.user_phone_no:
-            cart = Cart.objects.get(
+            cart = Cart.objects.get_active_cart(
                 store_uuid=request.store_uuid,
                 user_phone_no=request.user_phone_no
             )
@@ -408,11 +446,11 @@ class CartService(Cart_pb2_grpc.CartServiceServicer):
     @transaction.atomic
     def UpdateCart(self, request, context):
         if request.cart_uuid:
-            cart = Cart.objects.get(cart_uuid=request.cart_uuid)
+            cart = Cart.objects.get_active_cart(cart_uuid=request.cart_uuid)
         
         # Fall back to store_uuid + user_phone_no combination
         elif request.store_uuid and request.user_phone_no:
-            cart = Cart.objects.get(
+            cart = Cart.objects.get_active_cart(
                 store_uuid=request.store_uuid,
                 user_phone_no=request.user_phone_no
             )
@@ -443,14 +481,14 @@ class CartService(Cart_pb2_grpc.CartServiceServicer):
     def DeleteCart(self, request, context):
 
         if request.HasField("cart_uuid"):
-            cart = Cart.objects.get(cart_uuid = request.cart_uuid)
+            cart = Cart.objects.get_active_cart(cart_uuid = request.cart_uuid)
             cart.delete()
             logger.info(f"Cart:{cart.cart_uuid} for Phone_no:{cart.user_phone_no} at store:{cart.store_uuid} ")
             return empty_pb2()
         
 
         if request.HasField("store_uuid") and request.HasField("user_phone_no"):
-            cart = Cart.objects.get(store_uuid = request.store_uuid,user_phone_no = request.user_phone_no)
+            cart = Cart.objects.get_active_cart(store_uuid = request.store_uuid,user_phone_no = request.user_phone_no)
             cart.delete()
             logger.info(f"Cart:{cart.cart_uuid} for Phone_no:{cart.user_phone_no} at store:{cart.store_uuid} ")
             return empty_pb2()
@@ -458,7 +496,7 @@ class CartService(Cart_pb2_grpc.CartServiceServicer):
     @handle_error    
     @transaction.atomic
     def AddCartItem(self, request, context):
-        cart = Cart.objects.get(cart_uuid = request.cart_uuid)
+        cart = Cart.objects.get_active_cart(cart_uuid = request.cart_uuid)
 
         cart_item = CartItem.objects.create(
             cart = cart,
@@ -476,7 +514,7 @@ class CartService(Cart_pb2_grpc.CartServiceServicer):
     @handle_error
     @transaction.atomic
     def RemoveCartItem(self, request, context):
-        cart = Cart.objects.get(cart_uuid = request.cart_uuid)
+        cart = Cart.objects.get_active_cart(cart_uuid = request.cart_uuid)
 
         cart_item = CartItem.objects.get(cart = cart,cart_item_uuid = request.cart_item_uuid)
 
@@ -488,7 +526,7 @@ class CartService(Cart_pb2_grpc.CartServiceServicer):
     @handle_error
     @transaction.atomic
     def CreateAddOn(self, request, context):
-        cart = Cart.objects.get(cart_uuid = request.cart_uuid)
+        cart = Cart.objects.get_active_cart(cart_uuid = request.cart_uuid)
         cart_item = CartItem.objects.get(cart = cart,cart_item_uuid = request.cart_item_uuid)
 
         add_on = AddOn.objects.create(
@@ -505,7 +543,7 @@ class CartService(Cart_pb2_grpc.CartServiceServicer):
     @handle_error
     @transaction.atomic
     def UpdateAddOn(self, request, context):
-        cart = Cart.objects.get(cart_uuid = request.cart_uuid)
+        cart = Cart.objects.get_active_cart(cart_uuid = request.cart_uuid)
         cart_item = CartItem.objects.get(cart = cart,cart_item_uuid = request.cart_item_uuid)
         add_on = AddOn.objects.get(cart_item = cart_item,add_on_uuid = request.add_on_uuid)
 
@@ -525,7 +563,7 @@ class CartService(Cart_pb2_grpc.CartServiceServicer):
     @handle_error
     @transaction.atomic
     def RemoveAddOn(self, request, context):
-        cart = Cart.objects.get(cart_uuid = request.cart_uuid)
+        cart = Cart.objects.get_active_cart(cart_uuid = request.cart_uuid)
         cart_item = CartItem.objects.get(cart = cart,cart_item_uuid = request.cart_item_uuid)
         add_on = AddOn.objects.get(cart_item = cart_item,add_on_uuid = request.add_on_uuid)
         add_on.delete()
@@ -535,7 +573,7 @@ class CartService(Cart_pb2_grpc.CartServiceServicer):
     @handle_error
     @transaction.atomic
     def AddQuantity(self, request, context):
-        cart = Cart.objects.get(cart_uuid = request.cart_uuid)
+        cart = Cart.objects.get_active_cart(cart_uuid = request.cart_uuid)
 
         cart_item = CartItem.objects.get(cart = cart,cart_item_uuid = request.cart_item_uuid)
 
@@ -546,7 +584,7 @@ class CartService(Cart_pb2_grpc.CartServiceServicer):
     @handle_error
     @transaction.atomic
     def RemoveQuantity(self, request, context):
-        cart = Cart.objects.get(cart_uuid = request.cart_uuid)
+        cart = Cart.objects.get_active_cart(cart_uuid = request.cart_uuid)
 
         cart_item = CartItem.objects.get(cart = cart,cart_item_uuid = request.cart_item_uuid)
         if cart_item.quantity == 1:
@@ -560,7 +598,7 @@ class CartService(Cart_pb2_grpc.CartServiceServicer):
     @handle_error
     @transaction.atomic
     def IncreaseAddOnQuantity(self, request, context):
-        cart = Cart.objects.get(cart_uuid = request.cart_uuid)
+        cart = Cart.objects.get_active_cart(cart_uuid = request.cart_uuid)
         cart_item = CartItem.objects.get(cart = cart,cart_item_uuid = request.cart_item_uuid)
         add_on = AddOn.objects.get(cart_item = cart_item,add_on_uuid = request.add_on_uuid)
         add_on.add_quantity(1)
@@ -570,7 +608,7 @@ class CartService(Cart_pb2_grpc.CartServiceServicer):
     @handle_error
     @transaction.atomic
     def RemoveAddOnQuantity(self, request, context):
-        cart = Cart.objects.get(cart_uuid = request.cart_uuid)
+        cart = Cart.objects.get_active_cart(cart_uuid = request.cart_uuid)
         cart_item = CartItem.objects.get(cart = cart,cart_item_uuid = request.cart_item_uuid)
         add_on = AddOn.objects.get(cart_item = cart_item,add_on_uuid = request.add_on_uuid)
         if add_on.quantity == 1:
@@ -583,11 +621,16 @@ class CartService(Cart_pb2_grpc.CartServiceServicer):
 
    
     @handle_error
+    @transaction.atomic
     def ValidateCoupon(self, request, context):
-        cart = Cart.objects.get(cart_uuid = request.cart_uuid)
+        cart = Cart.objects.get_active_cart(cart_uuid = request.cart_uuid,store_uuid = request.store_uuid)
 
-        coupon  = Coupon.objects.get(coupon_code = request.coupon_code,cart_uuid = request.cart_uuid)
+        coupon  = Coupon.objects.get(coupon_code = request.coupon_code,store_uuid = cart.store_uuid)
         Valid,message = Coupon_Validator.validate(coupon=coupon,cart=cart)
+        if Valid:
+            cart.coupon_code = coupon.coupon_code
+            cart.apply_discount(coupon.discount)
+            cart.save()
         logger.info(f"Coupon:{coupon.coupon_code} Validation done Valid:{Valid} message:{message}")
         return Cart_pb2.ValidCouponResponse(Valid=Valid,message=message)
 
@@ -595,7 +638,7 @@ class CartService(Cart_pb2_grpc.CartServiceServicer):
     @transaction.atomic
     def AddCoupon(self, request, context):
         
-        cart = Cart.objects.get(cart_uuid = request.cart_uuid)
+        cart = Cart.objects.get_active_cart(cart_uuid = request.cart_uuid)
 
         coupon  = Coupon.objects.get(coupon_code = request.coupon_code,cart_uuid = request.cart_uuid)
         
@@ -611,16 +654,84 @@ class CartService(Cart_pb2_grpc.CartServiceServicer):
     @handle_error
     @transaction.atomic
     def RemoveCoupon(self, request, context):
-        cart = Cart.objects.get(cart_uuid = request.cart_uuid)
+        cart = Cart.objects.get_active_cart(cart_uuid = request.cart_uuid)
         cart.remove_discount()
 
         return self._Cart_to_response(cart)
-            
 
+    @handle_error
+    @transaction.atomic
+    def ValidateCart(self,request,context):
+        # Get the cart based on cart_uuid
+            cart = Cart.objects.get_active_cart(cart_uuid=request.cart_uuid)
+
+            # Check if the cart has a coupon code
+            if cart.coupon_code:
+                try:
+                    # Get the coupon object
+                    coupon = Coupon.objects.get(store_uuid=cart.store_uuid, coupon_code=cart.coupon_code)
+
+                    # Validate the cart with the coupon using CartValidator
+                    temp = CartVaildator.validate_cart(cart=cart, coupon=coupon)
+                    if temp["valid"]:
+                        # If the coupon is valid, record its usage
+                        coupon_usage = CouponUsage.objects.create(
+                            coupon=coupon,
+                            user_phone_no=cart.user_phone_no,
+                            cart_uuid=cart.cart_uuid
+                        )
+                        logger.info(f"Coupon Usage recorded for coupon:{coupon.coupon_code} by User:{coupon_usage.user_phone_no}")
+                    else:
+                        logger.warning(f"Cart validation failed for coupon: {cart.coupon_code} and cart: {cart.cart_uuid} for {temp["messeage"]}")
+                        raise ValidationError(f"Cart validation failed for coupon: {cart.coupon_code} and cart: {cart.cart_uuid} for {temp["messeage"]}")
+
+                except ObjectDoesNotExist:
+                    logger.error(f"Coupon with code {cart.coupon_code} not found for store {cart.store_uuid}")
+                    raise
+            cart.lock_cart()
+
+            logger.info(f"Cart {cart.cart_uuid} locked at {cart.updated_at}")
+
+            # Indicate successful validation and locking
+            return self._Cart_to_response(cart)
 
 class CouponService(Cart_pb2_grpc.CouponServiceServicer):
     
     
+    def _verify_wire_format(self, GRPC_message, GRPC_message_type, context_info=""):
+        try:
+            serialized = GRPC_message.SerializeToString()
+            test_msg = GRPC_message_type()
+            test_msg.ParseFromString(serialized)
+
+            logger.debug(f"Message before serialization: {GRPC_message}")
+            logger.debug(f"Serialized Message Size: {len(serialized)} bytes ")
+            logger.debug(f"Serialized data (hex): {serialized.hex()}")
+
+            original_fields = GRPC_message.ListFields()
+            test_fields = test_msg.ListFields()
+
+            if len(original_fields) != len(test_fields):
+                logger.error(f"Field count mismatch - Original: {len(original_fields)}, Deserialized: {len(test_fields)}")
+                logger.error(f"Original fields: {[f[0].name for f in original_fields]}")
+                logger.error(f"Deserialized fields: {[f[0].name for f in test_fields]}")
+
+            # Log field values for debugging
+            logger.debug("Original field values:")
+            for (field1, value1), (field2, value2) in zip(original_fields, test_fields):
+                logger.debug(f"Field: {field1.name}, Og_Value: {value1} Test_Value: {value2}")
+
+            # logger.debug("Deserialized field values:")
+            # for field2, value2 in test_fields:
+            #     logger.debug(f"Field: {field.name}, Value: {value}")
+
+            return True
+        except Exception as e:
+            logger.error(f"Wire Format verification failed for {GRPC_message_type.__name__} {context_info}: {str(e)}")
+            logger.error(f"Serialized data (hex): {serialized.hex()}")
+            return False
+
+
     def _Coupon_to_response(self,coupon:Coupon) -> Cart_pb2.Coupon:
         try:
             response = Cart_pb2.Coupon()
@@ -684,6 +795,12 @@ class CouponService(Cart_pb2_grpc.CouponServiceServicer):
             except (AttributeError, TypeError, ValueError) as e:
                 logger.warning(f"Failed to convert min_spend: {e}")
                 raise
+            
+            try:
+                response.max_discount = float(coupon.max_discount)
+            except (AttributeError, TypeError, ValueError) as e:
+                logger.warning(f"Failed to convert max_discount: {e}")
+                raise
 
             try:
                 response.is_for_new_users = bool(coupon.is_for_new_users)
@@ -698,7 +815,7 @@ class CouponService(Cart_pb2_grpc.CouponServiceServicer):
                 raise
 
             try:
-                response.max_cart_value = float(coupon.max_cart_value)
+                response.max_cart_value = float(coupon.max_cart_value or 0.0)
             except (AttributeError, TypeError, ValueError) as e:
                 logger.warning(f"Failed to convert max_cart_value: {e}")
                 raise
@@ -745,7 +862,7 @@ class CouponService(Cart_pb2_grpc.CouponServiceServicer):
                 raise
 
             try:
-                response.order_uuid = str(coupon_usage.order_uuid)
+                response.cart_uuid = str(coupon_usage.cart_uuid)
             except (AttributeError, TypeError, ValueError) as e:
                 logger.warning(f"Failed to convert order_uuid: {e}")
                 raise
@@ -760,26 +877,26 @@ class CouponService(Cart_pb2_grpc.CouponServiceServicer):
     @handle_error
     @transaction.atomic
     def CreateCoupon(self,request,context):
+        logger.info(request.coupon.valid_from.seconds)
         coupon =  Coupon.objects.create(
 
             store_uuid = request.store_uuid,
-            coupon_code = request.coupon_code,
-            discount_type = request.discount_type,
+            coupon_code = request.coupon.coupon_code,
+            discount_type = DISCOUNTTYPE.Name(request.coupon.discount_type),
             
-            valid_from = request.valid_from,
-            valid_to = request.valid_to,
+            valid_from = datetime.fromtimestamp(request.coupon.valid_from.seconds),
+            valid_to = datetime.fromtimestamp(request.coupon.valid_to.seconds),
 
-            usage_limit_per_user = request.usage_limit_per_user,
-            total_usage_limit = request.total_usage_limit,
+            usage_limit_per_user = request.coupon.usage_limit_per_user,
+            total_usage_limit = request.coupon.total_usage_limit,
 
-            discount = request.discount,
+            discount = request.coupon.discount,
 
-            min_spend = request.min_spend,
-            max_discount = request.max_discount,
-            is_for_new_users = request.is_for_new_users,
-            description = request.description,
-            max_cart_value = request.max_cart_value,
-            is_active = request.is_active,
+            min_spend = request.coupon.min_spend,
+            max_discount = request.coupon.max_discount,
+            is_for_new_users = request.coupon.is_for_new_users,
+            description = request.coupon.description,
+            is_active = request.coupon.is_active,
         )
         logger.info(
             f"Created Coupon:{coupon.coupon_uuid} at store:{coupon.store_uuid}"

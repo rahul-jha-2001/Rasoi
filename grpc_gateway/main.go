@@ -9,10 +9,10 @@ import (
 	"time"
 
 
-
-	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
+    "github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
+    "google.golang.org/grpc"
+    "google.golang.org/grpc/credentials/insecure"
+    "google.golang.org/grpc/metadata"
 
 	Cartgw "Gateway/cart"
 	Productgw "Gateway/product"
@@ -60,7 +60,11 @@ func main() {
 
 
 	// Create a new gRPC Gateway mux
-	gwmux := runtime.NewServeMux()
+	gwmux := runtime.NewServeMux(
+        runtime.WithMetadata(func(ctx context.Context, req *http.Request) metadata.MD {
+            return metadata.Pairs("authorization", req.Header.Get("Authorization"))
+        }),
+    )
 
 	// Register the Product service with the gRPC Gateway
 	if err := Productgw.RegisterProductServiceHandler(context.Background(), gwmux, conn); err != nil {

@@ -3,129 +3,215 @@ import os
 from  datetime import datetime
 import logging
 from concurrent import futures
+import json
 
 import django
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.core.exceptions import ValidationError,ObjectDoesNotExist,MultipleObjectsReturned,PermissionDenied
 from django.db import IntegrityError,DatabaseError
+from django.db import connection
+import jwt.utils
+import psycopg2
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'Cart.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'Orders.settings')
 django.setup()
 
-
+from typing import Any, Callable, Dict, Iterable, Optional, Sequence
 import grpc
-import traceback
+from grpc import RpcError,StatusCode
+from grpc_interceptor import ServerInterceptor
+from grpc_interceptor.exceptions import GrpcException,Unauthenticated,FailedPrecondition
 from decimal import Decimal as DecimalType
 from dotenv import load_dotenv
 from google.protobuf import empty_pb2
 from google.protobuf.timestamp_pb2 import Timestamp
 
+import jwt
+import time
+
 from Proto import order_pb2,order_pb2_grpc,cart_pb2,cart_pb2_grpc
 
-from Proto.order_pb2 import OrderState,OrderItemState,OrderItemAddOnState
-from Order.models import Order,OrderItem,OrderItemAddOn,OrderPayment
+from Proto.order_pb2 import PaymentMethod,PaymentState,OrderType,OrderState
+from Proto.order_pb2 import OrderState,OrderType,PaymentMethod,PaymentState
+from Order.models import Order,OrderItem,OrderItemAddOn,OrderPayment,order_types,order_state,payment_method,payment_state
 
 
 from utils.logger import Logger
+from utils.gprc_pool import GrpcChannelPool
 
 load_dotenv()
 
+JWT_SECRET = os.getenv("JWT_SECRET","Rahul")
+CART_SERVICE_ADDR = os.getenv("CART_SERVICE_ADDR","localhost:50051")
 logger = Logger("GRPC_service")
 
 def handle_error(func):
     def wrapper(self, request, context):
         try:
             return func(self, request, context)
+
         except Order.DoesNotExist:
             logger.warning(f"Order Not Found: Cart_uuid:{getattr(request, 'cart_uuid', '')} Store_uuid:{getattr(request, 'store_uuid', '')} user_phone_no:{getattr(request, 'user_phone_no', '')}")
             context.abort(grpc.StatusCode.NOT_FOUND, f"Cart Not Found: Cart_uuid:{getattr(request, 'cart_uuid', '')} Store_uuid:{getattr(request, 'store_uuid', '')} user_phone_no:{getattr(request, 'user_phone_no', '')}")
+            raise Exception("Forced rollback due to Order.DoesNotExist")
 
         except OrderItem.DoesNotExist:
             logger.error(f"CartItem Not Found: cart_item_uuid:{getattr(request, 'cart_item_uuid', '')}")
             context.abort(grpc.StatusCode.NOT_FOUND, f"CartItem Not Found: cart_item_uuid:{getattr(request, 'cart_item_uuid', '')}")
-            
+            raise Exception("Forced rollback due to OrderItem.DoesNotExist")
+
         except OrderItemAddOn.DoesNotExist:
             logger.error(f"Coupon Not Found: coupon_uuid: {getattr(request, 'coupon_uuid', '')} coupon_code: {getattr(request, 'coupon_code', '')}")
             context.abort(grpc.StatusCode.NOT_FOUND, f"Coupon Not Found: coupon_uuid: {getattr(request, 'coupon_uuid', '')} coupon_code: {getattr(request, 'coupon_code', '')}")
+            raise Exception("Forced rollback due to OrderItemAddOn.DoesNotExist")
 
         except ObjectDoesNotExist:
             logger.error("Requested object does not exist")
             context.abort(grpc.StatusCode.NOT_FOUND, "Requested Object Not Found")
+            raise Exception("Forced rollback due to ObjectDoesNotExist")
 
         except MultipleObjectsReturned:
-            logger.error(f"Multiple objects found for request")
+            logger.error("Multiple objects found for request")
             context.abort(grpc.StatusCode.FAILED_PRECONDITION, "Multiple matching objects found")
+            raise Exception("Forced rollback due to MultipleObjectsReturned")
 
         except ValidationError as e:
             logger.error(f"Validation Error: {str(e)}")
             context.abort(grpc.StatusCode.INVALID_ARGUMENT, f"Validation Error: {str(e)}")
+            raise Exception("Forced rollback due to ValidationError")
 
         except IntegrityError as e:
             logger.error(f"Integrity Error: {str(e)}")
             context.abort(grpc.StatusCode.ALREADY_EXISTS, "Integrity constraint violated")
+            raise Exception("Forced rollback due to IntegrityError")
 
         except DatabaseError as e:
-            logger.error(f"Database Error: {str(e)}",e)
+            logger.error(f"Database Error: {str(e)}")
             context.abort(grpc.StatusCode.INTERNAL, "Database Error")
+            raise Exception("Forced rollback due to DatabaseError")
 
         except PermissionDenied as e:
-            logger.warning(f"Permission Denied: {str(e)}",e)
+            logger.warning(f"Permission Denied: {str(e)}")
             context.abort(grpc.StatusCode.PERMISSION_DENIED, "Permission Denied")
+            raise Exception("Forced rollback due to PermissionDenied")
 
         except ValueError as e:
             logger.error(f"Invalid Value: {str(e)}")
             context.abort(grpc.StatusCode.INVALID_ARGUMENT, f"Invalid Value: {str(e)}")
+            raise Exception("Forced rollback due to ValueError")
 
         except TypeError as e:
             logger.error(f"Type Error: {str(e)}")
             context.abort(grpc.StatusCode.INVALID_ARGUMENT, f"Type Error: {str(e)}")
+            raise Exception("Forced rollback due to TypeError")
 
         except TimeoutError as e:
             logger.error(f"Timeout Error: {str(e)}")
             context.abort(grpc.StatusCode.DEADLINE_EXCEEDED, "Request timed out")
-            
+            raise Exception("Forced rollback due to TimeoutError")
+
         except grpc.RpcError as e:
-            logger.error(f"RPC Error: {str(e)}")
-            # Don't re-abort as this is likely a propagated error
-            raise
-            
+            raise  # Don't re-abort, just propagate the error
+
+        except FailedPrecondition as e:
+            context.abort(e.status_code,e.details)
+
+        except Unauthenticated as e:
+            context.abort(grpc.StatusCode.PERMISSION_DENIED,f"User Not Allowed To make this Call")
+            raise Exception("Forced rollback due to Unauthentication")    
+
         except AttributeError as e:
-            logger.error(f"Attribute Error: {str(e)}")
+            logger.error(f"Attribute Error: {str(e)}",e)
             context.abort(grpc.StatusCode.INVALID_ARGUMENT, f"Attribute Error: {str(e)}")
-            
+            raise Exception("Forced rollback due to AttributeError")
+
         except transaction.TransactionManagementError as e:
             logger.error(f"Transaction Error: {str(e)}")
             context.abort(grpc.StatusCode.ABORTED, f"Transaction Error: {str(e)}")
+            raise Exception("Forced rollback due to TransactionManagementError")
 
         except Exception as e:
             logger.error(f"Unexpected Error: {str(e)}",e)
-            context.abort(grpc.StatusCode.INTERNAL, "Internal Server Error")
+            context.abort(grpc.StatusCode.INTERNAL, f"Internal Server Error")
+            raise Exception("Forced rollback due to unexpected error")
+    
     return wrapper
 
-# def interceptor:
-#     metadata = context.invocation_metadata()
+class ContextWrapper:
+    """ Wrapper around grpc.ServicerContext to modify metadata. """
+    
+    def __init__(self, original_context, new_metadata):
+        self._original_context = original_context
+        self._new_metadata = new_metadata
 
-#         # Convert metadata to a dictionary
-#         metadata_dict = {key: value for key, value in metadata}
+    def invocation_metadata(self):
+        """ Return modified metadata instead of original. """
+        return tuple(self._new_metadata)
+    
+    def abort(self,StatusCode,Message):
+        self._original_context.abort(StatusCode,Message)
 
-#         # Log or use metadata
-#         token = str(metadata_dict.get("authorization", "").split(" ")[-1])
+    def __getattr__(self, attr):
+        """ Delegate all other calls to the original context. """
+        return getattr(self._original_context, attr)
 
-#         logger.info(f"Authorization token:{token}")
-#         try:
-#             decoded = jwt.decode(token, options={"verify_signature": False})
-#             print("Token is valid:", decoded)
-#         except jwt.ExpiredSignatureError:
-#             logger.error("Token is expired")
-#             context.abort(grpc.StatusCode.UNAUTHENTICATED, "Token is expired")
-#         except jwt.InvalidSignatureError:
-#             logger.error("Token signature is invalid")
-#             context.abort(grpc.StatusCode.UNAUTHENTICATED, "Token signature is invalid")
-#         except jwt.InvalidTokenError:
-#             logger.error("Token is invalid")
-#             context.abort(grpc.StatusCode.UNAUTHENTICATED, "Token is invalid")
+def Jwt_Decode(Jwt_token:str,key:str,algos:list[str]):
+    decoded = jwt.decode(Jwt_token,key,algorithms=algos)
+    return decoded
 
+class AuthenticationInterceptor(ServerInterceptor):
+    def __init__(self, secret_key: str):
+        self.SECRET_KEY = secret_key
+        super().__init__()
+
+    def intercept(
+        self,
+        method: Callable,
+        request_or_iterator: Any,
+        context: grpc.ServicerContext,
+        method_name: str,
+    ) -> Any:
+        metadata = context.invocation_metadata()
+        try:
+            # Check if metadata is empty
+            if metadata is None or len(metadata) == 0:
+                context.set_code(grpc.StatusCode.UNAUTHENTICATED)
+                context.set_details("No auth token sent")
+                logger.error(f"No meta data found in request")
+                context.abort(StatusCode.UNAUTHENTICATED,f"No Metadata found")
+                
+            metadata_dict = {}
+            for key,value in metadata:
+                metadata_dict[key] = value
+            if "authorization" not in metadata_dict.keys():
+                logger.error(f"Auth Token not in request")
+                context.abort(StatusCode.UNAUTHENTICATED,f"Auth Token not in request")
+            try:
+                token = metadata_dict.get("authorization").split(" ")[1]
+                decoded = Jwt_Decode(Jwt_token=token,key=self.SECRET_KEY,algos=["HS256"])
+            except jwt.ExpiredSignatureError:
+                logger.error("Token expired")
+                context.abort(grpc.StatusCode.UNAUTHENTICATED, "Token expired")
+            except jwt.InvalidTokenError as e:
+                logger.error(f"Invalid token: {str(e)}")
+                context.abort(grpc.StatusCode.UNAUTHENTICATED, "Invalid token")
+            except Exception as e:
+                logger.error(f"Authentication error: {str(e)}")
+                context.abort(grpc.StatusCode.INTERNAL, "Authentication failed")
+
+            new_metadata = [*metadata]
+            if decoded.get("role") == "User":
+                new_metadata.append(("user_phone_no", str(decoded.get("user_phone_no"))))
+                new_metadata.append(("user_role", decoded.get("role")))
+            elif decoded.get("role") == "Store":
+                new_metadata.append(("store_uuid", str(decoded.get("store_uuid"))))
+                new_metadata.append(("user_role", decoded.get("role")))
+            new_context =  ContextWrapper(context, new_metadata)
+        except Exception as e:
+            logger.error(f"Error in auth interceptor",e)
+        return method(request_or_iterator, new_context)
+    
 class OrderService(order_pb2_grpc.OrderServiceServicer):
 
     def _verify_wire_format(self, GRPC_message, GRPC_message_type, context_info=""):
@@ -164,219 +250,864 @@ class OrderService(order_pb2_grpc.OrderServiceServicer):
     def _add_on_to_response(self, add_on:OrderItemAddOn) -> order_pb2.OrderItemAddOn:
 
         try:   
-            response = order_pb2.AddOn(
-                add_on_uuid = add_on.add_on_uuid,
-                add_on_name = add_on.add_on_name,
-                quantity = add_on.quantity,
-                unit_price = add_on.unit_price,
-                is_free = add_on.is_free,
-                subtotal_amount = add_on.subtotal_amount
-            )
+            response = order_pb2.OrderItemAddOn()
+
+            try:
+                response.add_on_uuid = str(add_on.add_on_uuid)
+            except (AttributeError, TypeError, ValueError) as e:
+                logger.warning(f"Failed to convert add_on_uuid: {e}")
+                raise
+
+            try:
+                response.add_on_name = str(add_on.add_on_name)
+            except (AttributeError, TypeError, ValueError) as e:
+                logger.warning(f"Failed to convert add_on_name: {e}")
+                raise
+
+            try:
+                response.quantity = int(add_on.quantity)
+            except (AttributeError, TypeError, ValueError) as e:
+                logger.warning(f"Failed to convert quantity: {e}")
+                raise
+
+            try:
+                response.unit_price = float(add_on.unit_price)
+            except (AttributeError, TypeError, ValueError) as e:
+                logger.warning(f"Failed to convert unit_price: {e}")
+                raise
+
+            try:
+                response.is_free = bool(add_on.is_free)
+            except (AttributeError, TypeError, ValueError) as e:
+                logger.warning(f"Failed to convert is_free: {e}")
+                raise
+
+            try:
+                response.subtotal_amount = float(add_on.subtotal_amount)
+            except (AttributeError, TypeError, ValueError) as e:
+                logger.warning(f"Failed to convert subtotal_amount: {e}")
+                raise
 
             if not self._verify_wire_format(response, order_pb2.OrderItemAddOn, f"add_on_id:{add_on.add_on_uuid}"):
                 raise grpc.RpcError(grpc.StatusCode.INTERNAL, f"Failed to serialize AddOn:{add_on.add_on_uuid}")
             return response
         except Exception as e:
             logger.error(f"Unexpected error in _CartItem_to_response: {e}")
-            raise
+            raise e
             
     def _item_to_response(self, item:OrderItem) -> order_pb2.OrderItem:
         try:
-            response = order_pb2.OrderItem(
-                item_uuid = item.item_uuid,
-                product_uuid = item.product_uuid,
-                product_name = item.product_name,
-                unit_price = item.unit_price,
-                quantity = item.quantity,
-                discount = item.discount,
-                tax_percentage = item.tax_percentage,
-                
-                packaging_cost = item.packaging_cost,
-                subtotal_amount = item.subtotal_amount,
-                discount_amount = item.discount_amount,
-                tax_amount = item.tax_amount,
-                price_before_tax = item.price_before_tax,
-                total_amount = item.total_amount,
+            response = order_pb2.OrderItem()
 
-                add_ons = [self._add_on_to_response(add_on) for add_on in item.add_ons.all()]
+            try:
+                response.item_uuid = str(item.item_uuid)
+            except (AttributeError, TypeError, ValueError) as e:
+                logger.warning(f"Failed to convert item_uuid: {e}")
+                raise
 
-            )
+            try:
+                response.product_uuid = str(item.product_uuid)
+            except (AttributeError, TypeError, ValueError) as e:
+                logger.warning(f"Failed to convert product_uuid: {e}")
+                raise
 
-            if not self._verify_wire_format(response, order_pb2.OrderItem, f"item_id:{item.item_uuid}"):
-                raise grpc.RpcError(grpc.StatusCode.INTERNAL, f"Failed to serialize Item:{item.item_uuid}")
-            return response
+            try:
+                response.product_name = str(item.product_name)
+            except (AttributeError, TypeError, ValueError) as e:
+                logger.warning(f"Failed to convert product_name: {e}")
+                raise
+
+            try:
+                response.unit_price = float(item.unit_price)
+            except (AttributeError, TypeError, ValueError) as e:
+                logger.warning(f"Failed to convert unit_price: {e}")
+                raise
+
+            try:
+                response.quantity = int(item.quantity)
+            except (AttributeError, TypeError, ValueError) as e:
+                logger.warning(f"Failed to convert quantity: {e}")
+                raise
+
+            try:
+                response.discount = float(item.discount)
+            except (AttributeError, TypeError, ValueError) as e:
+                logger.warning(f"Failed to convert discount: {e}")
+                raise
+
+            try:
+                response.tax_percentage = float(item.tax_percentage)
+            except (AttributeError, TypeError, ValueError) as e:
+                logger.warning(f"Failed to convert tax_percentage: {e}")
+                raise
+
+            try:
+                response.packaging_cost = float(item.packaging_cost)
+            except (AttributeError, TypeError, ValueError) as e:
+                logger.warning(f"Failed to convert packaging_cost: {e}")
+                raise
+
+            try:
+                response.subtotal_amount = float(item.subtotal_amount)
+            except (AttributeError, TypeError, ValueError) as e:
+                logger.warning(f"Failed to convert subtotal_amount: {e}")
+                raise
+
+            try:
+                response.discount_amount = float(item.discount_amount)
+            except (AttributeError, TypeError, ValueError) as e:
+                logger.warning(f"Failed to convert discount_amount: {e}")
+                raise
+
+            try:
+                response.tax_amount = float(item.tax_amount)
+            except (AttributeError, TypeError, ValueError) as e:
+                logger.warning(f"Failed to convert tax_amount: {e}")
+                raise
+
+            try:
+                response.price_before_tax = float(item.price_before_tax)
+            except (AttributeError, TypeError, ValueError) as e:
+                logger.warning(f"Failed to convert price_before_tax: {e}")
+                raise
+
+            try:
+                response.final_price = float(item.final_price)
+            except (AttributeError, TypeError, ValueError) as e:
+                logger.warning(f"Failed to convert final_price: {e}")
+                raise
+
+            try:
+                response.add_ons.extend([self._add_on_to_response(add_on) for add_on in item.add_ons.all()])
+            except (AttributeError, TypeError, ValueError) as e:
+                logger.warning(f"Failed to convert add_ons: {e}")
+                raise
         except Exception as e:
-            logger.error(f"Unexpected error in _item_to_response: {e}")
-            raise
+            logger.error(f"Unexpected error in _item_to_response: {e}",e)
+            raise e
 
+        if not self._verify_wire_format(response, order_pb2.OrderItem, f"item_id:{item.item_uuid}"):
+            raise grpc.RpcError(grpc.StatusCode.INTERNAL, f"Failed to serialize Item:{item.item_uuid}")
+        return response
+        
     def _payment_to_response(self, payment:OrderPayment) -> order_pb2.OrderPayment:
         try:
-            response = order_pb2.Payment(
-                payment_uuid = payment.payment_uuid,
-                rz_order_id = payment.rz_order_id,
-                rz_payment_id = payment.rz_payment_id,
-                rz_signature = payment.rz_signature,
-                amount = payment.amount,
-                payment_status = payment.status,
-                payment_method = payment.payment_method,
-                notes = payment.notes,
 
-                payment_time = payment.payment_time
+            response = order_pb2.OrderPayment()
 
-            )
-            if not self._verify_wire_format(response, order_pb2.Payment, f"payment_id:{payment.payment_id}"):
-                raise grpc.RpcError(grpc.StatusCode.INTERNAL, f"Failed to serialize Payment:{payment.payment_id}")
+            try:
+                response.payment_uuid = str(payment.payment_uuid)
+            except (AttributeError, TypeError, ValueError) as e:
+                logger.warning(f"Failed to convert payment_uuid: {e}")
+                raise
+            try:
+                response.rz_order_id = str(payment.rz_order_id)
+            except (AttributeError, TypeError, ValueError) as e:
+                logger.warning(f"Failed to convert rz_order_id: {e}")
+                raise
+            try:
+                response.rz_payment_id = str(payment.rz_payment_id)
+            except (AttributeError, TypeError, ValueError) as e:
+                logger.warning(f"Failed to convert rz_payment_id: {e}")
+                raise
+            try:
+                response.rz_signature = str(payment.rz_signature)
+            except (AttributeError, TypeError, ValueError) as e:
+                logger.warning(f"Failed to convert rz_signature: {e}")
+                raise
+            try:
+                response.amount = float(payment.amount)
+            except (AttributeError, TypeError, ValueError) as e:
+                logger.warning(f"Failed to convert amount: {e}")
+                raise
+            try:
+                response.payment_status = PaymentState.Value(payment.status)
+            except (AttributeError, TypeError, ValueError) as e:
+                logger.warning(f"Failed to convert status: {e}")
+                raise e
+            try:
+                response.payment_method = PaymentMethod.Value(payment.method)
+            except (AttributeError, TypeError, ValueError) as e:
+                logger.warning(f"Failed to convert method: {e}")
+                raise e
+            try:
+                response.notes = str(payment.notes)
+            except (AttributeError, TypeError, ValueError) as e:
+                logger.warning(f"Failed to convert notes: {e}")
+                raise
+            try:
+                response.payment_time = payment.time
+            except (AttributeError, TypeError, ValueError) as e:
+                logger.warning(f"Failed to convert time: {e}")
+                raise
+
+            if not self._verify_wire_format(response, order_pb2.OrderPayment, f"payment_id:{payment.payment_uuid}"):
+                raise grpc.RpcError(grpc.StatusCode.INTERNAL, f"Failed to serialize Payment:{payment.payment_uuid}")
             return response
         except Exception as e:
-            logger.error(f"Unexpected error in _payment_to_response: {e}")
-            raise            
+            logger.error(f"Unexpected error in _payment_to_response: {e}",e)
+            raise e         
 
     def _user_order_to_response(self, order:Order) -> order_pb2.OrderUserView:
-        try:
-            response = order_pb2.Order(
-                order_uuid = order.order_uuid,
-                order_no = order.order_no,
-                store_uuid = order.store_uuid,
-                user_phone_no = order.user_phone_no,
-                order_type = order.order_type,
-                table_no = order.table_no,
-                vehicle_no = order.vehicle_no,
-                vehicle_description = order.vehicle_description,
-                coupon_code = order.coupon_code,
-                Items = [self._item_to_response(item) for item in order.items.all()],
-                special_instructions = order.special_instructions,
-                order_status = order.order_status,
-                payment_status = order.payment_status,
-                payment_method = order.payment_method,
+        try:    
+            response = order_pb2.OrderUserView()
+            
+            try:
+                response.cart_uuid = str(order.cart_uuid)
+            except (AttributeError, TypeError, ValueError) as e:
+                logger.error(f"Order UUID conversion error: {str(e)}")
+                raise
 
+            try:
+                response.order_uuid = str(order.order_uuid)
+            except (AttributeError, TypeError, ValueError) as e:
+                logger.error(f"Order UUID conversion error: {str(e)}")
+                raise
 
-                subtotal_amount = order.subtotal_amount,
-                discount_amount = order.discount_amount,
-                price_before_tax = order.price_before_tax,
-                tax_amount = order.tax_amount,
-                packaging_cost = order.packaging_cost,
-                final_amount = order.final_amount,
+            try:
+                response.order_no = str(order.order_no)
+            except (AttributeError, TypeError, ValueError) as e:
+                logger.error(f"Order number conversion error: {str(e)}")
+                raise
 
-                created_at = order.created_at,
-                updated_at = order.updated_at
-            )
-            if not self._verify_wire_format(response, order_pb2.Order, f"order_id:{order.order_uuid}"): 
+            try:
+                response.store_uuid = str(order.store_uuid)
+            except (AttributeError, TypeError, ValueError) as e:
+                logger.error(f"Store UUID conversion error: {str(e)}")
+                raise
+
+            try:
+                response.user_phone_no = str(order.user_phone_no)
+            except (AttributeError, TypeError, ValueError) as e:
+                logger.error(f"User phone number conversion error: {str(e)}")
+                raise
+
+            try:
+                response.order_type = OrderType.Value(order.order_type)
+            except (ValueError, AttributeError) as e:
+                logger.error(f"Order type conversion error: {str(e)}")
+                raise
+
+            try:
+                if order.table_no:
+                    response.table_no = str(order.table_no)
+            except (AttributeError, TypeError, ValueError) as e:
+                logger.error(f"Table number conversion error: {str(e)}")
+                raise
+
+            try:
+                if order.vehicle_no:
+                    response.vehicle_no = str(order.vehicle_no)
+            except (AttributeError, TypeError, ValueError) as e:
+                logger.error(f"Vehicle number conversion error: {str(e)}")
+                raise
+
+            try:
+                if order.vehicle_description:
+                    response.vehicle_description = str(order.vehicle_description)
+            except (AttributeError, TypeError, ValueError) as e:
+                logger.error(f"Vehicle description conversion error: {str(e)}")
+                raise
+
+            try:
+                if order.coupon_code:
+                    response.coupon_code = str(order.coupon_code)
+            except (AttributeError, TypeError, ValueError) as e:
+                logger.error(f"Coupon code conversion error: {str(e)}")
+                raise
+
+            try:
+                items = []
+                for item in order.items.all():
+                    try:
+                        items.append(self._item_to_response(item))
+                    except Exception as e:
+                        logger.error(f"Error converting item {item.order_item_addOn_uuid}: {str(e)}")
+                        raise
+                response.items.extend(items)
+            except (AttributeError, TypeError) as e:
+                logger.error(f"Items conversion error: {str(e)}")
+                raise
+
+            try:
+                if order.special_instructions:
+                    response.special_instructions = str(order.special_instructions)
+            except (AttributeError, TypeError, ValueError) as e:
+                logger.error(f"Special instructions conversion error: {str(e)}")
+                raise
+
+            try:
+                response.order_status = OrderState.Value(order.order_status)
+            except (ValueError, AttributeError) as e:
+                logger.error(f"Order status conversion error: {str(e)}")
+                raise
+
+            try:
+                if order.payment.exists():
+                    payment:OrderPayment = order.payment.first()
+                    response.payment_method = PaymentMethod.Value(payment.method)
+                    response.payment_state = PaymentState.Value(payment.status)
+            except (AttributeError, IndexError) as e:
+                logger.error(f"Payment conversion error: {str(e)}")
+                raise
+
+            try:
+                response.total_subtotal = float(order.subtotal_amount)
+                response.total_discount = float(order.discount_amount)
+                response.total_price_before_tax = float(order.price_before_tax)
+                response.total_tax = float(order.tax_amount)
+                response.packaging_cost = float(order.packaging_cost)
+                response.final_amount = float(order.final_amount)
+            except (TypeError, ValueError, AttributeError) as e:
+                logger.error(f"Financial field conversion error: {str(e)}")
+                raise
+
+            def convert_time(field_name, dt):
+                try:
+                    ts = Timestamp()
+                    ts.FromDatetime(dt)
+                    return ts
+                except Exception as e:
+                    logger.error(f"{field_name} conversion error: {str(e)}")
+                    raise
+
+            try:
+                if order.created_at:
+                    response.created_at = order.created_at
+            except Exception as e:
+                logger.error(f"Created at time conversion error: {str(e)}")
+                raise
+
+            try:
+                if order.updated_at:
+                    response.updated_at = order.updated_at
+            except Exception as e:
+                logger.error(f"Updated at time conversion error: {str(e)}",e)
+                raise
+            
+            if not self._verify_wire_format(response, order_pb2.OrderUserView, f"order_id:{order.order_uuid}"): 
                 raise grpc.RpcError(grpc.StatusCode.INTERNAL, f"Failed to serialize Order:{order.order_uuid}")
+            
             return response
+        
         except Exception as e:
-            logger.error(f"Unexpected error in _userorder_to_response: {e}")        
-
+            logger.error(f"Unexpected error in _store_order_to_response: {e}",e)        
+            raise e
+    
     def _store_order_to_response(self, order:Order) -> order_pb2.OrderStoreView:
-        try:
-            response = order_pb2.Order(
-                
-                order_uuid = order.order_uuid,
-                order_no = order.order_no,
-                store_uuid = order.store_uuid,
-                user_phone_no = order.user_phone_no,
-                order_type = order.order_type,
-                table_no = order.table_no,
-                vehicle_no = order.vehicle_no,
-                vehicle_description = order.vehicle_description,
-                coupon_code = order.coupon_code,
-                Items = [self._item_to_response(item) for item in order.items.all()],
-                special_instructions = order.special_instructions,
-                order_status = order.order_status,
-                payment_status = self._payment_to_response(order.payement.all()[0]) if order.payement.all() else None,
+        try:    
+            response = order_pb2.OrderStoreView()
+            
+            try:
+                response.cart_uuid = str(order.cart_uuid)
+            except (AttributeError, TypeError, ValueError) as e:
+                logger.error(f"Order UUID conversion error: {str(e)}")
+                raise
 
-                subtotal_amount = order.subtotal_amount,
-                discount_amount = order.discount_amount,
-                price_before_tax = order.price_before_tax,
-                tax_amount = order.tax_amount,
-                packaging_cost = order.packaging_cost,
-                final_amount = order.final_amount,
+            try:
+                response.order_uuid = str(order.order_uuid)
+            except (AttributeError, TypeError, ValueError) as e:
+                logger.error(f"Order UUID conversion error: {str(e)}")
+                raise
 
-                created_at = order.created_at,
-                updated_at = order.updated_at
-            )
-            if not self._verify_wire_format(response, order_pb2.Order, f"order_id:{order.order_uuid}"): 
+            try:
+                response.order_no = str(order.order_no)
+            except (AttributeError, TypeError, ValueError) as e:
+                logger.error(f"Order number conversion error: {str(e)}")
+                raise
+
+            try:
+                response.store_uuid = str(order.store_uuid)
+            except (AttributeError, TypeError, ValueError) as e:
+                logger.error(f"Store UUID conversion error: {str(e)}")
+                raise
+
+            try:
+                response.user_phone_no = str(order.user_phone_no)
+            except (AttributeError, TypeError, ValueError) as e:
+                logger.error(f"User phone number conversion error: {str(e)}")
+                raise
+
+            try:
+                response.order_type = OrderType.Value(order.order_type)
+            except (ValueError, AttributeError) as e:
+                logger.error(f"Order type conversion error: {str(e)}")
+                raise
+
+            try:
+                if order.table_no:
+                    response.table_no = str(order.table_no)
+            except (AttributeError, TypeError, ValueError) as e:
+                logger.error(f"Table number conversion error: {str(e)}")
+                raise
+
+            try:
+                if order.vehicle_no:
+                    response.vehicle_no = str(order.vehicle_no)
+            except (AttributeError, TypeError, ValueError) as e:
+                logger.error(f"Vehicle number conversion error: {str(e)}")
+                raise
+
+            try:
+                if order.vehicle_description:
+                    response.vehicle_description = str(order.vehicle_description)
+            except (AttributeError, TypeError, ValueError) as e:
+                logger.error(f"Vehicle description conversion error: {str(e)}")
+                raise
+
+            try:
+                if order.coupon_code:
+                    response.coupon_code = str(order.coupon_code)
+            except (AttributeError, TypeError, ValueError) as e:
+                logger.error(f"Coupon code conversion error: {str(e)}")
+                raise
+
+            try:
+                items = []
+                for item in order.items.all():
+                    try:
+                        items.append(self._item_to_response(item))
+                    except Exception as e:
+                        logger.error(f"Error converting item {item.order_item_addOn_uuid}: {str(e)}")
+                        raise
+                response.items.extend(items)
+            except (AttributeError, TypeError) as e:
+                logger.error(f"Items conversion error: {str(e)}")
+                raise
+
+            try:
+                if order.special_instructions:
+                    response.special_instructions = str(order.special_instructions)
+            except (AttributeError, TypeError, ValueError) as e:
+                logger.error(f"Special instructions conversion error: {str(e)}")
+                raise
+
+            try:
+                response.order_status = OrderState.Value(order.order_status)
+            except (ValueError, AttributeError) as e:
+                logger.error(f"Order status conversion error: {str(e)}")
+                raise
+
+            try:
+                if order.payment.exists():
+                    payment = order.payment.first()
+                    response.payment.CopyFrom(self._payment_to_response(payment))
+            except (AttributeError, IndexError) as e:
+                logger.error(f"Payment conversion error: {str(e)}")
+                raise
+
+            try:
+                response.subtotal_amount = float(order.subtotal_amount)
+                response.discount_amount = float(order.discount_amount)
+                response.price_before_tax = float(order.price_before_tax)
+                response.tax_amount = float(order.tax_amount)
+                response.packaging_cost = float(order.packaging_cost)
+                response.final_amount = float(order.final_amount)
+            except (TypeError, ValueError, AttributeError) as e:
+                logger.error(f"Financial field conversion error: {str(e)}")
+                raise
+
+            def convert_time(field_name, dt):
+                try:
+                    ts = Timestamp()
+                    ts.FromDatetime(dt)
+                    return ts
+                except Exception as e:
+                    logger.error(f"{field_name} conversion error: {str(e)}")
+                    raise
+
+            try:
+                if order.created_at:
+                    response.created_at = order.created_at
+            except Exception as e:
+                logger.error(f"Created at time conversion error: {str(e)}")
+                raise
+
+            try:
+                if order.updated_at:
+                    response.updated_at = order.updated_at
+            except Exception as e:
+                logger.error(f"Updated at time conversion error: {str(e)}",e)
+                raise
+            
+            if not self._verify_wire_format(response, order_pb2.OrderStoreView, f"order_id:{order.order_uuid}"): 
                 raise grpc.RpcError(grpc.StatusCode.INTERNAL, f"Failed to serialize Order:{order.order_uuid}")
+            
             return response
+        
         except Exception as e:
-            logger.error(f"Unexpected error in _userorder_to_response: {e}")        
+            logger.error(f"Unexpected error in _store_order_to_response: {e}",e)        
+            raise e
+    
+
+    def __init__(self):
+        # Initialize the pool without target
+        self.channel_pool = GrpcChannelPool()
+        # Get channel with target when needed
+        self.channel = self.channel_pool.get_channel(CART_SERVICE_ADDR)
+        self.Cart_stub = cart_pb2_grpc.CartServiceStub(self.channel)
+        logger.info(f"Initialized gRPC channel to Cart Service at {CART_SERVICE_ADDR}")
+        super().__init__()
+
+
+    @handle_error  # Should come after @transaction.atomic if handle_error doesn't interfere with transaction management
+    @transaction.atomic
+    def CreateOrder(self, request, context):
+
+        meta_dict ={k:v for k,v in context.invocation_metadata()}
+
+        role = meta_dict.get("user_role")
+        
+
+        if role != "Store":
+            # context.abort(StatusCode.PERMISSION_DENIED,f"Role does not Permit this Call")
+            # return
+            raise Unauthenticated
+        auth_store_uuid = meta_dict.get("store_uuid")
+
+        cart_uuid = request.cart_uuid
+
+        try:
+            order = Order.objects.get(cart_uuid = cart_uuid,store_uuid = auth_store_uuid)
+            return order_pb2.StoreOrderResponse(
+            order = self._store_order_to_response(order))
+        except Order.DoesNotExist:
+            pass
+
+        cart_request = cart_pb2.GetCartRequest(cart_uuid=cart_uuid,store_uuid = auth_store_uuid)
+        
+        try:
+            response = self.Cart_stub.GetCart(cart_request)
+            if response.cart.store_uuid != auth_store_uuid:
+                raise Unauthenticated
+        except RpcError as e:
+            error_message = e.details()
+            if e.code() == StatusCode.NOT_FOUND:
+                logger.error(f"Active Cart: {cart_uuid} not found")
+                context.abort(StatusCode.NOT_FOUND, f"Active Cart: {cart_uuid} not found")
+            elif e.code() == StatusCode.INVALID_ARGUMENT:
+                logger.error(error_message)
+                context.abort(StatusCode.INVALID_ARGUMENT, error_message)
+            elif e.code() == StatusCode.INTERNAL:
+                logger.error(error_message)
+                context.abort(StatusCode.INTERNAL, error_message)
+        
+        # Extract cart details
+        cart = response.cart
+        order = Order.objects.create(
+            store_uuid = cart.store_uuid,
+            cart_uuid = cart.cart_uuid,
+            user_phone_no = cart.user_phone_no,
+            order_type =  OrderType.Name(cart.order_type),
+            table_no=cart.table_no,
+            vehicle_no=cart.vehicle_no,
+            vehicle_description=cart.vehicle_description,
+            coupon_code=cart.coupon_code,
+            special_instructions=cart.special_instructions,
+            order_status=order_state.ORDER_STATE_PLACED,
+            subtotal_amount=cart.sub_total,
+            discount_amount=cart.total_discount,
+            price_before_tax=cart.total_price_before_tax,
+            tax_amount=cart.total_tax,
+            packaging_cost=cart.packaging_cost,
+            final_amount=cart.final_amount
+        )
+
+        # Process order items
+        order_items = []
+        order_add_ons = []
+        for i in cart.items:
+            item = OrderItem(
+                order=order,
+                product_name=i.product_name,
+                product_uuid=i.product_uuid,
+                unit_price=i.unit_price,
+                discount=i.discount,
+                quantity = i.quantity,
+                add_ons_total = i.add_ons_total,
+                tax_percentage=i.tax_percentage,
+                packaging_cost=i.packaging_cost,
+                subtotal_amount=i.subtotal_amount,
+                discount_amount=i.discount_amount,
+                price_before_tax=i.price_before_tax,
+                tax_amount=i.tax_amount,
+                final_price=i.final_price
+            )
+            order_items.append(item)
+
+        # Bulk insert items
+        created_items = OrderItem.objects.bulk_create(order_items)
+
+        # Process add-ons after item creation
+        for item, i in zip(created_items, cart.items):
+            for j in i.add_ons:
+                add_on = OrderItemAddOn(
+                    order_item=item,
+                    add_on_name=j.add_on_name,
+                    add_on_uuid=j.add_on_uuid,
+                    quantity=j.quantity,
+                    unit_price=j.unit_price,
+                    is_free=j.is_free,
+                    subtotal_amount=j.subtotal_amount
+                )
+                order_add_ons.append(add_on)
+
+        # Bulk insert add-ons
+        if order_add_ons:
+            OrderItemAddOn.objects.bulk_create(order_add_ons)
+
+        # Create payment record (outside item loop)
+        payment = OrderPayment.objects.create(
+            order=order,
+            amount=order.final_amount,
+            method=PaymentMethod.Name(PaymentMethod.PAYMENT_METHOD_CASH),
+            status=PaymentState.Name(PaymentState.PAYMENT_STATE_COMPLETE),
+        )
+        return order_pb2.StoreOrderResponse(
+        order = self._store_order_to_response(order)
+    )
+
+    @handle_error
+    def GetOrder(self,request,context):
+        
+        meta_dict ={k:v for k,v in context.invocation_metadata()}
+        role = meta_dict.get("user_role")
+        
+        if role != "Store":
+            raise Unauthenticated
+        
+        auth_store_uuid = meta_dict.get("store_uuid")
+
+
+        if request.order_uuid:
+            order = Order.objects.get(order_uuid = request.order_uuid,store_uuid = auth_store_uuid)
+        elif request.store_uuid and request.user_phone_no:
+            order = Order.objects.get(user_phone_no = request.user_phone_no,store_uuid = auth_store_uuid)
+        elif request.order_no:
+            order = Order.objects.get(order_no = request.order_no,store_uuid = auth_store_uuid)
+        else:
+            raise ValueError(f"No value given to fetch order")
+
+        return order_pb2.StoreOrderResponse(
+            order = self._store_order_to_response(order = order)
+        )
+    
+    @handle_error  # Should come after @transaction.atomic if handle_error doesn't interfere with transaction management
+    @transaction.atomic
+    def CancelOrder(self,request,context):
+
+        meta_dict = dict(context.invocation_metadata())
+
+        if meta_dict.get("user_role") != "Store":
+            raise Unauthenticated
+
+        auth_store_uuid = meta_dict.get("store_uuid")
+
+        # Fetch order
+        order = None
+        if request.order_uuid:
+            order = Order.objects.get(order_uuid=request.order_uuid, store_uuid=auth_store_uuid)
+        elif request.order_no:
+            order = Order.objects.select_related("payment").get(order_no=request.order_no, store_uuid=auth_store_uuid)
+        else:
+            raise ValueError("No value given to fetch order")
+
+        # Check if order is in a state that allows cancellation
+        if order.order_status in {order_state.ORDER_STATE_READY, order_state.ORDER_STATE_COMPLETED,order_state.ORDER_STATE_CANCELED}:
+            raise FailedPrecondition("Order cannot be canceled in current state",StatusCode.FAILED_PRECONDITION)
+
+        # Validate payment existence
+        if not hasattr(order, "payment"):
+            raise Exception("Internal Error Payment Object could not be found")
+
+        # Process refund
+        OrderPayment.objects.filter(order=order).update(status=payment_state.PAYMENT_STATE_REFUNDED)
+        
+        # Update order status
+        order.order_status = order_state.ORDER_STATE_CANCELED
+        order.save()
+        
+
+        logger.info(f"Order:{order.order_uuid} Order-No:{order.order_no} is Cancelled")
+
+        return order_pb2.StoreOrderResponse(order=self._store_order_to_response(order))
+
+    @handle_error
+    def ListOrder(self,request,context):
+
+        meta_dict ={k:v for k,v in context.invocation_metadata()}
+        role = meta_dict.get("user_role")
+        
+        if role != "Store":
+            raise Unauthenticated
+        
+        store_uuid = meta_dict.get("store_uuid")
+        limit = request.limit
+        page = request.page
+
+        orders,next_page,prev_page = Order.objects.get_store_orders(store_uuid=store_uuid,limit=limit,page=page)
+
+
+        return order_pb2.ListOrderResponse(
+            orders = [self._store_order_to_response(order) for order in orders],
+            next_page = next_page,
+            prev_page = prev_page) 
+    
+
+
+
+    @handle_error
+    def StreamOrders(self,request,context):
+        meta_dict = {k: v for k, v in context.invocation_metadata()}
+        role = meta_dict.get("user_role")
+
+        if role != "Store":
+            raise Unauthenticated
+
+        auth_store_uuid = meta_dict.get("store_uuid")
+
+        if request.store_uuid != auth_store_uuid:
+            raise Unauthenticated
+
+        last_order_time = None  # Keep track of the last streamed order time
+        channel_name = f"order_updates_{auth_store_uuid}"
+        
+        logger.info(f"Started Stream for store:{auth_store_uuid} at {time.time()}")
+
+        with connection.cursor() as cursor:
+            cursor.execute('LISTEN "%s";' % channel_name)
+            connection.connection.set_isolation_level(
+            psycopg2.extensions.ISOLATION_LEVEL_AUTOCOMMIT
+            )
+            
+            while context.is_active():
+                connection.connection.poll()
+                
+                while connection.connection.notifies:
+                    notification = connection.connection.notifies.pop(0)
+                    payload = json.loads(notification.payload)
+                    
+                    try:
+                        order = Order.objects.get(
+                            order_uuid=payload['order_uuid'],
+                            store_uuid=auth_store_uuid
+                        )
+                        last_order_time = time.time
+                        yield order_pb2.StoreOrderResponse(
+                            order=self._store_order_to_response(order)
+                        )
+                    except Order.DoesNotExist:
+                        logger.warning(f"Order {payload['order_uuid']} disappeared")
+                
+                time.sleep(0.1)  # Prevent CPU overload
+        logger.info(f"Stream ended for Store_uuid:{auth_store_uuid} last Stream at:{last_order_time}")
+
+    @handle_error
+    def GetUserOrder(self,request,context):
+
+        logger.info(request)
+        meta_dict ={k:v for k,v in context.invocation_metadata()}
+        role = meta_dict.get("user_role")
+        
+        if role != "User":
+            raise Unauthenticated
+        
+        user_phone_no = meta_dict.get("user_phone_no")
+
+        if request.order_uuid:
+            order = Order.objects.get(user_phone_no = user_phone_no,order_uuid = request.order_uuid)
+        elif request.order_no:
+            order = Order.objects.get(user_phone_no = user_phone_no,order_no = request.order_no)
+        else:
+            raise ValueError(f"No value given to fetech order")
+        
+        return order_pb2.UserOrderResponse(
+            order = self._user_order_to_response(order = order)
+        )
+
+    @handle_error
+    def listUserOrder(self,request,context):
+
+        meta_dict ={k:v for k,v in context.invocation_metadata()}
+        role = meta_dict.get("user_role")
+        
+        if role != "User":
+            raise Unauthenticated
+        
+        user_phone_no = meta_dict.get("user_phone_no")
+        store_uuid = request.store_uuid
+        limit = request.limit
+        page = request.page
+
+        orders,next_page,prev_page = Order.objects.get_user_orders(store_uuid=store_uuid,user_phone_no=user_phone_no,limit=limit,page=page)
+
+        return order_pb2.ListUserOrderResponse(
+            orders = [self._user_order_to_response(order) for order in orders],
+            next_page = next_page,
+            prev_page = prev_page)
 
     @handle_error
     @transaction.atomic
-    def CreateOrder(self, request, context):
-        order = request.order
-        try:
-            order = Order.objects.create(
-                store_uuid = order.store_uuid,
-                user_phone_no = order.user_phone_no,
-                order_type = order.order_type,
-                table_no = order.table_no,
-                vehicle_no = order.vehicle_no,
-                vehicle_description = order.vehicle_description,
-                
-                coupon_code = order.coupon_code,
-                special_instructions = order.special_instructions,
-                
-                order_status = order.order_status,
-                payment_status = order.payment_status,
-                payment_method = order.payment_method,
+    def CancelUserOrder(self,request,context):
+        
+        meta_dict ={k:v for k,v in context.invocation_metadata()}
+        role = meta_dict.get("user_role")
+        
+        if role != "User":
+            raise Unauthenticated
+        
+        user_phone_no = meta_dict.get("user_phone_no")
 
-                subtotal_amount = order.subtotal_amount,
-                discount_amount = order.discount_amount,
-                price_before_tax = order.price_before_tax,
-                tax_amount = order.tax_amount,
-                packaging_cost = order.packaging_cost,
-                final_amount = order.final_amount
-            )
 
-            for item in request.order.Items:
-                order_item = OrderItem.objects.create(
-                    order = order,
-                    product_uuid = item.product_uuid,
-                    product_name = item.product_name,
-                    unit_price = item.unit_price,
-                    quantity = item.quantity,
-                    discount = item.discount,
-                    tax_percentage = item.tax_percentage,
-                    packaging_cost = item.packaging_cost,
-                    subtotal_amount = item.subtotal_amount,
-                    discount_amount = item.discount_amount,
-                    tax_amount = item.tax_amount,
-                    price_before_tax = item.price_before_tax,
-                    total_amount = item.total_amount
-                )
+        if request.order_uuid:
+            order = Order.objects.get(user_phone_no = user_phone_no,order_uuid = request.order_uuid)
+        elif request.order_no:
+            order = Order.objects.get(user_phone_no = user_phone_no,order_no = request.order_no)
+        else:
+            logger.warning(f"Order_uuid and Order_NO missing")
+            context.abort(StatusCode.INVALID_ARGUMENT,f"Order_uuid and Order_NO missing")
+        
+        if order.order_status in [order_state.ORDER_STATE_READY,order_state.ORDER_STATE_COMPLETED]:
 
-                for add_on in item.add_ons:
-                    OrderItemAddOn.objects.create(
-                        item = order_item,
-                        add_on_name = add_on.add_on_name,
-                        quantity = add_on.quantity,
-                        unit_price = add_on.unit_price,
-                        is_free = add_on.is_free,
-                        subtotal_amount = add_on.subtotal_amount
-                    )
-            return order_pb2.UserOrderResponse(
-                order = self._store_order_to_response(order))
-        except Exception as e:
-            raise
+            raise FailedPrecondition(f"Order already completed or being prepared")
 
-    @handle_error
-    def GetOrder(self, request, context):
-        try:
-            order = Order.objects.get(order_uuid=request.order_uuid)
-            return self._userorder_to_response(order)
-        except Exception as e:
-            raise
+        if order.order_status in [order_state.ORDER_STATE_CANCELED]:
+            raise FailedPrecondition(f"Order already canceled")
+
+        if order.payment.method == payment_method.PAYMENT_METHOD_CASH:
+            raise FailedPrecondition("Order cannot be cancelled ,Checkout the counter",StatusCode.FAILED_PRECONDITION)
+
+        if order.payment.status == payment_state.PAYMENT_STATE_REFUNDED:
+            raise FailedPrecondition("Order has been refunded",StatusCode.FAILED_PRECONDITION)
+
+       # Process refund
+        OrderPayment.objects.filter(order=order).update(status=payment_state.PAYMENT_STATE_REFUNDED)
+        
+        # Update order status
+        order.order_status = order_state.ORDER_STATE_CANCELED
+        order.save()
+
+        logger.info(f"Order:{order.order_uuid} Order-No:{order.order_no} is Cancelled")
+
+        return order_pb2.UserOrderResponse(
+            order = self._user_order_to_response(order= order)
+        )
 
 
 
 def serve():
-    server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
+    interceptors = [AuthenticationInterceptor(secret_key=JWT_SECRET)]
+    
+    server = grpc.server(
+    futures.ThreadPoolExecutor(max_workers=10),
+    interceptors=interceptors
+)
 
     order_pb2_grpc.add_OrderServiceServicer_to_server(OrderService(),server)
 
-    grpc_port = os.getenv('GRPC_SERVER_PORT', '50051')
+    grpc_port = os.getenv('GRPC_SERVER_PORT', '50053')
 
-    server.add_insecure_port(f"[::]:{grpc_port}")
+    server.add_insecure_port(f"[::]:50053")
     server.start()
     logger.info(f"Server Stated at {grpc_port}")
     try:

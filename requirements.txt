@@ -18,3 +18,5 @@ razorpay
 pillow
 googleapis-common-protos
 boto3
+base58
+grpc-interceptor

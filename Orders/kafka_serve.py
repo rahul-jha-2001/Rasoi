@@ -1,4 +1,3 @@
-import sys
 import os
 import logging
 import traceback
@@ -6,47 +5,19 @@ import uuid
 from confluent_kafka import Consumer, KafkaException, KafkaError
 from google.protobuf.message import DecodeError
 from dotenv import load_dotenv
+
 import django
+from django.conf import settings
 from django.db import transaction,IntegrityError
 from django.core.exceptions import ValidationError
-
-# Set up Django
-sys.path.append(os.getcwd() + r"\Orders\proto")
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'Orders.settings')
 django.setup()
+
+from utils.logger import Logger
 from Order.models import Order, OrderItem
 from proto import Order_pb2
 
-# Configure logging
-def setup_logger():
-    # Create a logger
-    logger = logging.getLogger('order_service')
-    logger.setLevel(logging.INFO)
 
-    # Create console handler with a higher log level
-    console_handler = logging.StreamHandler()
-    console_handler.setLevel(logging.INFO)
-
-    # Create file handler which logs even debug messages
-    file_handler = logging.FileHandler('order_service.log')
-    file_handler.setLevel(logging.DEBUG)
-
-    # Create formatters and add it to handlers
-    console_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    file_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s')
-    
-    console_handler.setFormatter(console_formatter)
-    file_handler.setFormatter(file_formatter)
-
-    # Add the handlers to the logger
-    logger.addHandler(console_handler)
-    logger.addHandler(file_handler)
-
-    return logger
-
-# Global logger setup
-logger = setup_logger()
-
+logger = Logger.get_logger("Kafka_Order", logging.INFO)
 
 
 class PlaceOrder:

@@ -1,7 +1,7 @@
 {
   "swagger": "2.0",
   "info": {
-    "title": "Cart.proto",
+    "title": "cart.proto",
     "version": "version not set"
   },
   "tags": [
@@ -594,6 +594,36 @@
         ]
       }
     },
+    "/v1/cart/{cartUuid}/validate": {
+      "get": {
+        "operationId": "CartService_ValidateCart",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/Cart_v1CartResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "cartUuid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "CartService"
+        ]
+      }
+    },
     "/v1/cart/{cartUuid}/validate_coupon/{couponCode}": {
       "get": {
         "operationId": "CartService_ValidateCoupon",
@@ -910,12 +940,12 @@
     "Cart_v1CARTSTATE": {
       "type": "string",
       "enum": [
-        "UNSPECIFIED_STATE",
-        "ACTIVE",
-        "COMPLETED",
-        "ABANDONED"
+        "CART_STATE_UNSPECIFIED_STATE",
+        "CART_STATE_ACTIVE",
+        "CART_STATE_LOCKED",
+        "CART_STATE_ABANDONED"
       ],
-      "default": "UNSPECIFIED_STATE"
+      "default": "CART_STATE_UNSPECIFIED_STATE"
     },
     "Cart_v1Cart": {
       "type": "object",
@@ -1185,8 +1215,8 @@
       "type": "string",
       "enum": [
         "UNSPCIFIED_DISCOUNT",
-        "PERCENTAGE",
-        "FIXED"
+        "PERCENTAGE_DISCOUNT",
+        "FIXED_DISCOUNT"
       ],
       "default": "UNSPCIFIED_DISCOUNT"
     },
@@ -1213,12 +1243,12 @@
     "Cart_v1ORDERTYPE": {
       "type": "string",
       "enum": [
-        "UNSPECIFIED",
-        "DINEIN",
-        "TAKEAWAY",
-        "DRIVETHRU"
+        "ORDER_TYPE_UNSPECIFIED",
+        "ORDER_TYPE_DINE_IN",
+        "ORDER_TYPE_TAKE_AWAY",
+        "ORDER_TYPE_DRIVE_THRU"
       ],
-      "default": "UNSPECIFIED"
+      "default": "ORDER_TYPE_UNSPECIFIED"
     },
     "Cart_v1UpdateCartRequest": {
       "type": "object",

@@ -4,6 +4,7 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger,Page
 from django.db.models import manager
 from django.utils.translation import gettext_lazy as _
+from django.core.exceptions import ValidationError
 from decimal import Decimal
 import uuid
 import datetime
@@ -44,6 +45,34 @@ class coupon_usage_manager(models.Manager) :
         prev_page = paginated_data.previous_page_number() if paginated_data.has_previous() else None
 
         return paginated_data.object_list, next_page, prev_page
+
+class cart_manager(models.Manager):
+    def filter_active_carts(self,cart_uuid:str|None = None,store_uuid:str|None = None,user_phone_no:str|None = None):
+
+        """Returns all carts that are currently active."""
+        if cart_uuid:
+            return self.filter(cart_uuid=cart_uuid,state=Cart.cart_state.CART_STATE_ACTIVE)
+        if store_uuid and user_phone_no:
+            return self.filter(
+                store_uuid=store_uuid,
+                user_phone_no=user_phone_no,
+                state=Cart.cart_state.CART_STATE_ACTIVE
+            )
+    def filter_all_carts(self,store_uuid:str|None = None):
+        """Returns all carts, regardless of their state."""
+        return self.filter(store_uuid = store_uuid)
+    
+    def get_active_cart(self,cart_uuid:str|None = None,store_uuid:str|None = None,user_phone_no:str|None = None):
+
+        """Returns all carts that are currently active."""
+        if cart_uuid:
+            return self.get(cart_uuid=cart_uuid,state=Cart.cart_state.CART_STATE_ACTIVE)
+        if store_uuid and user_phone_no:
+            return self.get(
+                store_uuid=store_uuid,
+                user_phone_no=user_phone_no,
+                state=Cart.cart_state.CART_STATE_ACTIVE
+            )
 class Cart(models.Model):
     class order_types(models.TextChoices):
         ORDER_TYPE_UNSPECIFIED = "ORDER_TYPE_UNSPECIFIED",_("ORDER_TYPE_UNSPECIFIED")
@@ -52,23 +81,22 @@ class Cart(models.Model):
         ORDER_TYPE_DRIVE_THRU = "ORDER_TYPE_DRIVE_THRU",_("ORDER_TYPE_DRIVE_THRU")
     
     class cart_state(models.TextChoices):
-        CART_STATE_UNSPECIFIED_STATE = "UNSPECIFIED_STATE",_("Unspecified_State")
-        CART_STATE_ACTIVE = "ACTIVE",_("Active")
-        CART_STATE_LOCKED = "COMPLETED",_("Completed")
-        CART_STATE_ABANDONED = "ABANDONED",_("Abandoned")
+        CART_STATE_UNSPECIFIED_STATE = "CART_STATE_UNSPECIFIED_STATE",_("Unspecified_State")
+        CART_STATE_ACTIVE = "CART_STATE_ACTIVE",_("Active")
+        CART_STATE_LOCKED = "CART_STATE_LOCKED",_("Completed")
+        CART_STATE_ABANDONED = "CART_STATE_ABANDONED",_("Abandoned")
 
     store_uuid = models.UUIDField(db_index=True)
     cart_uuid = models.UUIDField(primary_key= True,default=uuid.uuid4,db_index=True)
     user_phone_no = models.CharField(max_length = 12,null=False,blank= False,verbose_name=_("Phone Number"))
-    order_type = models.CharField(max_length=15,choices=order_types.choices,default=order_types.DINEIN,verbose_name=_("Order type"))
+    order_type = models.CharField(max_length=30,choices=order_types.choices,default=order_types.ORDER_TYPE_DINE_IN,verbose_name=_("Order type"))
     table_no = models.CharField(max_length=4,null=True,blank=True,verbose_name=_("Table No"))
     vehicle_no = models.CharField(max_length=10,null=True,blank=True,verbose_name=_("Vehicle No"))
     vehicle_description = models.CharField(max_length=50,null=True,blank=True,verbose_name=_("Vehicle Description"))
     coupon_code = models.CharField(max_length=20,null=True,blank= True,verbose_name=_("coupone"))
-    speacial_instructions = models.TextField(verbose_name="speacial instructions",null=True,blank=True)
-    state = models.CharField(max_length=20,verbose_name = "State",choices = cart_state.choices,default = cart_state.CART_STATE_ACTIVE)
+    special_instructions = models.TextField(verbose_name="special instructions",null=True,blank=True)
+    state = models.CharField(max_length=30,verbose_name = "State",choices = cart_state.choices,default = cart_state.CART_STATE_ACTIVE)
     # TotalAmount = TextChoices.DecimalField(max_digits=6,decimal_places=2,blank= True,default=Decimal("0.00"),verbose_name= _("Total Amount"))
-    
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -77,12 +105,30 @@ class Cart(models.Model):
         verbose_name_plural = _("Carts")
         unique_together = ["store_uuid","user_phone_no"]
 
+    objects = cart_manager()
+
     def __str__(self):
         return self.user_phone_no
     
+    def save(self, *args, **kwargs):
+        """Prevent updates if the cart is locked, except when locking."""
+        if self.cart_uuid:  # If cart exists (not a new cart)
+            existing_cart = Cart.objects.filter(cart_uuid=self.cart_uuid).first()
+            if existing_cart and existing_cart.state == self.cart_state.CART_STATE_LOCKED:
+                raise ValidationError("Cannot modify a locked cart.")
+        super().save(*args, **kwargs)
+
+
+    def delete(self, *args, **kwargs):
+        """Prevent deletion of locked carts."""
+        if self.state == self.cart_state.CART_STATE_LOCKED:
+            raise ValidationError("Locked carts cannot be deleted.")
+        super().delete(*args, **kwargs)
+
+
     @property
-    def total_subtotal(self)->Decimal:
-        return Decimal(sum(item.subtotal_amount for item in self.items.all()))
+    def sub_total(self)->Decimal:
+        return Decimal(sum(item.sub_total for item in self.items.all()))
 
     @property
     def total_discount(self) -> Decimal:
@@ -98,7 +144,7 @@ class Cart(models.Model):
 
     @property
     def packaging_cost(self) -> Decimal:
-        if self.order_type == self.order_types.DINEIN:
+        if self.order_type == self.order_types.ORDER_TYPE_DINE_IN:
             return Decimal(0.00)
         return Decimal(sum(item.packaging_cost for item in self.items.all()))
     
@@ -109,7 +155,8 @@ class Cart(models.Model):
     @property
     def total_items(self)->int:
         return self.items.count()
-    
+
+
     def get_items(self)->models.QuerySet:
         return self.items.all()
 
@@ -119,7 +166,12 @@ class Cart(models.Model):
 
     def remove_discount(self):
         for item in self.get_items():
-            item.remove_discount()        
+            item.remove_discount()
+
+    def lock_cart(self):
+        """Locks the cart and prevents further modifications."""
+        self.state = self.cart_state.CART_STATE_LOCKED  
+        super().save(update_fields=["state"])  # Save only the state field     
     class Meta:
         verbose_name =  'Cart'
         verbose_name_plural = 'Carts'
@@ -129,18 +181,18 @@ class Cart(models.Model):
 
     def clean(self):
 
-        if self.order_type == self.order_types.DINEIN and self.table_no:
+        if self.order_type == self.order_types.ORDER_TYPE_DINE_IN and self.table_no:
             self.vehicle_description = ""
             self.vehicle_no = "" 
-        if self.order_type == self.order_types.DRIVETHRU and self.vehicle_no:
+        if self.order_type == self.order_types.ORDER_TYPE_DRIVE_THRU and self.vehicle_no:
             self.table_no = ""
 
 
-        if self.order_type == self.order_types.DINEIN and not self.table_no:
+        if self.order_type == self.order_types.ORDER_TYPE_DINE_IN and not self.table_no:
             raise ValueError("Table number is required for DineIn orders.")
-        if self.order_type == self.order_types.DRIVETHRU and not self.vehicle_no:
+        if self.order_type == self.order_types.ORDER_TYPE_DRIVE_THRU and not self.vehicle_no:
             raise ValueError("Vehicle number is required for DriveThru orders.")
-        if self.total_subtotal < Decimal("0.00"):
+        if self.sub_total < Decimal("0.00"):
             raise ValueError("Total subtotal cannot be negative.")
 
 class CartItem(models.Model):
@@ -174,13 +226,25 @@ class CartItem(models.Model):
             models.Index(fields=["product_uuid", "cart_item_uuid"]),
         ]
 
+    def save(self, *args, **kwargs):
+        """Prevent modifications if the cart is locked."""
+        if self.cart.state == Cart.cart_state.CART_STATE_LOCKED:
+            raise ValidationError("Cannot modify items in a locked cart.")
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        """Prevent deletion of items in a locked cart."""
+        if self.cart.state == Cart.cart_state.CART_STATE_LOCKED:
+            raise ValidationError("Cannot delete items from a locked cart.")
+        super().delete(*args, **kwargs)
+
     @property
     def add_ons_total(self) -> Decimal:
         """Total price of all add-ons linked to this cart item."""
-        return sum(addon.subtotal for addon in self.add_ons.all())
+        return sum(addon.sub_total for addon in self.add_ons.all())
 
     @property
-    def subtotal_amount(self) -> Decimal:
+    def sub_total(self) -> Decimal:
         """Total price before discounts, taxes, and including add-ons."""
         return (self.unit_price + self.add_ons_total ) * self.quantity 
 
@@ -188,12 +252,12 @@ class CartItem(models.Model):
     @property
     def discount_amount(self) -> Decimal:
         """Total discount applied to the item"""
-        return (self.subtotal_amount * self.discount) / Decimal("100.00")
+        return (self.sub_total * self.discount) / Decimal("100.00")
 
     @property
     def price_before_tax(self) -> Decimal:
         """Price before tax but after discount"""
-        return (self.subtotal_amount - self.discount_amount + self.packaging_cost) if self.cart.order_type == Cart.order_types.DRIVETHRU else (self.subtotal_amount - self.discount_amount)
+        return (self.sub_total - self.discount_amount + self.packaging_cost) if self.cart.order_type == Cart.order_types.ORDER_TYPE_DRIVE_THRU else (self.sub_total - self.discount_amount)
 
     @property
     def tax_amount(self) -> Decimal:
@@ -264,8 +328,20 @@ class AddOn(models.Model):
             models.Index(fields=['add_on_uuid']),
         ]
     
+    def save(self, *args, **kwargs):
+        """Prevent modifications if the cart is locked."""
+        if self.cart_item.cart.state == Cart.cart_state.CART_STATE_LOCKED:
+            raise ValidationError("Cannot modify addons in a locked cart.")
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        """Prevent deletion of addons in a locked cart."""
+        if self.cart_item.cart.state == Cart.cart_state.CART_STATE_LOCKED:
+            raise ValidationError("Cannot delete addons from a locked cart.")
+        super().delete(*args, **kwargs)
+
     @property
-    def subtotal(self) -> Decimal:
+    def sub_total(self) -> Decimal:
         if self.is_free:
             return Decimal("0.0")
         """Total price of this add-on for the given quantity."""
@@ -297,13 +373,14 @@ class AddOn(models.Model):
             
 class Coupon(models.Model):
     class DiscountType(models.TextChoices):
-        PERCENTAGE = "PERCENTAGE",_("Percentage")
-        FIXED = "FIXED",_("FIXED")
+        UNSPCIFIED_DISCOUNT = "UNSPCIFIED_DISCOUNT",_("UNSPCIFIED_DISCOUNT")
+        FIXED_DISCOUNT = "FIXED_DISCOUNT",_("FIXED_DISCOUNT")
+        PERCENTAGE_DISCOUNT = "PERCENTAGE_DISCOUNT",_("PERCENTAGE_DISCOUNT")
     
     coupon_uuid = models.UUIDField(primary_key= True,default=uuid.uuid4,verbose_name = _("Coupon Uuid"))
     store_uuid = models.UUIDField()
     coupon_code = models.CharField(max_length= 10)
-    discount_type = models.CharField(max_length=15,choices=DiscountType.choices,default=DiscountType.PERCENTAGE)
+    discount_type = models.CharField(max_length=30,choices=DiscountType.choices,default=DiscountType.PERCENTAGE_DISCOUNT)
     valid_from = models.DateField()
     valid_to = models.DateField()
     usage_limit_per_user = models.PositiveIntegerField(default=1,verbose_name="Usage Limit Per User")
@@ -318,6 +395,8 @@ class Coupon(models.Model):
     description = models.TextField(null=True, blank=True, verbose_name=_("Coupon Description"))
     max_cart_value = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name=_("Max Cart Value"))
     is_active = models.BooleanField(default=True, verbose_name=_("Is Active"))
+
+
 
     objects = coupon_manager()
 
@@ -339,13 +418,13 @@ class CouponUsage(models.Model):
     coupon = models.ForeignKey(Coupon, on_delete=models.DO_NOTHING, related_name="usages")
     user_phone_no = models.CharField(max_length=12, verbose_name=_("User Phone Number"))
     used_at = models.DateTimeField(auto_now_add=True, verbose_name=_("Used At"))
-    order_uuid = models.UUIDField(_("Order id"),null=False,blank=True)
+    cart_uuid = models.UUIDField(_("Order id"),null=False,blank=True)
         
     objects = coupon_usage_manager()    
     class Meta:
-        unique_together = ["coupon", "user_phone_no", "order_uuid"]  # Prevent duplicate usage by user for a single order
+        unique_together = ["coupon", "user_phone_no", "cart_uuid"]  # Prevent duplicate usage by user for a single order
         indexes = [
-                models.Index(fields=["user_phone_no","coupon","order_uuid"])
+                models.Index(fields=["user_phone_no","coupon","cart_uuid"])
         ]
 
     def __str__(self):
@@ -416,7 +495,7 @@ class Coupon_Validator:
         now = datetime.datetime.now().date()
         
         # Calculate cart value
-        cart_value = cart.TotalAmount
+        cart_value = cart.sub_total
         
         # Basic validation
         if not coupon.is_active:
@@ -432,7 +511,7 @@ class Coupon_Validator:
             return (False, "This coupon is not valid for this store")
         
         # Cart value validation
-        if coupon.min_spend > cart_value:
+        if coupon.min_spend and coupon.min_spend > cart_value:
             difference = coupon.min_spend - cart_value
             return (False, f"Add {difference:.2f} to your cart to use this coupon")
         
@@ -451,3 +530,4 @@ class Coupon_Validator:
                 return (False,msg)
             
         return (True, "Coupon applied successfully")
+    

@@ -115,6 +115,11 @@ class CartServiceStub(object):
                 request_serializer=cart__pb2.RemoveCouponRequest.SerializeToString,
                 response_deserializer=cart__pb2.CartResponse.FromString,
                 _registered_method=True)
+        self.ValidateCart = channel.unary_unary(
+                '/Cart_v1.CartService/ValidateCart',
+                request_serializer=cart__pb2.ValidateCartRequest.SerializeToString,
+                response_deserializer=cart__pb2.CartResponse.FromString,
+                _registered_method=True)
 
 
 class CartServiceServicer(object):
@@ -218,6 +223,12 @@ class CartServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def ValidateCart(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_CartServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -299,6 +310,11 @@ def add_CartServiceServicer_to_server(servicer, server):
             'RemoveCoupon': grpc.unary_unary_rpc_method_handler(
                     servicer.RemoveCoupon,
                     request_deserializer=cart__pb2.RemoveCouponRequest.FromString,
+                    response_serializer=cart__pb2.CartResponse.SerializeToString,
+            ),
+            'ValidateCart': grpc.unary_unary_rpc_method_handler(
+                    servicer.ValidateCart,
+                    request_deserializer=cart__pb2.ValidateCartRequest.FromString,
                     response_serializer=cart__pb2.CartResponse.SerializeToString,
             ),
     }
@@ -744,9 +760,40 @@ class CartService(object):
             metadata,
             _registered_method=True)
 
+    @staticmethod
+    def ValidateCart(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/Cart_v1.CartService/ValidateCart',
+            cart__pb2.ValidateCartRequest.SerializeToString,
+            cart__pb2.CartResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
 
 class CouponServiceStub(object):
-    """Missing associated documentation comment in .proto file."""
+    """message ValidateCartResponse{
+    Cart cart = 1;
+    }
+
+    """
 
     def __init__(self, channel):
         """Constructor.
@@ -787,7 +834,11 @@ class CouponServiceStub(object):
 
 
 class CouponServiceServicer(object):
-    """Missing associated documentation comment in .proto file."""
+    """message ValidateCartResponse{
+    Cart cart = 1;
+    }
+
+    """
 
     def CreateCoupon(self, request, context):
         """COre Coupon service
@@ -868,7 +919,11 @@ def add_CouponServiceServicer_to_server(servicer, server):
 
  # This class is part of an EXPERIMENTAL API.
 class CouponService(object):
-    """Missing associated documentation comment in .proto file."""
+    """message ValidateCartResponse{
+    Cart cart = 1;
+    }
+
+    """
 
     @staticmethod
     def CreateCoupon(request,

@@ -10,9 +10,11 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.core.exceptions import ValidationError,ObjectDoesNotExist,MultipleObjectsReturned,PermissionDenied
 from django.db import IntegrityError,DatabaseError
-from django.db import connection
-import jwt.utils
+from django.db import connection as conn
 import psycopg2
+from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
+
+import select
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'Orders.settings')
 django.setup()
@@ -121,6 +123,10 @@ def handle_error(func):
             context.abort(grpc.StatusCode.PERMISSION_DENIED,f"User Not Allowed To make this Call")
             raise Exception("Forced rollback due to Unauthentication")    
 
+        except GrpcException as e:
+            context.abort(e.status_code,e.details)
+            raise Exception("Forced RollBack due to GrpcException")
+
         except AttributeError as e:
             logger.error(f"Attribute Error: {str(e)}",e)
             context.abort(grpc.StatusCode.INVALID_ARGUMENT, f"Attribute Error: {str(e)}")
@@ -138,6 +144,11 @@ def handle_error(func):
     
     return wrapper
 
+
+
+def Jwt_Decode(Jwt_token:str,key:str,algos:list[str]):
+    decoded = jwt.decode(Jwt_token,key,algorithms=algos)
+    return decoded
 class ContextWrapper:
     """ Wrapper around grpc.ServicerContext to modify metadata. """
     
@@ -155,11 +166,6 @@ class ContextWrapper:
     def __getattr__(self, attr):
         """ Delegate all other calls to the original context. """
         return getattr(self._original_context, attr)
-
-def Jwt_Decode(Jwt_token:str,key:str,algos:list[str]):
-    decoded = jwt.decode(Jwt_token,key,algorithms=algos)
-    return decoded
-
 class AuthenticationInterceptor(ServerInterceptor):
     def __init__(self, secret_key: str):
         self.SECRET_KEY = secret_key
@@ -173,43 +179,40 @@ class AuthenticationInterceptor(ServerInterceptor):
         method_name: str,
     ) -> Any:
         metadata = context.invocation_metadata()
+        # Check if metadata is empty
+        if metadata is None or len(metadata) == 0:
+            context.set_code(grpc.StatusCode.UNAUTHENTICATED)
+            context.set_details("No auth token sent")
+            logger.error(f"No meta data found in request")
+            context.abort(StatusCode.UNAUTHENTICATED,f"No Metadata found")
+            
+        metadata_dict = {}
+        for key,value in metadata:
+            metadata_dict[key] = value
+        if "authorization" not in metadata_dict.keys():
+            logger.error(f"Auth Token not in request")
+            context.abort(StatusCode.UNAUTHENTICATED,f"Auth Token not in request")
         try:
-            # Check if metadata is empty
-            if metadata is None or len(metadata) == 0:
-                context.set_code(grpc.StatusCode.UNAUTHENTICATED)
-                context.set_details("No auth token sent")
-                logger.error(f"No meta data found in request")
-                context.abort(StatusCode.UNAUTHENTICATED,f"No Metadata found")
-                
-            metadata_dict = {}
-            for key,value in metadata:
-                metadata_dict[key] = value
-            if "authorization" not in metadata_dict.keys():
-                logger.error(f"Auth Token not in request")
-                context.abort(StatusCode.UNAUTHENTICATED,f"Auth Token not in request")
-            try:
-                token = metadata_dict.get("authorization").split(" ")[1]
-                decoded = Jwt_Decode(Jwt_token=token,key=self.SECRET_KEY,algos=["HS256"])
-            except jwt.ExpiredSignatureError:
-                logger.error("Token expired")
-                context.abort(grpc.StatusCode.UNAUTHENTICATED, "Token expired")
-            except jwt.InvalidTokenError as e:
-                logger.error(f"Invalid token: {str(e)}")
-                context.abort(grpc.StatusCode.UNAUTHENTICATED, "Invalid token")
-            except Exception as e:
-                logger.error(f"Authentication error: {str(e)}")
-                context.abort(grpc.StatusCode.INTERNAL, "Authentication failed")
-
-            new_metadata = [*metadata]
-            if decoded.get("role") == "User":
-                new_metadata.append(("user_phone_no", str(decoded.get("user_phone_no"))))
-                new_metadata.append(("user_role", decoded.get("role")))
-            elif decoded.get("role") == "Store":
-                new_metadata.append(("store_uuid", str(decoded.get("store_uuid"))))
-                new_metadata.append(("user_role", decoded.get("role")))
-            new_context =  ContextWrapper(context, new_metadata)
+            token = metadata_dict.get("authorization").split(" ")[1]
+            decoded = Jwt_Decode(Jwt_token=token,key=self.SECRET_KEY,algos=["HS256"])
+        except jwt.ExpiredSignatureError:
+            logger.warning("Token expired")
+            context.abort(grpc.StatusCode.UNAUTHENTICATED, "Token expired")
+        except jwt.InvalidTokenError as e:
+            logger.warning(f"Invalid token: {str(e)}")
+            context.abort(grpc.StatusCode.UNAUTHENTICATED, "Invalid token")
         except Exception as e:
-            logger.error(f"Error in auth interceptor",e)
+            logger.warning(f"Authentication error: {str(e)}")
+            context.abort(grpc.StatusCode.INTERNAL, "Authentication failed")
+
+        new_metadata = [*metadata]
+        if decoded.get("role") == "User":
+            new_metadata.append(("user_phone_no", str(decoded.get("user_phone_no"))))
+            new_metadata.append(("user_role", decoded.get("role")))
+        elif decoded.get("role") == "Store":
+            new_metadata.append(("store_uuid", str(decoded.get("store_uuid"))))
+            new_metadata.append(("user_role", decoded.get("role")))
+        new_context =  ContextWrapper(context, new_metadata)
         return method(request_or_iterator, new_context)
     
 class OrderService(order_pb2_grpc.OrderServiceServicer):
@@ -689,8 +692,8 @@ class OrderService(order_pb2_grpc.OrderServiceServicer):
                 raise
 
             try:
-                if order.payment.exists():
-                    payment = order.payment.first()
+                if order.payment:
+                    payment = order.payment
                     response.payment.CopyFrom(self._payment_to_response(payment))
             except (AttributeError, IndexError) as e:
                 logger.error(f"Payment conversion error: {str(e)}")
@@ -738,20 +741,16 @@ class OrderService(order_pb2_grpc.OrderServiceServicer):
         except Exception as e:
             logger.error(f"Unexpected error in _store_order_to_response: {e}",e)        
             raise e
-    
 
     def __init__(self):
-        # Initialize the pool without target
+        
         self.channel_pool = GrpcChannelPool()
-        # Get channel with target when needed
         self.channel = self.channel_pool.get_channel(CART_SERVICE_ADDR)
         self.Cart_stub = cart_pb2_grpc.CartServiceStub(self.channel)
         logger.info(f"Initialized gRPC channel to Cart Service at {CART_SERVICE_ADDR}")
         super().__init__()
 
-
-    @handle_error  # Should come after @transaction.atomic if handle_error doesn't interfere with transaction management
-    @transaction.atomic
+    @handle_error
     def CreateOrder(self, request, context):
 
         meta_dict ={k:v for k,v in context.invocation_metadata()}
@@ -760,112 +759,113 @@ class OrderService(order_pb2_grpc.OrderServiceServicer):
         
 
         if role != "Store":
-            # context.abort(StatusCode.PERMISSION_DENIED,f"Role does not Permit this Call")
-            # return
             raise Unauthenticated
         auth_store_uuid = meta_dict.get("store_uuid")
-
         cart_uuid = request.cart_uuid
+        store_uuid = request.store_uuid
+
+        if store_uuid !=  auth_store_uuid:
+            raise Unauthenticated
+        
 
         try:
-            order = Order.objects.get(cart_uuid = cart_uuid,store_uuid = auth_store_uuid)
+            order = Order.objects.get(cart_uuid = cart_uuid,store_uuid = store_uuid)
             return order_pb2.StoreOrderResponse(
             order = self._store_order_to_response(order))
         except Order.DoesNotExist:
             pass
 
-        cart_request = cart_pb2.GetCartRequest(cart_uuid=cart_uuid,store_uuid = auth_store_uuid)
+        cart_request = cart_pb2.GetCartRequest(cart_uuid=cart_uuid,store_uuid = store_uuid)
         
         try:
             response = self.Cart_stub.GetCart(cart_request)
-            if response.cart.store_uuid != auth_store_uuid:
-                raise Unauthenticated
         except RpcError as e:
             error_message = e.details()
             if e.code() == StatusCode.NOT_FOUND:
                 logger.error(f"Active Cart: {cart_uuid} not found")
-                context.abort(StatusCode.NOT_FOUND, f"Active Cart: {cart_uuid} not found")
+                raise GrpcException(error_message,status_code=e.code())
             elif e.code() == StatusCode.INVALID_ARGUMENT:
                 logger.error(error_message)
-                context.abort(StatusCode.INVALID_ARGUMENT, error_message)
+                raise GrpcException(error_message,status_code=e.code())
             elif e.code() == StatusCode.INTERNAL:
                 logger.error(error_message)
-                context.abort(StatusCode.INTERNAL, error_message)
+                raise GrpcException(error_message,status_code=e.code())
+                
         
-        # Extract cart details
-        cart = response.cart
-        order = Order.objects.create(
-            store_uuid = cart.store_uuid,
-            cart_uuid = cart.cart_uuid,
-            user_phone_no = cart.user_phone_no,
-            order_type =  OrderType.Name(cart.order_type),
-            table_no=cart.table_no,
-            vehicle_no=cart.vehicle_no,
-            vehicle_description=cart.vehicle_description,
-            coupon_code=cart.coupon_code,
-            special_instructions=cart.special_instructions,
-            order_status=order_state.ORDER_STATE_PLACED,
-            subtotal_amount=cart.sub_total,
-            discount_amount=cart.total_discount,
-            price_before_tax=cart.total_price_before_tax,
-            tax_amount=cart.total_tax,
-            packaging_cost=cart.packaging_cost,
-            final_amount=cart.final_amount
-        )
-
-        # Process order items
-        order_items = []
-        order_add_ons = []
-        for i in cart.items:
-            item = OrderItem(
-                order=order,
-                product_name=i.product_name,
-                product_uuid=i.product_uuid,
-                unit_price=i.unit_price,
-                discount=i.discount,
-                quantity = i.quantity,
-                add_ons_total = i.add_ons_total,
-                tax_percentage=i.tax_percentage,
-                packaging_cost=i.packaging_cost,
-                subtotal_amount=i.subtotal_amount,
-                discount_amount=i.discount_amount,
-                price_before_tax=i.price_before_tax,
-                tax_amount=i.tax_amount,
-                final_price=i.final_price
+        with transaction.atomic():# Extract cart details
+            cart = response.cart
+            order = Order.objects.create(
+                store_uuid = cart.store_uuid,
+                cart_uuid = cart.cart_uuid,
+                user_phone_no = cart.user_phone_no,
+                order_type =  OrderType.Name(cart.order_type),
+                table_no=cart.table_no,
+                vehicle_no=cart.vehicle_no,
+                vehicle_description=cart.vehicle_description,
+                coupon_code=cart.coupon_code,
+                special_instructions=cart.special_instructions,
+                order_status=order_state.ORDER_STATE_PLACED,
+                subtotal_amount=cart.sub_total,
+                discount_amount=cart.total_discount,
+                price_before_tax=cart.total_price_before_tax,
+                tax_amount=cart.total_tax,
+                packaging_cost=cart.packaging_cost,
+                final_amount=cart.final_amount
             )
-            order_items.append(item)
 
-        # Bulk insert items
-        created_items = OrderItem.objects.bulk_create(order_items)
-
-        # Process add-ons after item creation
-        for item, i in zip(created_items, cart.items):
-            for j in i.add_ons:
-                add_on = OrderItemAddOn(
-                    order_item=item,
-                    add_on_name=j.add_on_name,
-                    add_on_uuid=j.add_on_uuid,
-                    quantity=j.quantity,
-                    unit_price=j.unit_price,
-                    is_free=j.is_free,
-                    subtotal_amount=j.subtotal_amount
+            # Process order items
+            order_items = []
+            order_add_ons = []
+            for i in cart.items:
+                item = OrderItem(
+                    order=order,
+                    product_name=i.product_name,
+                    product_uuid=i.product_uuid,
+                    unit_price=i.unit_price,
+                    discount=i.discount,
+                    quantity = i.quantity,
+                    add_ons_total = i.add_ons_total,
+                    tax_percentage=i.tax_percentage,
+                    packaging_cost=i.packaging_cost,
+                    subtotal_amount=i.subtotal_amount,
+                    discount_amount=i.discount_amount,
+                    price_before_tax=i.price_before_tax,
+                    tax_amount=i.tax_amount,
+                    final_price=i.final_price
                 )
-                order_add_ons.append(add_on)
+                order_items.append(item)
 
-        # Bulk insert add-ons
-        if order_add_ons:
-            OrderItemAddOn.objects.bulk_create(order_add_ons)
+            # Bulk insert items
+            created_items = OrderItem.objects.bulk_create(order_items)
 
-        # Create payment record (outside item loop)
-        payment = OrderPayment.objects.create(
-            order=order,
-            amount=order.final_amount,
-            method=PaymentMethod.Name(PaymentMethod.PAYMENT_METHOD_CASH),
-            status=PaymentState.Name(PaymentState.PAYMENT_STATE_COMPLETE),
+            # Process add-ons after item creation
+            for item, i in zip(created_items, cart.items):
+                for j in i.add_ons:
+                    add_on = OrderItemAddOn(
+                        order_item=item,
+                        add_on_name=j.add_on_name,
+                        add_on_uuid=j.add_on_uuid,
+                        quantity=j.quantity,
+                        unit_price=j.unit_price,
+                        is_free=j.is_free,
+                        subtotal_amount=j.subtotal_amount
+                    )
+                    order_add_ons.append(add_on)
+
+            # Bulk insert add-ons
+            if order_add_ons:
+                OrderItemAddOn.objects.bulk_create(order_add_ons)
+
+            # Create payment record (outside item loop)
+            payment = OrderPayment.objects.create(
+                order=order,
+                amount=order.final_amount,
+                method=PaymentMethod.Name(PaymentMethod.PAYMENT_METHOD_CASH),
+                status=PaymentState.Name(PaymentState.PAYMENT_STATE_COMPLETE),
+            )
+            return order_pb2.StoreOrderResponse(
+            order = self._store_order_to_response(order)
         )
-        return order_pb2.StoreOrderResponse(
-        order = self._store_order_to_response(order)
-    )
 
     @handle_error
     def GetOrder(self,request,context):
@@ -877,14 +877,19 @@ class OrderService(order_pb2_grpc.OrderServiceServicer):
             raise Unauthenticated
         
         auth_store_uuid = meta_dict.get("store_uuid")
+        store_uuid = request.store_uuid
 
-
+        if store_uuid !=  auth_store_uuid:
+            raise Unauthenticated
+        
         if request.order_uuid:
-            order = Order.objects.get(order_uuid = request.order_uuid,store_uuid = auth_store_uuid)
+            order = Order.objects.get(order_uuid = request.order_uuid,store_uuid = store_uuid)
         elif request.store_uuid and request.user_phone_no:
-            order = Order.objects.get(user_phone_no = request.user_phone_no,store_uuid = auth_store_uuid)
+            order = Order.objects.get(user_phone_no = request.user_phone_no,store_uuid = store_uuid)
         elif request.order_no:
-            order = Order.objects.get(order_no = request.order_no,store_uuid = auth_store_uuid)
+            order = Order.objects.get(order_no = request.order_no,store_uuid = store_uuid)
+        elif request.order_no:
+            order = Order.objects.get(cart_uuid = request.cart_uuid,store_uuid = store_uuid)
         else:
             raise ValueError(f"No value given to fetch order")
 
@@ -892,23 +897,28 @@ class OrderService(order_pb2_grpc.OrderServiceServicer):
             order = self._store_order_to_response(order = order)
         )
     
+    
     @handle_error  # Should come after @transaction.atomic if handle_error doesn't interfere with transaction management
-    @transaction.atomic
     def CancelOrder(self,request,context):
 
-        meta_dict = dict(context.invocation_metadata())
-
-        if meta_dict.get("user_role") != "Store":
+        meta_dict ={k:v for k,v in context.invocation_metadata()}
+        role = meta_dict.get("user_role")
+        
+        if role != "Store":
             raise Unauthenticated
-
+        
         auth_store_uuid = meta_dict.get("store_uuid")
+        store_uuid = request.store_uuid
+
+        if store_uuid !=  auth_store_uuid:
+            raise Unauthenticated
 
         # Fetch order
         order = None
         if request.order_uuid:
-            order = Order.objects.get(order_uuid=request.order_uuid, store_uuid=auth_store_uuid)
+            order = Order.objects.prefetch_related("payment").get(order_uuid=request.order_uuid, store_uuid=store_uuid)
         elif request.order_no:
-            order = Order.objects.select_related("payment").get(order_no=request.order_no, store_uuid=auth_store_uuid)
+            order = Order.objects.prefetch_related("payment").get(order_no=request.order_no, store_uuid=store_uuid)
         else:
             raise ValueError("No value given to fetch order")
 
@@ -920,17 +930,16 @@ class OrderService(order_pb2_grpc.OrderServiceServicer):
         if not hasattr(order, "payment"):
             raise Exception("Internal Error Payment Object could not be found")
 
-        # Process refund
-        OrderPayment.objects.filter(order=order).update(status=payment_state.PAYMENT_STATE_REFUNDED)
-        
-        # Update order status
-        order.order_status = order_state.ORDER_STATE_CANCELED
-        order.save()
-        
+        with transaction.atomic():
+            # Process refund
+            order.payment.update_status(payment_state.PAYMENT_STATE_REFUNDED)
+            # Update order status
+            order.order_status = order_state.ORDER_STATE_CANCELED
+            order.save()
 
-        logger.info(f"Order:{order.order_uuid} Order-No:{order.order_no} is Cancelled")
+            logger.info(f"Order:{order.order_uuid} Order-No:{order.order_no} is Cancelled")
 
-        return order_pb2.StoreOrderResponse(order=self._store_order_to_response(order))
+            return order_pb2.StoreOrderResponse(order=self._store_order_to_response(order))
 
     @handle_error
     def ListOrder(self,request,context):
@@ -939,6 +948,12 @@ class OrderService(order_pb2_grpc.OrderServiceServicer):
         role = meta_dict.get("user_role")
         
         if role != "Store":
+            raise Unauthenticated
+        
+        auth_store_uuid = meta_dict.get("store_uuid")
+        store_uuid = request.store_uuid
+
+        if store_uuid !=  auth_store_uuid:
             raise Unauthenticated
         
         store_uuid = meta_dict.get("store_uuid")
@@ -952,67 +967,87 @@ class OrderService(order_pb2_grpc.OrderServiceServicer):
             orders = [self._store_order_to_response(order) for order in orders],
             next_page = next_page,
             prev_page = prev_page) 
-    
-
-
 
     @handle_error
     def StreamOrders(self,request,context):
-        meta_dict = {k: v for k, v in context.invocation_metadata()}
+        meta_dict ={k:v for k,v in context.invocation_metadata()}
         role = meta_dict.get("user_role")
-
+        
         if role != "Store":
             raise Unauthenticated
-
+        
         auth_store_uuid = meta_dict.get("store_uuid")
+        store_uuid = request.store_uuid
 
-        if request.store_uuid != auth_store_uuid:
+        if store_uuid !=  auth_store_uuid:
             raise Unauthenticated
 
         last_order_time = None  # Keep track of the last streamed order time
-        channel_name = f"order_updates_{auth_store_uuid}"
+        channel_name = f'order_updates_{store_uuid}'.replace("-","_")
         
-        logger.info(f"Started Stream for store:{auth_store_uuid} at {time.time()}")
+        logger.info(f"Started Stream for store:{store_uuid} at {time.time()}")
 
-        with connection.cursor() as cursor:
-            cursor.execute('LISTEN "%s";' % channel_name)
-            connection.connection.set_isolation_level(
-            psycopg2.extensions.ISOLATION_LEVEL_AUTOCOMMIT
-            )
-            
-            while context.is_active():
-                connection.connection.poll()
+        
+        try:
+            with conn.cursor() as cursor:
+                cursor.execute(f'LISTEN {channel_name}')
+                logger.info(f"Started listening to channel {channel_name}")
                 
-                while connection.connection.notifies:
-                    notification = connection.connection.notifies.pop(0)
-                    payload = json.loads(notification.payload)
+                while context.is_active():
+                    # Check for new notifications
+                    if select.select([conn.connection], [], [], 0.1) == ([], [], []):
+                        # No notifications available
+                        time.sleep(0.1)
+                        continue
                     
-                    try:
-                        order = Order.objects.get(
-                            order_uuid=payload['order_uuid'],
-                            store_uuid=auth_store_uuid
-                        )
-                        last_order_time = time.time
-                        yield order_pb2.StoreOrderResponse(
-                            order=self._store_order_to_response(order)
-                        )
-                    except Order.DoesNotExist:
-                        logger.warning(f"Order {payload['order_uuid']} disappeared")
-                
-                time.sleep(0.1)  # Prevent CPU overload
-        logger.info(f"Stream ended for Store_uuid:{auth_store_uuid} last Stream at:{last_order_time}")
+                    # Process notifications
+                    conn.connection.poll()
+                    while conn.connection.notifies:
+                        notification = conn.connection.notifies.pop(0)
+                        try:
+                            payload = json.loads(notification.payload)
+                            order = Order.objects.get(
+                                order_uuid=payload['order_uuid'],
+                                store_uuid=store_uuid
+                            )
+                            last_order_time = time.time()  # Fixed: added parentheses to time.time
+                            yield order_pb2.StoreOrderResponse(
+                                order=self._store_order_to_response(order)
+                            )
+                        except Order.DoesNotExist:
+                            logger.warning(f"Order {payload.get('order_uuid')} not found")
+                        except json.JSONDecodeError:
+                            logger.error(f"Invalid payload: {notification.payload}")
+                        except KeyError as e:
+                            logger.error(f"Missing key in payload: {e}")
+                    
+                    # Add small sleep to prevent busy waiting
+                    time.sleep(0.1)
+                    
+        except psycopg2.OperationalError as e:
+            logger.error(f"Database connection error: {str(e)}")
+        except Exception as e:
+            logger.exception("Unexpected error in order stream")
+        finally:
+            # Cleanup
+            try:
+                with conn.cursor() as cursor:
+                    cursor.execute(f'UNLISTEN "{channel_name}";')
+            except:
+                pass
+            logger.info(f"Stopped listening to channel {channel_name}")
 
     @handle_error
     def GetUserOrder(self,request,context):
-
-        logger.info(request)
         meta_dict ={k:v for k,v in context.invocation_metadata()}
         role = meta_dict.get("user_role")
         
         if role != "User":
             raise Unauthenticated
-        
         user_phone_no = meta_dict.get("user_phone_no")
+
+        if user_phone_no != request.user_phone_no:
+            raise  Unauthenticated
 
         if request.order_uuid:
             order = Order.objects.get(user_phone_no = user_phone_no,order_uuid = request.order_uuid)
@@ -1033,8 +1068,10 @@ class OrderService(order_pb2_grpc.OrderServiceServicer):
         
         if role != "User":
             raise Unauthenticated
-        
         user_phone_no = meta_dict.get("user_phone_no")
+
+        if user_phone_no != request.user_phone_no:
+            raise  Unauthenticated
         store_uuid = request.store_uuid
         limit = request.limit
         page = request.page
@@ -1046,8 +1083,8 @@ class OrderService(order_pb2_grpc.OrderServiceServicer):
             next_page = next_page,
             prev_page = prev_page)
 
+   
     @handle_error
-    @transaction.atomic
     def CancelUserOrder(self,request,context):
         
         meta_dict ={k:v for k,v in context.invocation_metadata()}
@@ -1079,20 +1116,19 @@ class OrderService(order_pb2_grpc.OrderServiceServicer):
 
         if order.payment.status == payment_state.PAYMENT_STATE_REFUNDED:
             raise FailedPrecondition("Order has been refunded",StatusCode.FAILED_PRECONDITION)
+        with transaction.atomic():
+        # Process refund
+            OrderPayment.objects.filter(order=order).update(status=payment_state.PAYMENT_STATE_REFUNDED)
+            
+            # Update order status
+            order.order_status = order_state.ORDER_STATE_CANCELED
+            order.save()
 
-       # Process refund
-        OrderPayment.objects.filter(order=order).update(status=payment_state.PAYMENT_STATE_REFUNDED)
-        
-        # Update order status
-        order.order_status = order_state.ORDER_STATE_CANCELED
-        order.save()
+            logger.info(f"Order:{order.order_uuid} Order-No:{order.order_no} is Cancelled")
 
-        logger.info(f"Order:{order.order_uuid} Order-No:{order.order_no} is Cancelled")
-
-        return order_pb2.UserOrderResponse(
-            order = self._user_order_to_response(order= order)
-        )
-
+            return order_pb2.UserOrderResponse(
+                order = self._user_order_to_response(order= order)
+            )
 
 
 def serve():

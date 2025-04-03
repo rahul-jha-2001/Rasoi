@@ -37,7 +37,7 @@ def test_stream_orders():
 
     # Add metadata (Auth headers)
     metadata = [
-        ("authorization", "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJSYXNvaSIsImlhdCI6MTc0MzU4OTE3NywiZXhwIjoxNzQzNjMyMzc3LCJzdG9yZV91dWlkIjoiOWMwYTY4OWUtYzFmNC00YmNkLWI2NGEtMjlkMTg2MWRiMzI2Iiwicm9sZSI6IlN0b3JlIn0.lZxHt_ytkt4Rw76G-uwpRxRRgliRWjFAtaAhjoz-fnc")
+        ("authorization", "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJSYXNvaSIsImlhdCI6MTc0MzY5MzA5MywiZXhwIjoxNzQzNzM2MjkzLCJzdG9yZV91dWlkIjoiOWMwYTY4OWUtYzFmNC00YmNkLWI2NGEtMjlkMTg2MWRiMzI2Iiwicm9sZSI6IlN0b3JlIn0.gw5iHhNhHYPOxfjazuvYN2jQxJk6ed-IkER56G6bLn0")
     ]
 
     try:

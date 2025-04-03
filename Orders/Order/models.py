@@ -52,13 +52,12 @@ class order_manager(models.Manager):
         """
         queryset = self.get_queryset().filter(store_uuid=store_uuid).order_by('-created_at')
         paginator = Paginator(queryset, limit)
-
         try:
             paginated_data = paginator.page(page)
         except PageNotAnInteger:
             paginated_data = paginator.page(1)
         except EmptyPage:
-            paginated_data = paginator.page(paginator.num_pages)
+            paginated_data = paginator.page(paginator.num_pages())
 
         next_page = paginated_data.next_page_number() if paginated_data.has_next() else None
         prev_page = paginated_data.previous_page_number() if paginated_data.has_previous() else None
@@ -158,15 +157,13 @@ class Order(models.Model):
     def save(self, *args, **kwargs):
         is_new = self._state.adding
         super().save(*args, **kwargs)
-        
-        def _notify():
-            with connection.cursor() as cursor:
-                channel_name = f"order_updates_{self.store_uuid}"
-                payload = json.dumps({'order_uuid': str(self.order_uuid), 'action': 'created' if is_new else 'updated'}) 
-                cursor.execute('NOTIFY "%s", %s;', [channel_name, payload])
+        with connection.cursor() as cursor:
+            channel_name = f'order_updates_{self.store_uuid}'.replace("-","_")
+            payload = json.dumps({'order_uuid': str(self.order_uuid), 'action': 'created' if is_new else 'updated'})
+            cursor.execute(f"NOTIFY {channel_name}, %s", [payload])
 
-
-        transaction.on_commit(_notify)
+        print("Notification sent")
+  
 
 class OrderItem(models.Model):
     item_uuid = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -265,7 +262,7 @@ class OrderPayment(models.Model):
     rz_signature = models.CharField(max_length=100, null=True, blank=True)
 
 
-    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name="payment")
+    order = models.OneToOneField(Order, on_delete=models.CASCADE, related_name="payment")
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     method = models.CharField(verbose_name=_("Payment Method"),max_length=30,choices=payment_method.choices,default=payment_method.PAYMENT_METHOD_CASH)
     status = models.CharField(verbose_name=_("Payment Status"),max_length=30, choices=payment_state.choices,default=payment_state.PAYMENT_STATE_PENDING)
@@ -283,3 +280,23 @@ class OrderPayment(models.Model):
 
     def __str__(self):
         return f"{self.order.order_uuid} - {self.amount} - {self.status}"
+    
+    @transaction.atomic
+    def update_status(self,new_payment_state):
+        if new_payment_state not in [choice[0] for choice in payment_state.choices]:
+            raise ValueError(f"Invalid payment state: {new_payment_state}")
+    
+        # Update payment status
+        old_status = self.status
+        self.status = new_payment_state
+        self.save()
+        
+        # Always update the order to trigger notification
+        # Even if no visible fields change, updating updated_at and triggering save() notification
+        order = self.order
+        
+        # Update corresponding order status if payment state requires it
+        if new_payment_state == payment_state.PAYMENT_STATE_COMPLETE and order.order_status == order_state.ORDER_STATE_PAYMENT_PENDING:
+            order.order_status = order_state.ORDER_STATE_PLACED
+        elif new_payment_state == payment_state.PAYMENT_STATE_REFUNDED:
+            order.order_status = order_state.ORDER_STATE_CANCELED

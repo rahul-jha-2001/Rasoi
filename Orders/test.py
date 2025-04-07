@@ -4,61 +4,45 @@ import json
 
 import sys 
 import os
+import django
 
-sys.path.append(os.getcwd()+r"\Orders\proto")
-from proto import Order_pb2,Order_pb2_grpc
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'Orders.settings')
+django.setup()
+from Proto.order_pb2 import KafkaOrderMessage, OrderState, OrderOpration, OrderPayment, PaymentState, PaymentMethod
+from Proto import order_pb2
+
+import time
+from datetime import datetime
+
 # Configure the producer
 conf = {
     'bootstrap.servers': 'localhost:29092',  # Adjust to your Kafka server settings
-    'client.id': 'python-producer'
+    'client.id': 'payment-service'
 }
 
 
-# Create items
-item1 = Order_pb2.OrderItem(
-    ProductUuid="987e6543-e21b-43d1-a432-123456789fed",
-    Price=20.0,
-    Quantity=2,
-    Discount=10.0,
-    SubTotal=40.0,
-    TaxedAmount=42.0,
-    DiscountAmount=4.0
-)
+payment=OrderPayment(
+        payment_uuid="0c3bf0fd-adf6-4c64-a7f9-46263173ad86",
+        rz_order_id= "Order_4545",
+        rz_payment_id= "Payment_5454",
+        rz_signature= "sadasda",
+        amount=700,
+        payment_method= PaymentMethod.PAYMENT_METHOD_RAZORPAY,
+        payment_status= PaymentState.PAYMENT_STATE_COMPLETE,
+        payment_time= datetime.utcnow()
+    )
 
-item2 = Order_pb2.OrderItem(
-    ProductUuid="876e5432-d12c-45e6-b234-567890fedcba",
-    Price=15.0,
-    Quantity=1,
-    Discount=5.0,
-    SubTotal=15.0,
-    TaxedAmount=15.75,
-    DiscountAmount=0.75
+message = order_pb2.KafkaOrderMessage(
+    cart_uuid="1b920999-cbf2-4a0d-a730-c7396c1caa31",
+    store_uuid = "9c0a689e-c1f4-4bcd-b64a-29d1861db326",
+    payment= payment,
+    operation=OrderOpration.ORDER_OP_CREATE
 )
-
-# Create order
-order = Order_pb2.Order(
-    OrderUuid="183e4567-e89b-12d3-a456-426614274000",
-    StoreUuid="456e7890-e12b-34d5-b678-123456789abc",
-    UserPhoneNo="+1234567890",
-    OrderType="ORDER_TYPE_DINE_IN",
-    TableNo="20A",
-    CouponName="WELCOME50",
-    Items=[item1, item2],
-    TotalAmount=57.0,
-    DiscountAmount=4.75,
-    FinalAmount=52.25,
-    PaymentState="PAYMENT_STATE_PENDING",
-    PaymentMethod="CASH",
-    SpecialInstruction="Extra x spicy",
-    OrderStatus="ORDER_STATE_PLACED"
-)
-
 # Serialize to binary
-serialized_data = order.SerializeToString()
+serialized_data = message.SerializeToString()
 
 # Create the producer instance
 producer = Producer(conf)
-
 
 # Delivery callback to check if the message was sent successfully
 def delivery_report(err, msg):
@@ -71,3 +55,6 @@ def delivery_report(err, msg):
 topic = 'Orders'
 producer.produce(topic, key="OrderPlaced", value=serialized_data, callback=delivery_report )
 producer.flush()  # Ensure all messages are sent
+
+
+

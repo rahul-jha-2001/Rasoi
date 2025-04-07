@@ -2,334 +2,274 @@ import os
 import logging
 import traceback
 import uuid
-from confluent_kafka import Consumer, KafkaException, KafkaError
+from confluent_kafka import Consumer
 from google.protobuf.message import DecodeError
 from dotenv import load_dotenv
 
 import django
 from django.conf import settings
-from django.db import transaction,IntegrityError
-from django.core.exceptions import ValidationError
+from django.db import transaction
+
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'Orders.settings')
 django.setup()
 
 from utils.logger import Logger
-from Order.models import Order, OrderItem
-from proto import Order_pb2
+from utils.gprc_pool import GrpcChannelPool
+from Proto import cart_pb2,cart_pb2_grpc,order_pb2
+from Order.models import Order,OrderItem,OrderItemAddOn,OrderPayment,order_types,order_state
+from Proto.order_pb2 import KafkaOrderMessage,OrderState,PaymentState,PaymentMethod,OrderType
+from Proto.cart_pb2 import CartResponse,GetCartRequest
+from grpc import RpcError,StatusCode
+from django.core.exceptions import ValidationError
+from django.db import IntegrityError
+from confluent_kafka import KafkaException, KafkaError
+from decimal import Decimal
 
 
-logger = Logger.get_logger("Kafka_Order", logging.INFO)
+logger = Logger("Kafka_Order")
+JWT_SECRET = os.getenv("JWT_SECRET","Rahul")
+CART_SERVICE_ADDR = os.getenv("CART_SERVICE_ADDR","localhost:50051")
+KAFKA_SERVER = os.getenv("KAFKA_SERVER",'localhost:29092')
+class OrderOpreation:
+    def __init__(self,Cart_stub):
+        self.DeserializedOrder = KafkaOrderMessage()
+        self.stub = Cart_stub
 
-
-class PlaceOrder:
-    def __init__(self):
-        self.DeserializedOrder = Order_pb2.Order()
-
-    @staticmethod
-    @transaction.atomic
-    def _proto_to_django_order(order_proto: Order_pb2.Order) -> Order:
-        """
-        Convert a Protobuf Order message to a Django Order instance, strictly for creation.
-        """
-
-        correlation_id = str(uuid.uuid4())
-        log_context = {
-            'correlation_id': correlation_id,
-            'order_uuid': order_proto.OrderUuid,
-            'store_uuid': order_proto.StoreUuid,
-        }
-
+    def _call_cart(self,cart_uuid:str,store_uuid:str) -> CartResponse:
+        cart_request = GetCartRequest(cart_uuid=cart_uuid,store_uuid = store_uuid)
         try:
-            # Detailed logging of order creation attempt
-            logger.info(f"Attempting to create order | Context: {log_context}")
-
-            # Create a new Order instance
-            order = Order.objects.create(
-                OrderUuid=order_proto.OrderUuid,  # This must be unique
-                StoreUuid=order_proto.StoreUuid,
-                UserPhoneNo=order_proto.UserPhoneNo,
-                OrderType=order_proto.OrderType,
-                TableNo=order_proto.TableNo if order_proto.HasField("TableNo") else None,
-                VehicleNo=order_proto.VehicleNo if order_proto.HasField("VehicleNo") else None,
-                VehicleDescription=order_proto.VehicleDescription if order_proto.HasField("VehicleDescription") else None,
-                CouponName=order_proto.CouponName if order_proto.HasField("CouponName") else None,
-                TotalAmount=order_proto.TotalAmount,
-                DiscountAmount=order_proto.DiscountAmount,
-                FinalAmount=order_proto.FinalAmount,
-                PaymentStatus=order_proto.PaymentState,
-                PaymentMethod=order_proto.PaymentMethod,
-                SpecialInstruction=order_proto.SpecialInstruction,
-                OrderStatus=order_proto.OrderStatus,
-            )
-
-            # Create OrderItems associated with the Order
-            order_items_context = []
-            for item_proto in order_proto.Items:
-                OrderItem.objects.create(
-                    Order=order,
-                    ProductUuid=item_proto.ProductUuid,
-                    Price=item_proto.Price,
-                    Quantity=item_proto.Quantity,
-                    Discount=item_proto.Discount,
-                    Subtotal=item_proto.SubTotal,
-                    TaxedAmount=item_proto.TaxedAmount,
-                    DiscountAmount=item_proto.DiscountAmount,
-                )
-            logger.info(f"Order created successfully | Context: {log_context}, Items: {order_items_context}")
-            return order
-        except IntegrityError as e:
-            # Specific handling for integrity errors
-            logger.warning(
-                f"Integrity error during order creation | "
-                f"Context: {log_context}, "
-                f"Error: {str(e)}"
-            )
-            # Optionally, try to retrieve existing order or handle duplicate
-        except ValidationError as e:
-            # Handle validation errors with detailed logging
-            logger.error(
-                f"Validation error during order creation | "
-                f"Context: {log_context}, "
-                f"Errors: {e.message_dict}"
-            )
-            raise
-
-        except Exception as e:
-            # Catch-all for unexpected errors with full traceback
-            logger.error(
-                f"Unexpected error during order creation | "
-                f"Context: {log_context}, "
-                f"Error: {str(e)}\n"
-                f"Traceback: {traceback.format_exc()}"
-            )
-            raise
-
-    def create(self, data):
-        """
-        Create an order from serialized Protobuf data.
-        
-        Args:
-            data (bytes): Serialized Protobuf data
-        
-        Returns:
-            Order: Created order instance
-        """
-        correlation_id = str(uuid.uuid4())
-
-        try:
-            if not data:
-                logger.warning(f"Empty data received for order creation | Correlation ID: {correlation_id}")
-                raise ValueError("Received empty data for order creation.")
-            
-            # Log incoming data size for monitoring
-            logger.info(f"Received order data | Size: {len(data)} bytes | Correlation ID: {correlation_id}")
-            self.DeserializedOrder.ParseFromString(data)
-            return self._proto_to_django_order(self.DeserializedOrder)
-        except DecodeError as e:
-            logger.error(
-                f"Protobuf DecodeError | "
-                f"Correlation ID: {correlation_id}, "
-                f"Error: {str(e)}, "
-                f"Possible data corruption"
-            )
-            raise
-        except Exception as e:
-            logger.error(
-                f"Unexpected error in order creation | "
-                f"Correlation ID: {correlation_id}, "
-                f"Error: {str(e)}\n"
-                f"Traceback: {traceback.format_exc()}"
-            )
-            raise
-
-
-
-class UpdateOrder:
-    def __init__(self):
-        self.DeserializedOrder = Order_pb2.Order()
-
-    @staticmethod
-    @transaction.atomic
-    def proto_to_django_order(order_proto: Order_pb2.Order) -> Order:
-        """
-        Update an existing Django Order instance from a Protobuf Order message.
-        
-        Args:
-            order_proto (Order_pb2.Order): Protobuf order message to update
-        
-        Returns:
-            Order: Updated order instance
-        """
-        correlation_id = str(uuid.uuid4())
-        log_context = {
-            'correlation_id': correlation_id,
-            'order_uuid': order_proto.OrderUuid,
-            'store_uuid': order_proto.StoreUuid,
-        }
-        try:
-            try:
-                # Retrieve the existing Order instance
-                order = Order.objects.get(OrderUuid=order_proto.OrderUuid)
-            except Order.DoesNotExist:
-                    logger.error(f"Order not found for update | Context: {log_context}")
-                    raise    
-
-            # Update fields of the Order
-            # order.StoreUuid = order_proto.StoreUuid
-            # order.UserPhoneNo = order_proto.UserPhoneNo
-
-            # Prepare update log for existing order
-            original_state = {
-                'store_uuid': order.StoreUuid,
-                'total_amount': order.TotalAmount,
-                'order_status': order.OrderStatus,
-                'payment_status': order.PaymentStatus,
-            }
-
-
-            order.OrderType = order_proto.OrderType
-            order.TableNo = order_proto.TableNo if order_proto.HasField("TableNo") else None
-            order.VehicleNo = order_proto.VehicleNo if order_proto.HasField("VehicleNo") else None
-            order.VehicleDescription = order_proto.VehicleDescription if order_proto.HasField("VehicleDescription") else None
-            order.CouponName = order_proto.CouponName if order_proto.HasField("CouponName") else None
-            order.TotalAmount = order_proto.TotalAmount
-            order.DiscountAmount = order_proto.DiscountAmount
-            order.FinalAmount = order_proto.FinalAmount
-            order.PaymentStatus = order_proto.PaymentState
-            order.PaymentMethod = order_proto.PaymentMethod
-            order.SpecialInstruction = order_proto.SpecialInstruction
-            order.OrderStatus = order_proto.OrderStatus
-            try:
-                    order.full_clean()
-                    order.save()
-            except ValidationError as ve:
-                logger.error(
-                    f"Validation error during order update | "
-                    f"Context: {log_context}, "
-                    f"Validation Errors: {ve.message_dict}"
-                )
-                raise
-            
-
-            # Log updated order items
-            updated_items_context = []
-            # Update OrderItems associated with the Order
-            for item_proto in order_proto.Items:
-                # Update or create items associated with the order
-                try:
-                    order_item, created = OrderItem.objects.update_or_create(
-                                Order=order,
-                                ProductUuid=item_proto.ProductUuid,
-                                defaults={
-                                    'Price': item_proto.Price,
-                                    'Quantity': item_proto.Quantity,
-                                    'Discount': item_proto.Discount,
-                                    'Subtotal': item_proto.SubTotal,
-                                    'TaxedAmount': item_proto.TaxedAmount,
-                                    'DiscountAmount': item_proto.DiscountAmount,
-                                }
-                            )
-                    updated_items_context.append({
-                            'product_uuid': item_proto.ProductUuid,
-                            'created': created,
-                            'quantity': item_proto.Quantity,
-                            'subtotal': item_proto.SubTotal
-                        })
-                except Exception as item_error:
-                    logger.error(
-                        f"Error updating order item | "
-                        f"Context: {log_context}, "
-                        f"Product UUID: {item_proto.ProductUuid}, "
-                        f"Error: {str(item_error)}"
-                    )
-                    raise
-
-                # Log successful update with changes
-                logger.info(
-                    f"Order updated successfully | "
-                    f"Context: {log_context}, "
-                    f"Original State: {original_state}, "
-                    f"Updated Items: {updated_items_context}"
-                )
-
-                return order
-
-        except Order.DoesNotExist as e:
-            logger.error(
-                f"Order not found for update | "
-                f"Context: {log_context}, "
-                f"Error: {str(e)}"
-            )
-            raise
-
-        except ValidationError as ve:
-            logger.error(
-                f"Validation error during order update | "
-                f"Context: {log_context}, "
-                f"Validation Errors: {ve.message_dict}"
-            )
-            raise
-
-        except Exception as e:
-            logger.error(
-                f"Unexpected error while updating order | "
-                f"Context: {log_context}, "
-                f"Error: {str(e)}\n"
-                f"Traceback: {traceback.format_exc()}"
-            )
-            raise
+            response = self.stub.GetCart(cart_request)
+        except RpcError as e:
+            error_message = e.details()
+            if e.code() == StatusCode.NOT_FOUND:
+                logger.error(f"Active Cart:{cart_uuid} at Store:{store_uuid} not found")
+                return None
+            elif e.code() == StatusCode.INVALID_ARGUMENT:
+                logger.error(error_message)
+                raise ValidationError(error_message)
+            elif e.code() == StatusCode.INTERNAL:
+                raise Exception(error_message)
+        return response
     
 
+    def _payment_order(self,orderpayment: order_pb2.OrderPayment,order:Order) -> OrderPayment:
+            try:
+                # Debug logging
+                logger.debug(f"Creating payment with data: {orderpayment}")
+                logger.debug(f"Order ID: {order.order_uuid}")
+                
+                try:
+                    amount = Decimal(orderpayment.amount)
+                    logger.debug(f"Amount converted: {amount}")
+                except Decimal.InvalidOperation as e:
+                    logger.error(f"Invalid amount: {orderpayment.amount}")
+                    raise ValueError(f"Invalid amount value: {orderpayment.amount}") from e
 
+                try:
+                    method = PaymentMethod.Name(orderpayment.payment_method)
+                    status = PaymentState.Name(orderpayment.payment_status)
+                    logger.debug(f"Enums converted - Method: {method}, Status: {status}")
+                except ValueError as e:
+                    logger.error(f"Invalid enum value - Method: {orderpayment.payment_method}, "
+                            f"Status: {orderpayment.payment_status}")
+                    raise
 
-    def update(self, data):
-        """
-        Update an order from serialized Protobuf data.
+                payment = OrderPayment.objects.create(
+                    order=order,
+                    amount=amount,
+                    method=method,
+                    status=status,
+                    time=orderpayment.payment_time,
+                    notes=orderpayment.notes,
+                    rz_payment_id=orderpayment.rz_payment_id,
+                    rz_order_id=orderpayment.rz_order_id,
+                    rz_signature=orderpayment.rz_signature
+                )
+                logger.info(f"Payment created successfully: {payment.id}")
+                return payment
+            except ValidationError as e:
+                # logger.error(f"ValidationError creating Payment:{str(e)}")
+                raise
+            except ValueError as e:
+                # logger.error(f"ValueError creating Payment:{str(e)}")
+                raise
+            except IntegrityError as e:
+                # logger.error(f"IntegrityError creating Payment:{str(e)}")
+                raise
+
+            except Exception as e:
+                logger.error("Payment creation failed",error = e)
+                raise
+
+    def _cart_to_order(self,response:CartResponse) -> Order:   
+
+        with transaction.atomic():# Extract cart details
+            cart = response.cart
+            try:
+                order = Order.objects.create(
+                    store_uuid = cart.store_uuid,
+                    cart_uuid = cart.cart_uuid,
+                    user_phone_no = cart.user_phone_no,
+                    order_type =  OrderType.Name(cart.order_type),
+                    table_no=cart.table_no,
+                    vehicle_no=cart.vehicle_no,
+                    vehicle_description=cart.vehicle_description,
+                    coupon_code=cart.coupon_code,
+                    special_instructions=cart.special_instructions,
+                    order_status=order_state.ORDER_STATE_PLACED,
+                    subtotal_amount=cart.sub_total,
+                    discount_amount=cart.total_discount,
+                    price_before_tax=cart.total_price_before_tax,
+                    tax_amount=cart.total_tax,
+                    packaging_cost=cart.packaging_cost,
+                    final_amount=cart.final_amount
+                )
+                order_items = []
+                order_add_ons = []
+                for i in cart.items:
+                    item = OrderItem(
+                        order=order,
+                        product_name=i.product_name,
+                        product_uuid=i.product_uuid,
+                        unit_price=i.unit_price,
+                        discount=i.discount,
+                        quantity = i.quantity,
+                        add_ons_total = i.add_ons_total,
+                        tax_percentage=i.tax_percentage,
+                        packaging_cost=i.packaging_cost,
+                        subtotal_amount=i.subtotal_amount,
+                        discount_amount=i.discount_amount,
+                        price_before_tax=i.price_before_tax,
+                        tax_amount=i.tax_amount,
+                        final_price=i.final_price
+                    )
+                    order_items.append(item)
+
+                # Bulk insert items
+                created_items = OrderItem.objects.bulk_create(order_items)
+
+                # Process add-ons after item creation
+                for item, i in zip(created_items, cart.items):
+                    for j in i.add_ons:
+                        add_on = OrderItemAddOn(
+                            order_item=item,
+                            add_on_name=j.add_on_name,
+                            add_on_uuid=j.add_on_uuid,
+                            quantity=j.quantity,
+                            unit_price=j.unit_price,
+                            is_free=j.is_free,
+                            subtotal_amount=j.subtotal_amount
+                        )
+                        order_add_ons.append(add_on)
+
+                # Bulk insert add-ons
+                if order_add_ons:
+                    OrderItemAddOn.objects.bulk_create(order_add_ons)
+            except ValidationError as e:
+                # logger.error(f"Validation error in order creation: {str(e)}")
+                raise
+            except ValueError as e:
+                # logger.error(f"Value error in order creation: {str(e)}")
+                raise
+                
+            except IntegrityError as e:
+                # logger.error(f"Database integrity error: {str(e)}")
+                raise
+                
+            except Exception as e:
+                # logger.error(f"Unexpected error in order creation: {str(e)}",e)
+                raise        
+    
+    def create(self, data):
         
-        Args:
-            data (bytes): Serialized Protobuf data
+        if not data:
+            logger.warning("Empty data received for order creation")
+            raise ValueError("Received empty data for order creation.")
         
-        Returns:
-            Order: Updated order instance
-        """
-        correlation_id = str(uuid.uuid4())
+        logger.info(f"Received cart data | Size: {len(data)} bytes")
+        
+        # Deserialize protobuf
         try:
-            if not data:
-                logger.warning(f"Empty data received for order update | Correlation ID: {correlation_id}")
-                raise ValueError("Received empty data for order update.")
-            # Log incoming data size for monitoring
-            logger.info(f"Received order update data | Size: {len(data)} bytes | Correlation ID: {correlation_id}")
-            
             self.DeserializedOrder.ParseFromString(data)
-            return self.proto_to_django_order(self.DeserializedOrder)
-        
-        
-        except DecodeError as e:
-            logger.error(
-                f"Protobuf DecodeError during order update | "
-                f"Correlation ID: {correlation_id}, "
-                f"Error: {str(e)}, "
-                f"Possible data corruption"
-            )
-            raise
+            cart_uuid = self.DeserializedOrder.cart_uuid 
+            store_uuid = self.DeserializedOrder.store_uuid
+            payment = self.DeserializedOrder.payment
+        except (DecodeError, AttributeError) as e:
+            logger.error(f"Protobuf deserialization failed: {str(e)}")
+            raise ValueError("Invalid message format") from e
 
+        # Process order
+        try:
+            response = self._call_cart(cart_uuid=cart_uuid, store_uuid=store_uuid)
+            order = self._cart_to_order(response)
+            self._payment_order(payment, order)
+            return order
+            
+        except (ValidationError, ValueError, IntegrityError, AttributeError) as e:
+            # logger.error(f"Order processing failed: {str(e)}")
+            raise  # Re-raise to maintain error type
         except Exception as e:
-            logger.error(
-                f"Unexpected error in order update | "
-                f"Correlation ID: {correlation_id}, "
-                f"Error: {str(e)}\n"
-                f"Traceback: {traceback.format_exc()}"
+            logger.critical(f"Unexpected error in order creation: {str(e)}",e)
+            raise RuntimeError("Order creation failed") from e
+        
+    def update(self, data):
+        if not data:
+            logger.warning("Empty data received for order update")
+            raise ValueError("Received empty data for order update.")
+        
+        logger.info(f"Received order update data | Size: {len(data)} bytes")
+        
+        # Deserialize protobuf
+        try:
+            self.DeserializedOrder.ParseFromString(data)
+            cart_uuid = self.DeserializedOrder.cart_uuid 
+            store_uuid = self.DeserializedOrder.store_uuid
+            payment = self.DeserializedOrder.payment
+            order_state = self.DeserializedOrder.order_status
+            operation = self.DeserializedOrder.operation
+        except (DecodeError, AttributeError) as e:
+            logger.error(f"Protobuf deserialization failed: {str(e)}")
+            raise ValueError("Invalid message format") from e
+        
+        try:
+            order = Order.objects.prefetch_related("payment").get(
+                cart_uuid=cart_uuid,
+                store_uuid=store_uuid
             )
-            raise
+        except Order.DoesNotExist:
+            logger.error(f"Order not found for cart:{cart_uuid} store:{store_uuid}")
+            raise 
 
+        with transaction.atomic():
+            try:
+                # Update payment status if payment info exists
+                if payment and order.payment:
+                    order.payment.update_status(PaymentState.Name(payment.payment_status))
+                
+                # Update order status
+                if order_state:
+                    order.order_status = OrderState.Name(order_state)
+                    order.save()
+                    
+                logger.info(
+                    f"Order:{order.order_uuid} Order-No:{order.order_no} "
+                    f"status changed to {order.order_status}"
+                )
 
-
+                return  order
+            except ValidationError as e:
+                logger.error(f"Validation error updating order: {str(e)}")
+                raise
+            except Exception as e:
+                logger.error(f"Error updating order: {str(e)}", error=e)
+                raise
 
 
 class KafkaServer:
     def __init__(self):
         try:
             load_dotenv()
-            kafka_brokers = os.getenv('KAFKA_BROKERS', 'kafka:29092')
+            kafka_brokers = KAFKA_SERVER
             group_id = 'order_service_group'
             self.consumer_config = {
                 'bootstrap.servers': kafka_brokers,
@@ -344,14 +284,19 @@ class KafkaServer:
             self.consumer.subscribe(['Orders'])
             logger.info(f"Subscribed to topic: Orders")
 
-            self.place_order_handler = PlaceOrder()
-            self.update_order_handler = UpdateOrder()
-            self.shutdown_flag = False
 
+            self.channel_pool = GrpcChannelPool()
+            self.channel = self.channel_pool.get_channel(CART_SERVICE_ADDR)
+            self.Cart_stub = cart_pb2_grpc.CartServiceStub(self.channel)
+            logger.info(f"Initialized gRPC channel to Cart Service at {CART_SERVICE_ADDR}")
+
+            self.place_order_handler = OrderOpreation(Cart_stub = self.Cart_stub)
+            # self.update_order_handler = UpdateOrder(Cart_stub = self.cart_stub)
+            self.shutdown_flag = False
+            
 
         except Exception as e:
-            logger.critical(f"Failed to initialize KafkaServer: {e}")
-            logger.debug(traceback.format_exc())
+            logger.critical(f"Failed to initialize KafkaServer: {e}",e)
             raise
 
     def _process_message(self, message):
@@ -359,65 +304,93 @@ class KafkaServer:
             key = message.key().decode('utf-8')
             data = message.value()
             logger.info(f"Processing message with key: {key}")
-
+            
             if key == "OrderPlaced":
                 try:
-                    self.place_order_handler.create(data)
-                    logger.info("Order placed successfully.")
+                    order = self.place_order_handler.create(data)
+                    logger.info(f"Order {order.order_uuid} placed for cart {order.cart_uuid} at store {order.store_uuid}")
+                    return True  # Success flag
+                except ValidationError as e:
+                    logger.error(f"Validation failed for order: {str(e)}")
+                except ValueError as e:
+                    logger.error(f"Invalid data in order: {str(e)}")
+                except IntegrityError as e:
+                    logger.error(f"Database integrity error for order: {str(e)}")
                 except Exception as e:
-                    logger.info("Order cannot be placed")
-
-            elif key == "OrderUpdate":
+                    logger.error(f"Unexpected error processing order: {str(e)}",error=e)
+                return False  # Failure flag
+            
+            if key == "OrderUpdate":
                 try:
-                    self.Update_order_handler.update(data)
-                    logger.info("Order Updated successfully.")
+                    order = self.place_order_handler.update(data)
+                    logger.info(f"Order {order.order_uuid} placed for cart {order.cart_uuid} at store {order.store_uuid}")
+                    return True  # Success flag
+                except ValidationError as e:
+                    logger.error(f"Validation failed for order: {str(e)}")
+                except ValueError as e:
+                    logger.error(f"Invalid data in order: {str(e)}")
+                except IntegrityError as e:
+                    logger.error(f"Database integrity error for order: {str(e)}")
                 except Exception as e:
-                    logger.info("Order cannot be Updated")    
-            else:
-                logger.warning(f"Unhandled event type: {key}")
+                    logger.error(f"Unexpected error processing order: {str(e)}",error=e)
+                return False  # Failure flag
+
+            logger.warning(f"Unhandled event type: {key}")
+            return False  # Unhandled message type
+            
+        except UnicodeDecodeError as e:
+            logger.error(f"Failed to decode message key: {str(e)}")
+            return False
         except Exception as e:
-            logger.error(f"Error processing message: {e}")
-            logger.debug(traceback.format_exc())
-            raise
+            logger.error(f"Error processing message: {str(e)}",e)
+            return False
 
     def run(self):
-        """
-        Main Kafka consumer loop with batch processing and graceful shutdown.
-        """
+        """Main Kafka consumer loop with batch processing and graceful shutdown."""
         try:
             while not self.shutdown_flag:
-                msgs = self.consumer.consume(num_messages=10, timeout=1.0)
+                msgs = self.consumer.consume(num_messages=10, timeout=0.5)
+                
                 for msg in msgs:
                     if msg is None:
                         continue
+                        
                     if msg.error():
-                        if msg.error().code() == KafkaError._PARTITION_EOF:
-                            logger.info(f"End of partition reached: {msg.error()}")
-                        else:
-                            logger.error(f"Kafka error: {msg.error()}")
+                        self._handle_kafka_error(msg.error())
                         continue
 
                     try:
-                        self._process_message(msg)
-                        self.consumer.commit(msg)
-                    except Exception:
-                        logger.error(f"Message processing failed. Key: {msg.key()}")
+                        processing_success = self._process_message(msg)
+                        if processing_success:
+                            self.consumer.commit(msg)
+                        else:
+                            logger.warning("Message processing failed - not committing offset")
+                    except Exception as e:
+                        logger.error(f"Critical error processing message: {str(e)}",error=e)
+                        # Consider whether to continue or shutdown based on error severity
 
         except KeyboardInterrupt:
-            logger.info("Kafka consumer stopping due to keyboard interrupt.")
-            self.shutdown_flag = True
-        except Exception as e:
-            logger.error(f"Unhandled error in Kafka consumer: {e}")
-            logger.debug(traceback.format_exc())
-        finally:
-            self.consumer.close()
-            logger.info("Kafka consumer closed.")
+            logger.info("Graceful shutdown initiated")
+            self._shutdown()
 
-    def stop(self):
-        """
-        Signal the consumer loop to stop.
-        """
-        self.shutdown_flag = True
+    def _handle_kafka_error(self, error):
+        """Handle Kafka-specific errors"""
+        if error.code() == KafkaError._PARTITION_EOF:
+            logger.info(f"End of partition reached: {error}")
+        elif error.code() == KafkaError.UNKNOWN_TOPIC_OR_PART:
+            logger.error(f"Topic/partition error: {error}",e)
+        else:
+            logger.error(f"Kafka protocol error: {error}",e)
+
+    def _shutdown(self):
+        """Graceful shutdown procedure"""
+        try:
+            self.consumer.close()
+            logger.info("Kafka consumer closed gracefully")
+        except Exception as e:
+            logger.error(f"Error during shutdown: {str(e)}",e)
+        finally:
+            self.shutdown_flag = True
 
 
 if __name__ == "__main__":
@@ -428,4 +401,4 @@ if __name__ == "__main__":
         logger.info("Starting Kafka server...")
         kafka_server.run()
      except Exception as e:
-        logger.error(f"Error in Kafka server: {e}")
+        logger.error(f"Error in Kafka server: {e}",e)

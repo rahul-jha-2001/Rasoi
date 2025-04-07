@@ -41,6 +41,12 @@ class OrderType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     ORDER_TYPE_DINE_IN: _ClassVar[OrderType]
     ORDER_TYPE_TAKE_AWAY: _ClassVar[OrderType]
     ORDER_TYPE_DRIVE_THRU: _ClassVar[OrderType]
+
+class OrderOpration(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
+    __slots__ = ()
+    ORDER_OP_UNSPECIFIED: _ClassVar[OrderOpration]
+    ORDER_OP_CREATE: _ClassVar[OrderOpration]
+    ORDER_OP_UPDATE: _ClassVar[OrderOpration]
 ORDER_STATE_UNSPECIFIED: OrderState
 ORDER_STATE_PAYMENT_PENDING: OrderState
 ORDER_STATE_PLACED: OrderState
@@ -63,6 +69,9 @@ ORDER_TYPE_UNSPECIFIED: OrderType
 ORDER_TYPE_DINE_IN: OrderType
 ORDER_TYPE_TAKE_AWAY: OrderType
 ORDER_TYPE_DRIVE_THRU: OrderType
+ORDER_OP_UNSPECIFIED: OrderOpration
+ORDER_OP_CREATE: OrderOpration
+ORDER_OP_UPDATE: OrderOpration
 
 class OrderStoreView(_message.Message):
     __slots__ = ("order_uuid", "order_no", "store_uuid", "user_phone_no", "order_type", "table_no", "vehicle_no", "vehicle_description", "coupon_code", "items", "special_instructions", "order_status", "payment", "subtotal_amount", "discount_amount", "price_before_tax", "tax_amount", "packaging_cost", "final_amount", "created_at", "updated_at", "cart_uuid")
@@ -407,3 +416,19 @@ class ListOrderResponse(_message.Message):
 class Empty(_message.Message):
     __slots__ = ()
     def __init__(self) -> None: ...
+
+class KafkaOrderMessage(_message.Message):
+    __slots__ = ("cart_uuid", "store_uuid", "user_phone_no", "payment", "order_status", "operation")
+    CART_UUID_FIELD_NUMBER: _ClassVar[int]
+    STORE_UUID_FIELD_NUMBER: _ClassVar[int]
+    USER_PHONE_NO_FIELD_NUMBER: _ClassVar[int]
+    PAYMENT_FIELD_NUMBER: _ClassVar[int]
+    ORDER_STATUS_FIELD_NUMBER: _ClassVar[int]
+    OPERATION_FIELD_NUMBER: _ClassVar[int]
+    cart_uuid: str
+    store_uuid: str
+    user_phone_no: str
+    payment: OrderPayment
+    order_status: OrderState
+    operation: OrderOpration
+    def __init__(self, cart_uuid: _Optional[str] = ..., store_uuid: _Optional[str] = ..., user_phone_no: _Optional[str] = ..., payment: _Optional[_Union[OrderPayment, _Mapping]] = ..., order_status: _Optional[_Union[OrderState, str]] = ..., operation: _Optional[_Union[OrderOpration, str]] = ...) -> None: ...

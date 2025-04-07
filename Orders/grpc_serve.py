@@ -546,8 +546,8 @@ class OrderService(order_pb2_grpc.OrderServiceServicer):
                 raise
 
             try:
-                if order.payment.exists():
-                    payment:OrderPayment = order.payment.first()
+                if order.payment:
+                    payment:OrderPayment = order.payment
                     response.payment_method = PaymentMethod.Value(payment.method)
                     response.payment_state = PaymentState.Value(payment.status)
             except (AttributeError, IndexError) as e:
@@ -941,6 +941,33 @@ class OrderService(order_pb2_grpc.OrderServiceServicer):
 
             return order_pb2.StoreOrderResponse(order=self._store_order_to_response(order))
 
+
+    @handle_error
+    def UpdateOrderState(self,request,context):
+        meta_dict ={k:v for k,v in context.invocation_metadata()}
+        role = meta_dict.get("user_role")
+        
+        if role != "Store":
+            raise Unauthenticated
+        
+        auth_store_uuid = meta_dict.get("store_uuid")
+        store_uuid = request.store_uuid
+        order_uuid = request.order_uuid
+
+        if store_uuid !=  auth_store_uuid:
+            raise Unauthenticated
+        
+        order = Order.objects.get(order_uuid = order_uuid , store_uuid = store_uuid)
+
+        with transaction.atomic():
+            # Process refund
+            order.order_status = OrderState.Name(request.order_state)
+            order.save()
+            logger.info(f"Order:{order.order_uuid} Order-No:{order.order_no} status changed to {order.order_status}")
+
+            return order_pb2.StoreOrderResponse(order=self._store_order_to_response(order))
+
+
     @handle_error
     def ListOrder(self,request,context):
 
@@ -983,16 +1010,16 @@ class OrderService(order_pb2_grpc.OrderServiceServicer):
             raise Unauthenticated
 
         last_order_time = None  # Keep track of the last streamed order time
-        channel_name = f'order_updates_{store_uuid}'.replace("-","_")
+        channel_name = f"order_updates_{store_uuid}".replace("-","_")
         
         logger.info(f"Started Stream for store:{store_uuid} at {time.time()}")
 
-        
         try:
             with conn.cursor() as cursor:
                 cursor.execute(f'LISTEN {channel_name}')
                 logger.info(f"Started listening to channel {channel_name}")
-                
+                HEALTH_CHECK_INTERVAL = 100
+                health_check_counter = 0
                 while context.is_active():
                     # Check for new notifications
                     if select.select([conn.connection], [], [], 0.1) == ([], [], []):
@@ -1010,6 +1037,11 @@ class OrderService(order_pb2_grpc.OrderServiceServicer):
                                 order_uuid=payload['order_uuid'],
                                 store_uuid=store_uuid
                             )
+                            MAX_QUEUE_SIZE = 100  # Max number of pending unacknowledged responses
+
+                            # # Before yield:
+                            # while context.pending_response_count() > MAX_QUEUE_SIZE:
+                            #     await asyncio.sleep(0.1)  # Wait if client is falling behind
                             last_order_time = time.time()  # Fixed: added parentheses to time.time
                             yield order_pb2.StoreOrderResponse(
                                 order=self._store_order_to_response(order)
@@ -1022,12 +1054,22 @@ class OrderService(order_pb2_grpc.OrderServiceServicer):
                             logger.error(f"Missing key in payload: {e}")
                     
                     # Add small sleep to prevent busy waiting
-                    time.sleep(0.1)
+                    health_check_counter += 1
+                    if health_check_counter >= HEALTH_CHECK_INTERVAL:
+                        health_check_counter = 0
+                        try:
+                            # Simple query to verify connection is alive
+                            with conn.cursor() as ping_cursor:
+                                ping_cursor.execute("SELECT 1")
+                        except Exception as e:
+                            logger.error(f"Connection health check failed: {str(e)}")
+                            break 
+                    time.sleep(0.25)
                     
         except psycopg2.OperationalError as e:
             logger.error(f"Database connection error: {str(e)}")
         except Exception as e:
-            logger.exception("Unexpected error in order stream")
+            logger.error("Unexpected error in order stream ",e)
         finally:
             # Cleanup
             try:
@@ -1117,18 +1159,15 @@ class OrderService(order_pb2_grpc.OrderServiceServicer):
         if order.payment.status == payment_state.PAYMENT_STATE_REFUNDED:
             raise FailedPrecondition("Order has been refunded",StatusCode.FAILED_PRECONDITION)
         with transaction.atomic():
-        # Process refund
-            OrderPayment.objects.filter(order=order).update(status=payment_state.PAYMENT_STATE_REFUNDED)
-            
+            # Process refund
+            order.payment.update_status(payment_state.PAYMENT_STATE_REFUNDED)
             # Update order status
             order.order_status = order_state.ORDER_STATE_CANCELED
             order.save()
 
             logger.info(f"Order:{order.order_uuid} Order-No:{order.order_no} is Cancelled")
 
-            return order_pb2.UserOrderResponse(
-                order = self._user_order_to_response(order= order)
-            )
+            return order_pb2.UserOrderResponse(order=self._user_order_to_response(order))
 
 
 def serve():

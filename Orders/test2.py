@@ -1,24 +1,26 @@
 from confluent_kafka import Consumer, KafkaException
-import json
 import sys 
 import os
+import django
+import json
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'Orders.settings')
+django.setup()
+from Proto.order_pb2 import KafkaOrderMessage, OrderState, OrderOpration, OrderPayment, PaymentState, PaymentMethod
+from Proto import order_pb2
 
-sys.path.append(os.getcwd()+r"\Orders\proto")
-print(sys.path)
-from proto import Order_pb2,Order_pb2_grpc
 
 
 # Configure the consumer
 conf = {
-    'bootstrap.servers': 'localhost:9092',
-    'group.id': 'my-group',
+    'bootstrap.servers': 'localhost:29092',
+    'group.id': 'order-service',
     'auto.offset.reset': 'earliest'
 }
 
 # Create the consumer instance
 consumer = Consumer(conf)
 consumer.subscribe(['Orders'])  # Subscribe to the topic
-deserialized_order = Order_pb2.Order()
+deserialized_order = KafkaOrderMessage()
 
 try:
     while True:
@@ -34,8 +36,8 @@ try:
             continue
         print(msg.value())
         deserialized_order.ParseFromString(msg.value())    
-        print(deserialized_order.Items[0])
-        print(type(deserialized_order.Items[0]))
+        print(deserialized_order)
+        print(type(deserialized_order))
 
 
 except KeyboardInterrupt:

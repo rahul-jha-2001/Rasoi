@@ -20,3 +20,4 @@ googleapis-common-protos
 boto3
 base58
 grpc-interceptor
+psycopg2-binary

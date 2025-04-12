@@ -10,6 +10,8 @@ from django.db import IntegrityError,DatabaseError
 from django.db import transaction
 from django.conf import settings
 
+from grpc_interceptor.exceptions import GrpcException,Unauthenticated,FailedPrecondition
+
 import PIL
 
 from dotenv import load_dotenv
@@ -117,6 +119,53 @@ def handle_error(func):
             logger.error(f"Unexpected Error: {str(e)}",e)
             context.abort(grpc.StatusCode.INTERNAL, "Internal Server Error")
     return wrapper
+
+
+def check_access(roles:list[str]):
+    def decorator(func):
+        def wrapper(self, request, context):
+            metadata = dict(context.invocation_metadata() or [])
+            role = metadata.get("role")
+
+            if not role:
+                logger.warning("Missing role in metadata")
+                raise Unauthenticated("Role missing from metadata")
+
+            if role == "internal":
+                # TODO: Add internal service verification here
+                return func(self, request, context)
+
+            if role not in roles:
+                logger.warning(f"Unauthorized role: {role}")
+                raise Unauthenticated(f"Unauthorized role: {role}")
+
+            # Role-specific access checks
+            try:
+                if role == "store":
+                    store_uuid_in_token = metadata["store_uuid"]
+                    if not getattr(request, "store_uuid", None):
+                        logger.warning("Store UUID missing in request")
+                        raise Unauthenticated("Store UUID is missing in the request")
+                    if store_uuid_in_token != getattr(request, "store_uuid", None):
+                        logger.warning("Store UUID mismatch")
+                        raise Unauthenticated("Store UUID does not match token")
+
+                elif role == "user":
+                    phone_in_token = metadata["user_phone_no"]
+                    if not getattr(request, "user_phone_no", None):
+                        logger.warning("User phone number missing in request")
+                        raise Unauthenticated("User phone number is missing in the request")
+                    if phone_in_token != getattr(request, "user_phone_no", None):
+                        logger.warning("User phone mismatch")
+                        raise Unauthenticated("User phone does not match token")
+
+            except KeyError as e:
+                logger.warning(f"Missing required metadata for role '{role}': {e}")
+                raise Unauthenticated(f"Missing metadata: {e}")
+
+            return func(self, request, context)
+        return wrapper
+    return decorator
 
 class ProductService(Product_pb2_grpc.ProductServiceServicer):
 
@@ -397,8 +446,8 @@ class ProductService(Product_pb2_grpc.ProductServiceServicer):
         # return response
     
     @handle_error
+    @check_access(roles=["user","store","internal"])
     def CreateProduct(self, request, context):
-        
 
         size = image_handler.check_size(request.Image)
         if size > 5:
@@ -444,6 +493,7 @@ class ProductService(Product_pb2_grpc.ProductServiceServicer):
                 success= True)
        
     @handle_error
+    @check_access(roles=["user","store","internal"])
     def GetProduct(self, request, context):
 
         category = Category.objects.get(category_uuid = request.category_uuid,store_uuid =request.store_uuid)
@@ -457,6 +507,7 @@ class ProductService(Product_pb2_grpc.ProductServiceServicer):
         
     
     @handle_error
+    @check_access(roles=["user","store","internal"])
     def ListProducts(self, request, context):
         if request.page < 0:
             request.page = 1
@@ -477,8 +528,8 @@ class ProductService(Product_pb2_grpc.ProductServiceServicer):
         )
         return response
     
-    @transaction.atomic
     @handle_error
+    @check_access(roles=["user","store","internal"])
     def UpdateProduct(self, request, context):
 
         category = Category.objects.get(category_uuid = request.category_uuid,store_uuid =request.store_uuid)
@@ -486,78 +537,80 @@ class ProductService(Product_pb2_grpc.ProductServiceServicer):
 
         product = Product_model.objects.get(store_uuid = request.store_uuid,product_uuid = request.product_uuid,category=category)
 
+        with transaction.atomic():
     
-        if request.product.HasField('name'):
-                product.description = request.product.name
+            if request.product.HasField('name'):
+                    product.description = request.product.name
 
-        if request.product.HasField('description'):
-            product.description = request.product.description
+            if request.product.HasField('description'):
+                product.description = request.product.description
 
-        if request.product.HasField('status'):
-            product.status = request.product.status
-        
-        if request.product.HasField('is_available'):
-            product.is_available = request.product.is_available
+            if request.product.HasField('status'):
+                product.status = request.product.status
+            
+            if request.product.HasField('is_available'):
+                product.is_available = request.product.is_available
 
-        if request.product.HasField('display_price'):
-            product.display_price = request.product.display_price
+            if request.product.HasField('display_price'):
+                product.display_price = request.product.display_price
 
-        if request.product.HasField('price'):
-            product.price = request.product.price
+            if request.product.HasField('price'):
+                product.price = request.product.price
 
-        if request.product.HasField('GST_percentage'):
-            product.GST_percentage = request.product.GST_percentage
+            if request.product.HasField('GST_percentage'):
+                product.GST_percentage = request.product.GST_percentage
 
-        if request.product.HasField('category_uuid'):
-            category = Category.objects.get(category_uuid = request.product.category_uuid)
-            product.category = category        
+            if request.product.HasField('category_uuid'):
+                category = Category.objects.get(category_uuid = request.product.category_uuid)
+                product.category = category        
 
-        if request.product.HasField('dietary_pref'):
-            product.dietary_pref = request.product.dietary_pref
-
-
-        product.clean()
-        product.save()
-
-        logger.info(f"Product Updated For product id: {product.product_uuid}")
-        return Product_pb2.ProductResponse(
-            product=self._product_to_proto(product),
-            success= True,
-        )   
+            if request.product.HasField('dietary_pref'):
+                product.dietary_pref = request.product.dietary_pref
 
 
-    @transaction.atomic
+            product.clean()
+            product.save()
+
+            logger.info(f"Product Updated For product id: {product.product_uuid}")
+            return Product_pb2.ProductResponse(
+                product=self._product_to_proto(product),
+                success= True,
+            )   
+
+
     @handle_error
+    @check_access(roles=["user","store","internal"])
     def DeleteProduct(self, request, context):
         category = Category.objects.get(category_uuid = request.category_uuid,store_uuid =request.store_uuid)
 
-
-        product = Product_model.objects.get(store_uuid = request.store_uuid,product_uuid = request.product_uuid,category=category)
-        product.delete()
+        with transaction.atomic():
+            product = Product_model.objects.get(store_uuid = request.store_uuid,product_uuid = request.product_uuid,category=category)
+            product.delete()
         
-        logger.info(f"Deleted product: {request.product_uuid}")
-        return Product_pb2.DeleteProductResponse(success=True)
+            logger.info(f"Deleted product: {request.product_uuid}")
+            return Product_pb2.DeleteProductResponse(success=True)
 
-    @transaction.atomic
     @handle_error
+    @check_access(roles=["user","store","internal"])
     def CreateCategory(self, request, context):
-        logger.info(request)
-        cat = Category.objects.create(
-            store_uuid = request.store_uuid,
-            name = request.category.name,
-            description = request.category.description,
-            display_order = request.category.display_order,
-            is_available = request.category.is_available,
-            is_active = request.category.is_active
-        )
-        logger.info(f"Category Id:{cat.category_uuid} Created at store Id:{cat.store_uuid}")
+        with transaction.atomic():
+            cat = Category.objects.create(
+                store_uuid = request.store_uuid,
+                name = request.category.name,
+                description = request.category.description,
+                display_order = request.category.display_order,
+                is_available = request.category.is_available,
+                is_active = request.category.is_active
+            )
+            logger.info(f"Category Id:{cat.category_uuid} Created at store Id:{cat.store_uuid}")
 
-        return Product_pb2.CategoryResponse(
-            category= self._category_to_proto(cat),
-            success= True,
-        )
+            return Product_pb2.CategoryResponse(
+                category= self._category_to_proto(cat),
+                success= True,
+            )
     
     @handle_error
+    @check_access(roles=["user","store","internal"])
     def GetCategory(self, request, context):
         
         category_uuid = request.category_uuid
@@ -571,43 +624,46 @@ class ProductService(Product_pb2_grpc.ProductServiceServicer):
         )
 
     @handle_error
+    @check_access(roles=["store","internal"])
     def UpdateCategory(self, request, context):
     
         category_obj = Category.objects.get(category_uuid=request.category_uuid,store_uuid=request.store_uuid)
-        
-        if request.category.HasField('name'):
-            category_obj.name = request.category.name 
+        with transaction.atomic():
+            if request.category.HasField('name'):
+                category_obj.name = request.category.name 
 
-        if request.category.HasField('description'):
-            category_obj.description = request.category.description
-        
-        if request.category.HasField('is_available'):
-            category_obj.is_available = request.category.is_available
+            if request.category.HasField('description'):
+                category_obj.description = request.category.description
+            
+            if request.category.HasField('is_available'):
+                category_obj.is_available = request.category.is_available
 
-        if request.category.HasField('display_order'):
-            category_obj.display_order = request.category.display_order
+            if request.category.HasField('display_order'):
+                category_obj.display_order = request.category.display_order
 
-        if request.category.HasField('is_active'):
-            category_obj.is_active = request.category.is_active
+            if request.category.HasField('is_active'):
+                category_obj.is_active = request.category.is_active
 
-        category_obj.full_clean()
-        category_obj.save()
-        logger.debug(category_obj)
-        logger.info(f"Category Updated For category id: {category_obj.category_uuid}")
-        return Product_pb2.CategoryResponse(
-            category=self._category_to_proto(category_obj),
-            success= True,
-        )
+            category_obj.full_clean()
+            category_obj.save()
+            logger.debug(category_obj)
+            logger.info(f"Category Updated For category id: {category_obj.category_uuid}")
+            return Product_pb2.CategoryResponse(
+                category=self._category_to_proto(category_obj),
+                success= True,
+            )
 
-    @transaction.atomic
     @handle_error
+    @check_access(roles=["store","internal"])
     def DeleteCategory(self, request, context):  
-        Category.objects.get(category_uuid = request.category_uuid,store_uuid=request.store_uuid).delete()
+        with transaction.atomic():
+            Category.objects.get(category_uuid = request.category_uuid,store_uuid=request.store_uuid).delete()
         
-        logger.info(f"Deleted Category: {request.category_uuid}")
-        return Product_pb2.DeleteCategoryResponse(success=True)
+            logger.info(f"Deleted Category: {request.category_uuid}")
+            return Product_pb2.DeleteCategoryResponse(success=True)
     
     @handle_error
+    @check_access(roles=["user","store","internal"])
     def ListCategory(self, request, context):
         if request.page < 0:
             request.page = 1
@@ -627,26 +683,28 @@ class ProductService(Product_pb2_grpc.ProductServiceServicer):
         )
         return response 
     
-    @transaction.atomic
-    @handle_error
-    def CreateAddOn(self, request, context):
-        product:Product_model = Product_model.objects.get(store_uuid = request.store_uuid,product_uuid = request.product_uuid)
-    
-        add_on:Add_on = Add_on.objects.create(
-            product = product,
-            name = request.add_on.name,
-            is_available = request.add_on.is_available,
-            max_selectable = request.add_on.max_selectable,
-            GST_percentage = request.add_on.GST_percentage,
-            price = request.add_on.price
-        )
-        logger.info(f"Created Add-On:{add_on.add_on_uuid} for product id:{product.product_uuid} at Store id:{product.store_uuid}")
-        return Product_pb2.AddOnResponse(
-            add_on=self._add_on_to_proto(add_on),
-            success= True
-        )
 
     @handle_error
+    @check_access(roles=["store","internal"])
+    def CreateAddOn(self, request, context):
+        product:Product_model = Product_model.objects.get(store_uuid = request.store_uuid,product_uuid = request.product_uuid)
+        with transaction.atomic(): 
+            add_on:Add_on = Add_on.objects.create(
+                product = product,
+                name = request.add_on.name,
+                is_available = request.add_on.is_available,
+                max_selectable = request.add_on.max_selectable,
+                GST_percentage = request.add_on.GST_percentage,
+                price = request.add_on.price
+            )
+            logger.info(f"Created Add-On:{add_on.add_on_uuid} for product id:{product.product_uuid} at Store id:{product.store_uuid}")
+            return Product_pb2.AddOnResponse(
+                add_on=self._add_on_to_proto(add_on),
+                success= True
+            )
+
+    @handle_error
+    @check_access(roles=["user","store","internal"])
     def GetAddOn(self,request,context):
 
         product = Product_model.objects.get(store_uuid = request.store_uuid,product_uuid = request.product_uuid)
@@ -659,38 +717,39 @@ class ProductService(Product_pb2_grpc.ProductServiceServicer):
             success=True
         )
     
-    @transaction.atomic
     @handle_error
+    @check_access(roles=["store","internal"])
     def UpdateAddOn(self, request, context):
         product = Product_model.objects.get(store_uuid = request.store_uuid,product_uuid = request.product_uuid)
 
         add_on = Add_on.objects.get(add_on_uuid=request.add_on_uuid,product=product)
+        with transaction.atomic():
+            if request.add_on.HasField('name'):
+                add_on.name = request.add_on.name 
 
-        if request.add_on.HasField('name'):
-            add_on.name = request.add_on.name 
+            if request.add_on.HasField('is_available'):
+                add_on.is_available = request.add_on.is_available
+            
+            if request.add_on.HasField('max_selectable'):
+                add_on.max_selectable = request.add_on.max_selectable
 
-        if request.add_on.HasField('is_available'):
-            add_on.is_available = request.add_on.is_available
-        
-        if request.add_on.HasField('max_selectable'):
-            add_on.max_selectable = request.add_on.max_selectable
+            if request.add_on.HasField('GST_percentage'):
+                add_on.GST_percentage = request.add_on.GST_percentage
 
-        if request.add_on.HasField('GST_percentage'):
-            add_on.GST_percentage = request.add_on.GST_percentage
+            if request.add_on.HasField('price'):
+                add_on.price = request.add_on.price
 
-        if request.add_on.HasField('price'):
-            add_on.price = request.add_on.price
-
-        add_on.full_clean()
-        add_on.save()
-        logger.debug(add_on)
-        logger.info(f"add_on Updated For add_on id: {add_on.add_on_uuid}")
-        return Product_pb2.AddOnResponse(
-            add_on=self._add_on_to_proto(add_on),
-            success= True,
-        )
+            add_on.full_clean()
+            add_on.save()
+            logger.debug(add_on)
+            logger.info(f"add_on Updated For add_on id: {add_on.add_on_uuid}")
+            return Product_pb2.AddOnResponse(
+                add_on=self._add_on_to_proto(add_on),
+                success= True,
+            )
        
     @handle_error
+    @check_access(roles=["user","store","internal"])
     def ListAddOn(self, request, context):
 
         product = Product_model.objects.get(store_uuid = request.store_uuid,product_uuid = request.product_uuid)
@@ -712,17 +771,18 @@ class ProductService(Product_pb2_grpc.ProductServiceServicer):
             prev_page=prev_page
         )
         return response
-    
-    @transaction.atomic
+
     @handle_error
+    @check_access(roles=["user","store","internal"])
     def DeleteAddOn(self, request, context):
         product = Product_model.objects.get(store_uuid = request.store_uuid,product_uuid = request.product_uuid)
+        with transaction.atomic():
 
-        add_on = Add_on.objects.get(add_on_uuid = request.add_on_uuid,product=product)
-        add_on.delete()
+            add_on = Add_on.objects.get(add_on_uuid = request.add_on_uuid,product=product)
+            add_on.delete()
         
-        logger.info(f"Deleted Add_on:{request.add_on_uuid} of Product:{product.product_uuid}")
-        return Product_pb2.DeleteAddOnResponse(success=True)
+            logger.info(f"Deleted Add_on:{request.add_on_uuid} of Product:{product.product_uuid}")
+            return Product_pb2.DeleteAddOnResponse(success=True)
 
 # class HealthCheck(healthcheck_pb2_grpc.HealthServicer):
 #     def __init__(self):

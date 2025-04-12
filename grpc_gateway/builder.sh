@@ -62,6 +62,12 @@ if protoc -I="$PROTO_DIR" --go-grpc_out=. --go_out=. --grpc-gateway_out=. cart.p
       echo "Error: Could Not Compile $filename"
       exit 1
 fi
+if protoc -I="$PROTO_DIR" --go-grpc_out=. --go_out=. --grpc-gateway_out=. order.proto; then
+      echo "$filename Compiled Successfully"
+    else
+      echo "Error: Could Not Compile $filename"
+      exit 1
+fi
 # Build the Go program
 echo "Building Go program..."
 go build -ldflags "-s -w" -o server .

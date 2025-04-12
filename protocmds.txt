@@ -1,3 +1,0 @@
-python -m grpc_tools.protoc -I./Proto --python_out=./Orders/Proto --grpc_python_out=./Orders/Proto --pyi_out=./Orders/Proto  cart.proto
-protoc -I=Proto --go-grpc_out=./grpc_gateway --go_out=./grpc_gateway --grpc-gateway_out=./grpc_gateway  cart.proto
-protoc -I=Proto --openapiv2_out=./swagger  Orders.proto

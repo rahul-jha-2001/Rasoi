@@ -1,7 +1,4 @@
-import sys
 import os
-from  datetime import datetime
-import logging
 from concurrent import futures
 import json
 
@@ -12,21 +9,18 @@ from django.core.exceptions import ValidationError,ObjectDoesNotExist,MultipleOb
 from django.db import IntegrityError,DatabaseError
 from django.db import connection as conn
 import psycopg2
-from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 
 import select
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'Orders.settings')
 django.setup()
 
-from typing import Any, Callable, Dict, Iterable, Optional, Sequence
+from typing import Any, Callable
 import grpc
 from grpc import RpcError,StatusCode
 from grpc_interceptor import ServerInterceptor
 from grpc_interceptor.exceptions import GrpcException,Unauthenticated,FailedPrecondition
-from decimal import Decimal as DecimalType
 from dotenv import load_dotenv
-from google.protobuf import empty_pb2
 from google.protobuf.timestamp_pb2 import Timestamp
 
 import jwt
@@ -36,16 +30,18 @@ from Proto import order_pb2,order_pb2_grpc,cart_pb2,cart_pb2_grpc
 
 from Proto.order_pb2 import PaymentMethod,PaymentState,OrderType,OrderState
 from Proto.order_pb2 import OrderState,OrderType,PaymentMethod,PaymentState
-from Order.models import Order,OrderItem,OrderItemAddOn,OrderPayment,order_types,order_state,payment_method,payment_state
+from Order.models import Order,OrderItem,OrderItemAddOn,OrderPayment,order_state,payment_method,payment_state
 
 
 from utils.logger import Logger
 from utils.gprc_pool import GrpcChannelPool
+from utils.uuid_checker import is_valid_uuid
 
 load_dotenv()
 
 JWT_SECRET = os.getenv("JWT_SECRET","Rahul")
 CART_SERVICE_ADDR = os.getenv("CART_SERVICE_ADDR","localhost:50051")
+GRPC_SERVER_PORT = os.getenv('GRPC_SERVER_PORT', '50053')
 logger = Logger("GRPC_service")
 
 def handle_error(func):
@@ -59,32 +55,32 @@ def handle_error(func):
             raise Exception("Forced rollback due to Order.DoesNotExist")
 
         except OrderItem.DoesNotExist:
-            logger.error(f"CartItem Not Found: cart_item_uuid:{getattr(request, 'cart_item_uuid', '')}")
+            logger.warning(f"CartItem Not Found: cart_item_uuid:{getattr(request, 'cart_item_uuid', '')}")
             context.abort(grpc.StatusCode.NOT_FOUND, f"CartItem Not Found: cart_item_uuid:{getattr(request, 'cart_item_uuid', '')}")
             raise Exception("Forced rollback due to OrderItem.DoesNotExist")
 
         except OrderItemAddOn.DoesNotExist:
-            logger.error(f"Coupon Not Found: coupon_uuid: {getattr(request, 'coupon_uuid', '')} coupon_code: {getattr(request, 'coupon_code', '')}")
+            logger.warning(f"Coupon Not Found: coupon_uuid: {getattr(request, 'coupon_uuid', '')} coupon_code: {getattr(request, 'coupon_code', '')}")
             context.abort(grpc.StatusCode.NOT_FOUND, f"Coupon Not Found: coupon_uuid: {getattr(request, 'coupon_uuid', '')} coupon_code: {getattr(request, 'coupon_code', '')}")
             raise Exception("Forced rollback due to OrderItemAddOn.DoesNotExist")
 
         except ObjectDoesNotExist:
-            logger.error("Requested object does not exist")
+            logger.warning("Requested object does not exist")
             context.abort(grpc.StatusCode.NOT_FOUND, "Requested Object Not Found")
             raise Exception("Forced rollback due to ObjectDoesNotExist")
 
         except MultipleObjectsReturned:
-            logger.error("Multiple objects found for request")
+            logger.warning("Multiple objects found for request")
             context.abort(grpc.StatusCode.FAILED_PRECONDITION, "Multiple matching objects found")
             raise Exception("Forced rollback due to MultipleObjectsReturned")
 
         except ValidationError as e:
-            logger.error(f"Validation Error: {str(e)}")
+            logger.warning(f"Validation Error: {str(e)}")
             context.abort(grpc.StatusCode.INVALID_ARGUMENT, f"Validation Error: {str(e)}")
             raise Exception("Forced rollback due to ValidationError")
 
         except IntegrityError as e:
-            logger.error(f"Integrity Error: {str(e)}")
+            logger.warning(f"Integrity Error: {str(e)}")
             context.abort(grpc.StatusCode.ALREADY_EXISTS, "Integrity constraint violated")
             raise Exception("Forced rollback due to IntegrityError")
 
@@ -144,76 +140,51 @@ def handle_error(func):
     
     return wrapper
 
+def check_access(roles:list[str]):
+    def decorator(func):
+        def wrapper(self, request, context):
+            metadata = dict(context.invocation_metadata() or [])
+            role = metadata.get("role")
 
+            if not role:
+                logger.warning("Missing role in metadata")
+                raise Unauthenticated("Role missing from metadata")
 
-def Jwt_Decode(Jwt_token:str,key:str,algos:list[str]):
-    decoded = jwt.decode(Jwt_token,key,algorithms=algos)
-    return decoded
-class ContextWrapper:
-    """ Wrapper around grpc.ServicerContext to modify metadata. """
-    
-    def __init__(self, original_context, new_metadata):
-        self._original_context = original_context
-        self._new_metadata = new_metadata
+            if role == "internal":
+                # TODO: Add internal service verification here
+                return func(self, request, context)
 
-    def invocation_metadata(self):
-        """ Return modified metadata instead of original. """
-        return tuple(self._new_metadata)
-    
-    def abort(self,StatusCode,Message):
-        self._original_context.abort(StatusCode,Message)
+            if role not in roles:
+                logger.warning(f"Unauthorized role: {role}")
+                raise Unauthenticated(f"Unauthorized role: {role}")
 
-    def __getattr__(self, attr):
-        """ Delegate all other calls to the original context. """
-        return getattr(self._original_context, attr)
-class AuthenticationInterceptor(ServerInterceptor):
-    def __init__(self, secret_key: str):
-        self.SECRET_KEY = secret_key
-        super().__init__()
+            # Role-specific access checks
+            try:
+                if role == "store":
+                    store_uuid_in_token = metadata["store_uuid"]
+                    if not getattr(request, "store_uuid", None):
+                        logger.warning("Store UUID missing in request")
+                        raise Unauthenticated("Store UUID is missing in the request")
+                    if store_uuid_in_token != getattr(request, "store_uuid", None):
+                        logger.warning("Store UUID mismatch")
+                        raise Unauthenticated("Store UUID does not match token")
 
-    def intercept(
-        self,
-        method: Callable,
-        request_or_iterator: Any,
-        context: grpc.ServicerContext,
-        method_name: str,
-    ) -> Any:
-        metadata = context.invocation_metadata()
-        # Check if metadata is empty
-        if metadata is None or len(metadata) == 0:
-            context.set_code(grpc.StatusCode.UNAUTHENTICATED)
-            context.set_details("No auth token sent")
-            logger.error(f"No meta data found in request")
-            context.abort(StatusCode.UNAUTHENTICATED,f"No Metadata found")
-            
-        metadata_dict = {}
-        for key,value in metadata:
-            metadata_dict[key] = value
-        if "authorization" not in metadata_dict.keys():
-            logger.error(f"Auth Token not in request")
-            context.abort(StatusCode.UNAUTHENTICATED,f"Auth Token not in request")
-        try:
-            token = metadata_dict.get("authorization").split(" ")[1]
-            decoded = Jwt_Decode(Jwt_token=token,key=self.SECRET_KEY,algos=["HS256"])
-        except jwt.ExpiredSignatureError:
-            logger.warning("Token expired")
-            context.abort(grpc.StatusCode.UNAUTHENTICATED, "Token expired")
-        except jwt.InvalidTokenError as e:
-            logger.warning(f"Invalid token: {str(e)}")
-            context.abort(grpc.StatusCode.UNAUTHENTICATED, "Invalid token")
-        except Exception as e:
-            logger.warning(f"Authentication error: {str(e)}")
-            context.abort(grpc.StatusCode.INTERNAL, "Authentication failed")
+                elif role == "user":
+                    phone_in_token = metadata["user_phone_no"]
+                    if not getattr(request, "user_phone_no", None):
+                        logger.warning("User phone number missing in request")
+                        raise Unauthenticated("User phone number is missing in the request")
+                    if phone_in_token != getattr(request, "user_phone_no", None):
+                        logger.warning("User phone mismatch")
+                        raise Unauthenticated("User phone does not match token")
 
-        new_metadata = [*metadata]
-        if decoded.get("role") == "User":
-            new_metadata.append(("user_phone_no", str(decoded.get("user_phone_no"))))
-            new_metadata.append(("user_role", decoded.get("role")))
-        elif decoded.get("role") == "Store":
-            new_metadata.append(("store_uuid", str(decoded.get("store_uuid"))))
-            new_metadata.append(("user_role", decoded.get("role")))
-        new_context =  ContextWrapper(context, new_metadata)
-        return method(request_or_iterator, new_context)
+            except KeyError as e:
+                logger.warning(f"Missing required metadata for role '{role}': {e}")
+                raise Unauthenticated(f"Missing metadata: {e}")
+
+            return func(self, request, context)
+        return wrapper
+    return decorator
     
 class OrderService(order_pb2_grpc.OrderServiceServicer):
 
@@ -748,25 +719,22 @@ class OrderService(order_pb2_grpc.OrderServiceServicer):
         self.channel = self.channel_pool.get_channel(CART_SERVICE_ADDR)
         self.Cart_stub = cart_pb2_grpc.CartServiceStub(self.channel)
         logger.info(f"Initialized gRPC channel to Cart Service at {CART_SERVICE_ADDR}")
+        self.meta_data =[ 
+            ("role","internal"),
+            ("service","order")
+        ]
         super().__init__()
-
+    
     @handle_error
+    @check_access(roles=["store","internal"])
     def CreateOrder(self, request, context):
-
-        meta_dict ={k:v for k,v in context.invocation_metadata()}
-
-        role = meta_dict.get("user_role")
-        
-
-        if role != "Store":
-            raise Unauthenticated
-        auth_store_uuid = meta_dict.get("store_uuid")
         cart_uuid = request.cart_uuid
         store_uuid = request.store_uuid
-
-        if store_uuid !=  auth_store_uuid:
-            raise Unauthenticated
         
+        if not is_valid_uuid(store_uuid):
+            raise ValidationError(f"store_uud:{store_uuid} is not Valid Uuid")
+        if not is_valid_uuid(cart_uuid):
+            raise ValidationError(f"cart_uuid:{cart_uuid} is not Valid Uuid")
 
         try:
             order = Order.objects.get(cart_uuid = cart_uuid,store_uuid = store_uuid)
@@ -778,8 +746,9 @@ class OrderService(order_pb2_grpc.OrderServiceServicer):
         cart_request = cart_pb2.GetCartRequest(cart_uuid=cart_uuid,store_uuid = store_uuid)
         
         try:
-            response = self.Cart_stub.GetCart(cart_request)
+            response = self.Cart_stub.GetCart(cart_request,metadata = self.meta_data)
         except RpcError as e:
+
             error_message = e.details()
             if e.code() == StatusCode.NOT_FOUND:
                 logger.error(f"Active Cart: {cart_uuid} not found")
@@ -790,7 +759,9 @@ class OrderService(order_pb2_grpc.OrderServiceServicer):
             elif e.code() == StatusCode.INTERNAL:
                 logger.error(error_message)
                 raise GrpcException(error_message,status_code=e.code())
-                
+            elif e.code() == StatusCode.UNAVAILABLE:
+                logger.error(f"Cart Service does not exist at:{CART_SERVICE_ADDR}")
+                raise GrpcException("Internal Server Error",status_code=StatusCode.UNAVAILABLE)
         
         with transaction.atomic():# Extract cart details
             cart = response.cart
@@ -868,27 +839,26 @@ class OrderService(order_pb2_grpc.OrderServiceServicer):
         )
 
     @handle_error
+    @check_access(roles=["store","internal"])
     def GetOrder(self,request,context):
         
-        meta_dict ={k:v for k,v in context.invocation_metadata()}
-        role = meta_dict.get("user_role")
-        
-        if role != "Store":
-            raise Unauthenticated
-        
-        auth_store_uuid = meta_dict.get("store_uuid")
         store_uuid = request.store_uuid
 
-        if store_uuid !=  auth_store_uuid:
-            raise Unauthenticated
+        if not is_valid_uuid(store_uuid):
+            raise ValidationError(f"store_uud:{store_uuid} is not Valid Uuid")
         
         if request.order_uuid:
+            if not is_valid_uuid(request.order_uuid):
+                raise ValidationError(f"order_uud:{request.order_uuid} is not Valid Uuid")
+            
             order = Order.objects.get(order_uuid = request.order_uuid,store_uuid = store_uuid)
         elif request.store_uuid and request.user_phone_no:
             order = Order.objects.get(user_phone_no = request.user_phone_no,store_uuid = store_uuid)
         elif request.order_no:
             order = Order.objects.get(order_no = request.order_no,store_uuid = store_uuid)
-        elif request.order_no:
+        elif request.cart_uuid:
+            if not is_valid_uuid(request.cart_uuid):
+                raise ValidationError(f"cart_uuid:{request.cart_uuid} is not Valid Uuid")
             order = Order.objects.get(cart_uuid = request.cart_uuid,store_uuid = store_uuid)
         else:
             raise ValueError(f"No value given to fetch order")
@@ -898,24 +868,16 @@ class OrderService(order_pb2_grpc.OrderServiceServicer):
         )
     
     
-    @handle_error  # Should come after @transaction.atomic if handle_error doesn't interfere with transaction management
+    @handle_error
+    @check_access(roles=["store","internal"])
     def CancelOrder(self,request,context):
 
-        meta_dict ={k:v for k,v in context.invocation_metadata()}
-        role = meta_dict.get("user_role")
-        
-        if role != "Store":
-            raise Unauthenticated
-        
-        auth_store_uuid = meta_dict.get("store_uuid")
         store_uuid = request.store_uuid
-
-        if store_uuid !=  auth_store_uuid:
-            raise Unauthenticated
-
+        if not is_valid_uuid(store_uuid):
+                raise ValidationError(f"store_uuid:{store_uuid} is not Valid Uuid")
         # Fetch order
         order = None
-        if request.order_uuid:
+        if is_valid_uuid(request.order_uuid):
             order = Order.objects.prefetch_related("payment").get(order_uuid=request.order_uuid, store_uuid=store_uuid)
         elif request.order_no:
             order = Order.objects.prefetch_related("payment").get(order_no=request.order_no, store_uuid=store_uuid)
@@ -943,19 +905,15 @@ class OrderService(order_pb2_grpc.OrderServiceServicer):
 
 
     @handle_error
+    @check_access(roles=["store","internal"])
     def UpdateOrderState(self,request,context):
-        meta_dict ={k:v for k,v in context.invocation_metadata()}
-        role = meta_dict.get("user_role")
-        
-        if role != "Store":
-            raise Unauthenticated
-        
-        auth_store_uuid = meta_dict.get("store_uuid")
         store_uuid = request.store_uuid
         order_uuid = request.order_uuid
 
-        if store_uuid !=  auth_store_uuid:
-            raise Unauthenticated
+        if not is_valid_uuid(store_uuid):
+                raise ValidationError(f"store_uuid:{store_uuid} is not Valid Uuid")
+        if not is_valid_uuid(order_uuid):
+                raise ValidationError(f"order_uuid:{order_uuid} is not Valid Uuid")        
         
         order = Order.objects.get(order_uuid = order_uuid , store_uuid = store_uuid)
 
@@ -969,21 +927,15 @@ class OrderService(order_pb2_grpc.OrderServiceServicer):
 
 
     @handle_error
+    @check_access(roles=["store","internal"])
     def ListOrder(self,request,context):
 
-        meta_dict ={k:v for k,v in context.invocation_metadata()}
-        role = meta_dict.get("user_role")
-        
-        if role != "Store":
-            raise Unauthenticated
-        
-        auth_store_uuid = meta_dict.get("store_uuid")
         store_uuid = request.store_uuid
+        if not is_valid_uuid(store_uuid):
+                raise ValidationError(f"store_uuid:{store_uuid} is not Valid Uuid")
 
-        if store_uuid !=  auth_store_uuid:
-            raise Unauthenticated
+
         
-        store_uuid = meta_dict.get("store_uuid")
         limit = request.limit
         page = request.page
 
@@ -996,18 +948,13 @@ class OrderService(order_pb2_grpc.OrderServiceServicer):
             prev_page = prev_page) 
 
     @handle_error
+    @check_access(roles=["store","internal"])
     def StreamOrders(self,request,context):
-        meta_dict ={k:v for k,v in context.invocation_metadata()}
-        role = meta_dict.get("user_role")
-        
-        if role != "Store":
-            raise Unauthenticated
-        
-        auth_store_uuid = meta_dict.get("store_uuid")
-        store_uuid = request.store_uuid
 
-        if store_uuid !=  auth_store_uuid:
-            raise Unauthenticated
+        store_uuid = request.store_uuid
+        
+        if not is_valid_uuid(store_uuid):
+                raise ValidationError(f"store_uuid:{store_uuid} is not Valid Uuid")
 
         last_order_time = None  # Keep track of the last streamed order time
         channel_name = f"order_updates_{store_uuid}".replace("-","_")
@@ -1037,12 +984,8 @@ class OrderService(order_pb2_grpc.OrderServiceServicer):
                                 order_uuid=payload['order_uuid'],
                                 store_uuid=store_uuid
                             )
-                            MAX_QUEUE_SIZE = 100  # Max number of pending unacknowledged responses
-
-                            # # Before yield:
-                            # while context.pending_response_count() > MAX_QUEUE_SIZE:
-                            #     await asyncio.sleep(0.1)  # Wait if client is falling behind
-                            last_order_time = time.time()  # Fixed: added parentheses to time.time
+                            last_order_time = time.time()
+                            logger.info(f"Order:{order.order_uuid} Streamed for store_uuid:{order.store_uuid} at {last_order_time} ")
                             yield order_pb2.StoreOrderResponse(
                                 order=self._store_order_to_response(order)
                             )
@@ -1080,16 +1023,13 @@ class OrderService(order_pb2_grpc.OrderServiceServicer):
             logger.info(f"Stopped listening to channel {channel_name}")
 
     @handle_error
-    def GetUserOrder(self,request,context):
-        meta_dict ={k:v for k,v in context.invocation_metadata()}
-        role = meta_dict.get("user_role")
-        
-        if role != "User":
-            raise Unauthenticated
-        user_phone_no = meta_dict.get("user_phone_no")
+    @check_access(roles=["user","internal"])
 
-        if user_phone_no != request.user_phone_no:
-            raise  Unauthenticated
+    def GetUserOrder(self,request,context):
+
+        if not is_valid_uuid(request.order_uuid):
+                raise ValidationError(f"order_uuid:{request.order_uuid} is not Valid Uuid")
+        user_phone_no = request.user_phone_no
 
         if request.order_uuid:
             order = Order.objects.get(user_phone_no = user_phone_no,order_uuid = request.order_uuid)
@@ -1103,17 +1043,10 @@ class OrderService(order_pb2_grpc.OrderServiceServicer):
         )
 
     @handle_error
+    @check_access(roles=["user","internal"])
     def listUserOrder(self,request,context):
+        user_phone_no = request.user_phone_no
 
-        meta_dict ={k:v for k,v in context.invocation_metadata()}
-        role = meta_dict.get("user_role")
-        
-        if role != "User":
-            raise Unauthenticated
-        user_phone_no = meta_dict.get("user_phone_no")
-
-        if user_phone_no != request.user_phone_no:
-            raise  Unauthenticated
         store_uuid = request.store_uuid
         limit = request.limit
         page = request.page
@@ -1127,16 +1060,10 @@ class OrderService(order_pb2_grpc.OrderServiceServicer):
 
    
     @handle_error
+    @check_access(roles=["user","internal"])
     def CancelUserOrder(self,request,context):
         
-        meta_dict ={k:v for k,v in context.invocation_metadata()}
-        role = meta_dict.get("user_role")
-        
-        if role != "User":
-            raise Unauthenticated
-        
-        user_phone_no = meta_dict.get("user_phone_no")
-
+        user_phone_no = request.user_phone_no
 
         if request.order_uuid:
             order = Order.objects.get(user_phone_no = user_phone_no,order_uuid = request.order_uuid)
@@ -1171,20 +1098,18 @@ class OrderService(order_pb2_grpc.OrderServiceServicer):
 
 
 def serve():
-    interceptors = [AuthenticationInterceptor(secret_key=JWT_SECRET)]
     
     server = grpc.server(
-    futures.ThreadPoolExecutor(max_workers=10),
-    interceptors=interceptors
+    futures.ThreadPoolExecutor(max_workers=10)
 )
 
     order_pb2_grpc.add_OrderServiceServicer_to_server(OrderService(),server)
 
-    grpc_port = os.getenv('GRPC_SERVER_PORT', '50053')
+    
 
-    server.add_insecure_port(f"[::]:50053")
+    server.add_insecure_port(f"[::]:{GRPC_SERVER_PORT}")
     server.start()
-    logger.info(f"Server Stated at {grpc_port}")
+    logger.info(f"Server Stated at {GRPC_SERVER_PORT}")
     try:
         server.wait_for_termination()
     except KeyboardInterrupt:

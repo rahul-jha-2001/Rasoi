@@ -19,14 +19,15 @@
     "application/json"
   ],
   "paths": {
-    "/v1/cart": {
-      "get": {
-        "operationId": "CartService_GetCart",
+    "/v1/store/{storeUuid}/coupon": {
+      "post": {
+        "summary": "COre Coupon service",
+        "operationId": "CouponService_CreateCoupon",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/Cart_v1CartResponse"
+              "$ref": "#/definitions/Cart_v1Coupon"
             }
           },
           "default": {
@@ -39,29 +40,105 @@
         "parameters": [
           {
             "name": "storeUuid",
-            "in": "query",
-            "required": false,
+            "in": "path",
+            "required": true,
             "type": "string"
           },
           {
-            "name": "userPhoneNo",
-            "in": "query",
-            "required": false,
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/CouponServiceCreateCouponBody"
+            }
+          }
+        ],
+        "tags": [
+          "CouponService"
+        ]
+      }
+    },
+    "/v1/store/{storeUuid}/coupon/list": {
+      "get": {
+        "operationId": "CouponService_listCoupon",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/Cart_v1listCouponResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "storeUuid",
+            "in": "path",
+            "required": true,
             "type": "string"
           },
           {
-            "name": "cartUuid",
+            "name": "page",
             "in": "query",
             "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "CouponService"
+        ]
+      }
+    },
+    "/v1/store/{storeUuid}/coupon/{couponUuid}": {
+      "get": {
+        "operationId": "CouponService_GetCoupon",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/Cart_v1Coupon"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "storeUuid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "couponUuid",
+            "in": "path",
+            "required": true,
             "type": "string"
           }
         ],
         "tags": [
-          "CartService"
+          "CouponService"
         ]
       },
       "delete": {
-        "operationId": "CartService_DeleteCart",
+        "operationId": "CouponService_DeleteCoupon",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -80,14 +157,183 @@
         "parameters": [
           {
             "name": "storeUuid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "couponUuid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "CouponService"
+        ]
+      },
+      "patch": {
+        "operationId": "CouponService_UpdateCoupon",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/Cart_v1Coupon"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "storeUuid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "couponUuid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/CouponServiceUpdateCouponBody"
+            }
+          }
+        ],
+        "tags": [
+          "CouponService"
+        ]
+      }
+    },
+    "/v1/store/{storeUuid}/coupon/{couponUuid}/couponusage": {
+      "get": {
+        "operationId": "CouponService_GetCouponUsage",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/Cart_v1GetCouponUsageResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "storeUuid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "couponUuid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "page",
             "in": "query",
             "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "CouponService"
+        ]
+      }
+    },
+    "/v1/store/{storeUuid}/user/{userPhoneNo}/cart": {
+      "get": {
+        "operationId": "CartService_GetCart2",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/Cart_v1CartResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "storeUuid",
+            "in": "path",
+            "required": true,
             "type": "string"
           },
           {
             "name": "userPhoneNo",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "cartUuid",
             "in": "query",
             "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "CartService"
+        ]
+      },
+      "delete": {
+        "operationId": "CartService_DeleteCart2",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "type": "object",
+              "properties": {}
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "storeUuid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "userPhoneNo",
+            "in": "path",
+            "required": true,
             "type": "string"
           },
           {
@@ -120,12 +366,149 @@
         },
         "parameters": [
           {
+            "name": "storeUuid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "userPhoneNo",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
             "name": "body",
             "in": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/Cart_v1CreateCartRequest"
+              "$ref": "#/definitions/CartServiceCreateCartBody"
             }
+          }
+        ],
+        "tags": [
+          "CartService"
+        ]
+      },
+      "put": {
+        "operationId": "CartService_UpdateCart2",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/Cart_v1CartResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "storeUuid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "userPhoneNo",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/CartServiceUpdateCartBody"
+            }
+          }
+        ],
+        "tags": [
+          "CartService"
+        ]
+      }
+    },
+    "/v1/store/{storeUuid}/user/{userPhoneNo}/cart/{cartUuid}": {
+      "get": {
+        "operationId": "CartService_GetCart",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/Cart_v1CartResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "storeUuid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "userPhoneNo",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "cartUuid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "CartService"
+        ]
+      },
+      "delete": {
+        "operationId": "CartService_DeleteCart",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "type": "object",
+              "properties": {}
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "storeUuid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "userPhoneNo",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "cartUuid",
+            "in": "path",
+            "required": true,
+            "type": "string"
           }
         ],
         "tags": [
@@ -150,11 +533,29 @@
         },
         "parameters": [
           {
+            "name": "storeUuid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "userPhoneNo",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "cartUuid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
             "name": "body",
             "in": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/Cart_v1UpdateCartRequest"
+              "$ref": "#/definitions/CartServiceUpdateCartBody"
             }
           }
         ],
@@ -163,7 +564,59 @@
         ]
       }
     },
-    "/v1/cart/{cartUuid}/cartitem": {
+    "/v1/store/{storeUuid}/user/{userPhoneNo}/cart/{cartUuid}/cartitem": {
+      "delete": {
+        "operationId": "CartService_RemoveCartItem",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/Cart_v1CartResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "storeUuid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "userPhoneNo",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "cartUuid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "cartItemUuid",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "productUuid",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "CartService"
+        ]
+      },
       "post": {
         "summary": "Cart item Service",
         "operationId": "CartService_AddCartItem",
@@ -182,6 +635,18 @@
           }
         },
         "parameters": [
+          {
+            "name": "storeUuid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "userPhoneNo",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
           {
             "name": "cartUuid",
             "in": "path",
@@ -202,44 +667,8 @@
         ]
       }
     },
-    "/v1/cart/{cartUuid}/cartitem/{cartItemUuid}": {
-      "delete": {
-        "operationId": "CartService_RemoveCartItem",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/Cart_v1CartResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "cartUuid",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "cartItemUuid",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "CartService"
-        ]
-      }
-    },
-    "/v1/cart/{cartUuid}/cartitem/{cartItemUuid}/add_quantity": {
-      "put": {
+    "/v1/store/{storeUuid}/user/{userPhoneNo}/cart/{cartUuid}/cartitem/{cartItemUuid}/Add": {
+      "patch": {
         "operationId": "CartService_AddQuantity",
         "responses": {
           "200": {
@@ -257,6 +686,18 @@
         },
         "parameters": [
           {
+            "name": "storeUuid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "userPhoneNo",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
             "name": "cartUuid",
             "in": "path",
             "required": true,
@@ -267,6 +708,14 @@
             "in": "path",
             "required": true,
             "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/CartServiceAddQuantityBody"
+            }
           }
         ],
         "tags": [
@@ -274,7 +723,61 @@
         ]
       }
     },
-    "/v1/cart/{cartUuid}/cartitem/{cartItemUuid}/addon": {
+    "/v1/store/{storeUuid}/user/{userPhoneNo}/cart/{cartUuid}/cartitem/{cartItemUuid}/Remove": {
+      "patch": {
+        "operationId": "CartService_RemoveQuantity",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/Cart_v1CartResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "storeUuid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "userPhoneNo",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "cartUuid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "cartItemUuid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "productUuid",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "CartService"
+        ]
+      }
+    },
+    "/v1/store/{storeUuid}/user/{userPhoneNo}/cart/{cartUuid}/cartitem/{cartItemUuid}/addon": {
       "post": {
         "operationId": "CartService_CreateAddOn",
         "responses": {
@@ -292,6 +795,18 @@
           }
         },
         "parameters": [
+          {
+            "name": "storeUuid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "userPhoneNo",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
           {
             "name": "cartUuid",
             "in": "path",
@@ -318,7 +833,7 @@
         ]
       }
     },
-    "/v1/cart/{cartUuid}/cartitem/{cartItemUuid}/addon/{addOnUuid}": {
+    "/v1/store/{storeUuid}/user/{userPhoneNo}/cart/{cartUuid}/cartitem/{cartItemUuid}/addon/{addOnUuid}": {
       "delete": {
         "operationId": "CartService_RemoveAddOn",
         "responses": {
@@ -336,6 +851,18 @@
           }
         },
         "parameters": [
+          {
+            "name": "storeUuid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "userPhoneNo",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
           {
             "name": "cartUuid",
             "in": "path",
@@ -359,7 +886,7 @@
           "CartService"
         ]
       },
-      "post": {
+      "patch": {
         "operationId": "CartService_UpdateAddOn",
         "responses": {
           "200": {
@@ -376,6 +903,18 @@
           }
         },
         "parameters": [
+          {
+            "name": "storeUuid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "userPhoneNo",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
           {
             "name": "cartUuid",
             "in": "path",
@@ -408,8 +947,8 @@
         ]
       }
     },
-    "/v1/cart/{cartUuid}/cartitem/{cartItemUuid}/addon/{addOnUuid}/add_quantity": {
-      "put": {
+    "/v1/store/{storeUuid}/user/{userPhoneNo}/cart/{cartUuid}/cartitem/{cartItemUuid}/addon/{addOnUuid}/add_quantity": {
+      "patch": {
         "operationId": "CartService_IncreaseAddOnQuantity",
         "responses": {
           "200": {
@@ -427,6 +966,18 @@
         },
         "parameters": [
           {
+            "name": "storeUuid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "userPhoneNo",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
             "name": "cartUuid",
             "in": "path",
             "required": true,
@@ -450,8 +1001,8 @@
         ]
       }
     },
-    "/v1/cart/{cartUuid}/cartitem/{cartItemUuid}/addon/{addOnUuid}/remove_quantity": {
-      "put": {
+    "/v1/store/{storeUuid}/user/{userPhoneNo}/cart/{cartUuid}/cartitem/{cartItemUuid}/addon/{addOnUuid}/remove_quantity": {
+      "patch": {
         "operationId": "CartService_RemoveAddOnQuantity",
         "responses": {
           "200": {
@@ -469,6 +1020,18 @@
         },
         "parameters": [
           {
+            "name": "storeUuid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "userPhoneNo",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
             "name": "cartUuid",
             "in": "path",
             "required": true,
@@ -492,43 +1055,7 @@
         ]
       }
     },
-    "/v1/cart/{cartUuid}/cartitem/{cartItemUuid}/remove_quantity": {
-      "put": {
-        "operationId": "CartService_RemoveQuantity",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/Cart_v1CartResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "cartUuid",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "cartItemUuid",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "CartService"
-        ]
-      }
-    },
-    "/v1/cart/{cartUuid}/coupon/{CouponCode}": {
+    "/v1/store/{storeUuid}/user/{userPhoneNo}/cart/{cartUuid}/coupon/{couponCode}": {
       "put": {
         "operationId": "CartService_AddCoupon",
         "responses": {
@@ -547,101 +1074,17 @@
         },
         "parameters": [
           {
-            "name": "cartUuid",
+            "name": "storeUuid",
             "in": "path",
             "required": true,
             "type": "string"
           },
           {
-            "name": "CouponCode",
+            "name": "userPhoneNo",
             "in": "path",
             "required": true,
             "type": "string"
-          }
-        ],
-        "tags": [
-          "CartService"
-        ]
-      }
-    },
-    "/v1/cart/{cartUuid}/removecoupon": {
-      "delete": {
-        "operationId": "CartService_RemoveCoupon",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/Cart_v1CartResponse"
-            }
           },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "cartUuid",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "CartService"
-        ]
-      }
-    },
-    "/v1/cart/{cartUuid}/validate": {
-      "get": {
-        "operationId": "CartService_ValidateCart",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/Cart_v1CartResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "cartUuid",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "CartService"
-        ]
-      }
-    },
-    "/v1/cart/{cartUuid}/validate_coupon/{couponCode}": {
-      "get": {
-        "operationId": "CartService_ValidateCoupon",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/Cart_v1ValidCouponResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
           {
             "name": "cartUuid",
             "in": "path",
@@ -660,49 +1103,14 @@
         ]
       }
     },
-    "/v1/coupon": {
-      "get": {
-        "operationId": "CouponService_GetCoupon",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/Cart_v1Coupon"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "storeUuid",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "couponUuid",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "CouponService"
-        ]
-      },
+    "/v1/store/{storeUuid}/user/{userPhoneNo}/cart/{cartUuid}/removecoupon": {
       "delete": {
-        "operationId": "CouponService_DeleteCoupon",
+        "operationId": "CartService_RemoveCoupon",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "type": "object",
-              "properties": {}
+              "$ref": "#/definitions/Cart_v1CartResponse"
             }
           },
           "default": {
@@ -715,91 +1123,36 @@
         "parameters": [
           {
             "name": "storeUuid",
-            "in": "query",
-            "required": false,
+            "in": "path",
+            "required": true,
             "type": "string"
           },
           {
-            "name": "couponUuid",
-            "in": "query",
-            "required": false,
+            "name": "userPhoneNo",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "cartUuid",
+            "in": "path",
+            "required": true,
             "type": "string"
           }
         ],
         "tags": [
-          "CouponService"
-        ]
-      },
-      "post": {
-        "summary": "COre Coupon service",
-        "operationId": "CouponService_CreateCoupon",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/Cart_v1Coupon"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/Cart_v1CreateCouponRequest"
-            }
-          }
-        ],
-        "tags": [
-          "CouponService"
-        ]
-      },
-      "put": {
-        "operationId": "CouponService_UpdateCoupon",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/Cart_v1Coupon"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/Cart_v1UpdateCouponRequest"
-            }
-          }
-        ],
-        "tags": [
-          "CouponService"
+          "CartService"
         ]
       }
     },
-    "/v1/coupon/list": {
+    "/v1/store/{storeUuid}/user/{userPhoneNo}/cart/{cartUuid}/validate": {
       "get": {
-        "operationId": "CouponService_listCoupon",
+        "operationId": "CartService_ValidateCart",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/Cart_v1listCouponResponse"
+              "$ref": "#/definitions/Cart_v1CartResponse"
             }
           },
           "default": {
@@ -812,38 +1165,36 @@
         "parameters": [
           {
             "name": "storeUuid",
-            "in": "query",
-            "required": false,
+            "in": "path",
+            "required": true,
             "type": "string"
           },
           {
-            "name": "page",
-            "in": "query",
-            "required": false,
-            "type": "integer",
-            "format": "int32"
+            "name": "userPhoneNo",
+            "in": "path",
+            "required": true,
+            "type": "string"
           },
           {
-            "name": "limit",
-            "in": "query",
-            "required": false,
-            "type": "integer",
-            "format": "int32"
+            "name": "cartUuid",
+            "in": "path",
+            "required": true,
+            "type": "string"
           }
         ],
         "tags": [
-          "CouponService"
+          "CartService"
         ]
       }
     },
-    "/v1/couponusage": {
+    "/v1/store/{storeUuid}/user/{userPhoneNo}/cart/{cartUuid}/validate_coupon/{couponCode}": {
       "get": {
-        "operationId": "CouponService_GetCouponUsage",
+        "operationId": "CartService_ValidateCoupon",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/Cart_v1GetCouponUsageResponse"
+              "$ref": "#/definitions/Cart_v1ValidCouponResponse"
             }
           },
           "default": {
@@ -856,33 +1207,31 @@
         "parameters": [
           {
             "name": "storeUuid",
-            "in": "query",
-            "required": false,
+            "in": "path",
+            "required": true,
             "type": "string"
           },
           {
-            "name": "couponUuid",
-            "in": "query",
-            "required": false,
+            "name": "userPhoneNo",
+            "in": "path",
+            "required": true,
             "type": "string"
           },
           {
-            "name": "page",
-            "in": "query",
-            "required": false,
-            "type": "integer",
-            "format": "int32"
+            "name": "cartUuid",
+            "in": "path",
+            "required": true,
+            "type": "string"
           },
           {
-            "name": "limit",
-            "in": "query",
-            "required": false,
-            "type": "integer",
-            "format": "int32"
+            "name": "couponCode",
+            "in": "path",
+            "required": true,
+            "type": "string"
           }
         ],
         "tags": [
-          "CouponService"
+          "CartService"
         ]
       }
     }
@@ -896,11 +1245,39 @@
         }
       }
     },
+    "CartServiceAddQuantityBody": {
+      "type": "object",
+      "properties": {
+        "productUuid": {
+          "type": "string"
+        }
+      }
+    },
     "CartServiceCreateAddOnBody": {
       "type": "object",
       "properties": {
+        "productUuid": {
+          "type": "string"
+        },
         "addOn": {
           "$ref": "#/definitions/Cart_v1AddOn"
+        }
+      }
+    },
+    "CartServiceCreateCartBody": {
+      "type": "object",
+      "properties": {
+        "orderType": {
+          "$ref": "#/definitions/Cart_v1ORDERTYPE"
+        },
+        "tableNo": {
+          "type": "string"
+        },
+        "vehicleNo": {
+          "type": "string"
+        },
+        "vehicleDescription": {
+          "type": "string"
         }
       }
     },
@@ -909,6 +1286,17 @@
       "properties": {
         "addOn": {
           "$ref": "#/definitions/Cart_v1AddOn"
+        }
+      }
+    },
+    "CartServiceUpdateCartBody": {
+      "type": "object",
+      "properties": {
+        "cartUuid": {
+          "type": "string"
+        },
+        "cart": {
+          "$ref": "#/definitions/Cart_v1Cart"
         }
       }
     },
@@ -934,6 +1322,10 @@
         },
         "isFree": {
           "type": "boolean"
+        },
+        "subtotalAmount": {
+          "type": "number",
+          "format": "float"
         }
       }
     },
@@ -974,7 +1366,7 @@
         "couponCode": {
           "type": "string"
         },
-        "speacialInstructions": {
+        "specialInstructions": {
           "type": "string"
         },
         "items": {
@@ -984,7 +1376,7 @@
             "$ref": "#/definitions/Cart_v1CartItem"
           }
         },
-        "totalSubtotal": {
+        "subTotal": {
           "type": "number",
           "format": "float",
           "title": "Sum of all the total amounts of a"
@@ -1038,6 +1430,10 @@
           "type": "string"
         },
         "taxPercentage": {
+          "type": "number",
+          "format": "float"
+        },
+        "discount": {
           "type": "number",
           "format": "float"
         },
@@ -1153,6 +1549,10 @@
         },
         "isActive": {
           "type": "boolean"
+        },
+        "maxDiscount": {
+          "type": "number",
+          "format": "float"
         }
       }
     },
@@ -1162,7 +1562,7 @@
         "usageUuid": {
           "type": "string"
         },
-        "CouponUuid": {
+        "couponUuid": {
           "type": "string"
         },
         "userPhoneNo": {
@@ -1174,40 +1574,6 @@
         },
         "orderUuid": {
           "type": "string"
-        }
-      }
-    },
-    "Cart_v1CreateCartRequest": {
-      "type": "object",
-      "properties": {
-        "storeUuid": {
-          "type": "string"
-        },
-        "userPhoneNo": {
-          "type": "string"
-        },
-        "orderType": {
-          "$ref": "#/definitions/Cart_v1ORDERTYPE"
-        },
-        "tableNo": {
-          "type": "string"
-        },
-        "vehicleNo": {
-          "type": "string"
-        },
-        "vehicleDescription": {
-          "type": "string"
-        }
-      }
-    },
-    "Cart_v1CreateCouponRequest": {
-      "type": "object",
-      "properties": {
-        "storeUuid": {
-          "type": "string"
-        },
-        "coupon": {
-          "$ref": "#/definitions/Cart_v1Coupon"
         }
       }
     },
@@ -1250,41 +1616,10 @@
       ],
       "default": "ORDER_TYPE_UNSPECIFIED"
     },
-    "Cart_v1UpdateCartRequest": {
-      "type": "object",
-      "properties": {
-        "storeUuid": {
-          "type": "string"
-        },
-        "userPhoneNo": {
-          "type": "string"
-        },
-        "cartUuid": {
-          "type": "string"
-        },
-        "cart": {
-          "$ref": "#/definitions/Cart_v1Cart"
-        }
-      }
-    },
-    "Cart_v1UpdateCouponRequest": {
-      "type": "object",
-      "properties": {
-        "storeUuid": {
-          "type": "string"
-        },
-        "couponUuid": {
-          "type": "string"
-        },
-        "coupon": {
-          "$ref": "#/definitions/Cart_v1Coupon"
-        }
-      }
-    },
     "Cart_v1ValidCouponResponse": {
       "type": "object",
       "properties": {
-        "Valid": {
+        "valid": {
           "type": "boolean"
         },
         "message": {
@@ -1309,6 +1644,22 @@
         "prevPage": {
           "type": "integer",
           "format": "int32"
+        }
+      }
+    },
+    "CouponServiceCreateCouponBody": {
+      "type": "object",
+      "properties": {
+        "coupon": {
+          "$ref": "#/definitions/Cart_v1Coupon"
+        }
+      }
+    },
+    "CouponServiceUpdateCouponBody": {
+      "type": "object",
+      "properties": {
+        "coupon": {
+          "$ref": "#/definitions/Cart_v1Coupon"
         }
       }
     },

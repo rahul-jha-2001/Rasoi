@@ -39,9 +39,26 @@ func request_CartService_CreateCart_0(ctx context.Context, marshaler runtime.Mar
 	var (
 		protoReq CreateCartRequest
 		metadata runtime.ServerMetadata
+		err      error
 	)
 	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && !errors.Is(err, io.EOF) {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	val, ok := pathParams["store_uuid"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "store_uuid")
+	}
+	protoReq.StoreUuid, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "store_uuid", err)
+	}
+	val, ok = pathParams["user_phone_no"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "user_phone_no")
+	}
+	protoReq.UserPhoneNo, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "user_phone_no", err)
 	}
 	msg, err := client.CreateCart(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
 	return msg, metadata, err
@@ -51,27 +68,61 @@ func local_request_CartService_CreateCart_0(ctx context.Context, marshaler runti
 	var (
 		protoReq CreateCartRequest
 		metadata runtime.ServerMetadata
+		err      error
 	)
 	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && !errors.Is(err, io.EOF) {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	val, ok := pathParams["store_uuid"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "store_uuid")
+	}
+	protoReq.StoreUuid, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "store_uuid", err)
+	}
+	val, ok = pathParams["user_phone_no"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "user_phone_no")
+	}
+	protoReq.UserPhoneNo, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "user_phone_no", err)
 	}
 	msg, err := server.CreateCart(ctx, &protoReq)
 	return msg, metadata, err
 }
 
-var filter_CartService_GetCart_0 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
-
 func request_CartService_GetCart_0(ctx context.Context, marshaler runtime.Marshaler, client CartServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var (
 		protoReq GetCartRequest
 		metadata runtime.ServerMetadata
+		err      error
 	)
 	io.Copy(io.Discard, req.Body)
-	if err := req.ParseForm(); err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	val, ok := pathParams["store_uuid"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "store_uuid")
 	}
-	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_CartService_GetCart_0); err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	protoReq.StoreUuid, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "store_uuid", err)
+	}
+	val, ok = pathParams["user_phone_no"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "user_phone_no")
+	}
+	protoReq.UserPhoneNo, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "user_phone_no", err)
+	}
+	val, ok = pathParams["cart_uuid"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "cart_uuid")
+	}
+	protoReq.CartUuid, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "cart_uuid", err)
 	}
 	msg, err := client.GetCart(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
 	return msg, metadata, err
@@ -81,11 +132,97 @@ func local_request_CartService_GetCart_0(ctx context.Context, marshaler runtime.
 	var (
 		protoReq GetCartRequest
 		metadata runtime.ServerMetadata
+		err      error
 	)
+	val, ok := pathParams["store_uuid"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "store_uuid")
+	}
+	protoReq.StoreUuid, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "store_uuid", err)
+	}
+	val, ok = pathParams["user_phone_no"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "user_phone_no")
+	}
+	protoReq.UserPhoneNo, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "user_phone_no", err)
+	}
+	val, ok = pathParams["cart_uuid"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "cart_uuid")
+	}
+	protoReq.CartUuid, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "cart_uuid", err)
+	}
+	msg, err := server.GetCart(ctx, &protoReq)
+	return msg, metadata, err
+}
+
+var filter_CartService_GetCart_1 = &utilities.DoubleArray{Encoding: map[string]int{"store_uuid": 0, "user_phone_no": 1}, Base: []int{1, 1, 2, 0, 0}, Check: []int{0, 1, 1, 2, 3}}
+
+func request_CartService_GetCart_1(ctx context.Context, marshaler runtime.Marshaler, client CartServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq GetCartRequest
+		metadata runtime.ServerMetadata
+		err      error
+	)
+	io.Copy(io.Discard, req.Body)
+	val, ok := pathParams["store_uuid"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "store_uuid")
+	}
+	protoReq.StoreUuid, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "store_uuid", err)
+	}
+	val, ok = pathParams["user_phone_no"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "user_phone_no")
+	}
+	protoReq.UserPhoneNo, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "user_phone_no", err)
+	}
 	if err := req.ParseForm(); err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
-	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_CartService_GetCart_0); err != nil {
+	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_CartService_GetCart_1); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	msg, err := client.GetCart(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	return msg, metadata, err
+}
+
+func local_request_CartService_GetCart_1(ctx context.Context, marshaler runtime.Marshaler, server CartServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq GetCartRequest
+		metadata runtime.ServerMetadata
+		err      error
+	)
+	val, ok := pathParams["store_uuid"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "store_uuid")
+	}
+	protoReq.StoreUuid, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "store_uuid", err)
+	}
+	val, ok = pathParams["user_phone_no"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "user_phone_no")
+	}
+	protoReq.UserPhoneNo, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "user_phone_no", err)
+	}
+	if err := req.ParseForm(); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_CartService_GetCart_1); err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
 	msg, err := server.GetCart(ctx, &protoReq)
@@ -96,9 +233,34 @@ func request_CartService_UpdateCart_0(ctx context.Context, marshaler runtime.Mar
 	var (
 		protoReq UpdateCartRequest
 		metadata runtime.ServerMetadata
+		err      error
 	)
 	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && !errors.Is(err, io.EOF) {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	val, ok := pathParams["store_uuid"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "store_uuid")
+	}
+	protoReq.StoreUuid, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "store_uuid", err)
+	}
+	val, ok = pathParams["user_phone_no"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "user_phone_no")
+	}
+	protoReq.UserPhoneNo, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "user_phone_no", err)
+	}
+	val, ok = pathParams["cart_uuid"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "cart_uuid")
+	}
+	protoReq.CartUuid, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "cart_uuid", err)
 	}
 	msg, err := client.UpdateCart(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
 	return msg, metadata, err
@@ -108,27 +270,127 @@ func local_request_CartService_UpdateCart_0(ctx context.Context, marshaler runti
 	var (
 		protoReq UpdateCartRequest
 		metadata runtime.ServerMetadata
+		err      error
 	)
 	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && !errors.Is(err, io.EOF) {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	val, ok := pathParams["store_uuid"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "store_uuid")
+	}
+	protoReq.StoreUuid, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "store_uuid", err)
+	}
+	val, ok = pathParams["user_phone_no"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "user_phone_no")
+	}
+	protoReq.UserPhoneNo, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "user_phone_no", err)
+	}
+	val, ok = pathParams["cart_uuid"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "cart_uuid")
+	}
+	protoReq.CartUuid, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "cart_uuid", err)
 	}
 	msg, err := server.UpdateCart(ctx, &protoReq)
 	return msg, metadata, err
 }
 
-var filter_CartService_DeleteCart_0 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
+func request_CartService_UpdateCart_1(ctx context.Context, marshaler runtime.Marshaler, client CartServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq UpdateCartRequest
+		metadata runtime.ServerMetadata
+		err      error
+	)
+	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && !errors.Is(err, io.EOF) {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	val, ok := pathParams["store_uuid"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "store_uuid")
+	}
+	protoReq.StoreUuid, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "store_uuid", err)
+	}
+	val, ok = pathParams["user_phone_no"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "user_phone_no")
+	}
+	protoReq.UserPhoneNo, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "user_phone_no", err)
+	}
+	msg, err := client.UpdateCart(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	return msg, metadata, err
+}
+
+func local_request_CartService_UpdateCart_1(ctx context.Context, marshaler runtime.Marshaler, server CartServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq UpdateCartRequest
+		metadata runtime.ServerMetadata
+		err      error
+	)
+	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && !errors.Is(err, io.EOF) {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	val, ok := pathParams["store_uuid"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "store_uuid")
+	}
+	protoReq.StoreUuid, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "store_uuid", err)
+	}
+	val, ok = pathParams["user_phone_no"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "user_phone_no")
+	}
+	protoReq.UserPhoneNo, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "user_phone_no", err)
+	}
+	msg, err := server.UpdateCart(ctx, &protoReq)
+	return msg, metadata, err
+}
 
 func request_CartService_DeleteCart_0(ctx context.Context, marshaler runtime.Marshaler, client CartServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var (
 		protoReq DeleteCartRequest
 		metadata runtime.ServerMetadata
+		err      error
 	)
 	io.Copy(io.Discard, req.Body)
-	if err := req.ParseForm(); err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	val, ok := pathParams["store_uuid"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "store_uuid")
 	}
-	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_CartService_DeleteCart_0); err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	protoReq.StoreUuid, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "store_uuid", err)
+	}
+	val, ok = pathParams["user_phone_no"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "user_phone_no")
+	}
+	protoReq.UserPhoneNo, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "user_phone_no", err)
+	}
+	val, ok = pathParams["cart_uuid"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "cart_uuid")
+	}
+	protoReq.CartUuid, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "cart_uuid", err)
 	}
 	msg, err := client.DeleteCart(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
 	return msg, metadata, err
@@ -138,11 +400,97 @@ func local_request_CartService_DeleteCart_0(ctx context.Context, marshaler runti
 	var (
 		protoReq DeleteCartRequest
 		metadata runtime.ServerMetadata
+		err      error
 	)
+	val, ok := pathParams["store_uuid"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "store_uuid")
+	}
+	protoReq.StoreUuid, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "store_uuid", err)
+	}
+	val, ok = pathParams["user_phone_no"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "user_phone_no")
+	}
+	protoReq.UserPhoneNo, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "user_phone_no", err)
+	}
+	val, ok = pathParams["cart_uuid"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "cart_uuid")
+	}
+	protoReq.CartUuid, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "cart_uuid", err)
+	}
+	msg, err := server.DeleteCart(ctx, &protoReq)
+	return msg, metadata, err
+}
+
+var filter_CartService_DeleteCart_1 = &utilities.DoubleArray{Encoding: map[string]int{"store_uuid": 0, "user_phone_no": 1}, Base: []int{1, 1, 2, 0, 0}, Check: []int{0, 1, 1, 2, 3}}
+
+func request_CartService_DeleteCart_1(ctx context.Context, marshaler runtime.Marshaler, client CartServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq DeleteCartRequest
+		metadata runtime.ServerMetadata
+		err      error
+	)
+	io.Copy(io.Discard, req.Body)
+	val, ok := pathParams["store_uuid"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "store_uuid")
+	}
+	protoReq.StoreUuid, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "store_uuid", err)
+	}
+	val, ok = pathParams["user_phone_no"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "user_phone_no")
+	}
+	protoReq.UserPhoneNo, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "user_phone_no", err)
+	}
 	if err := req.ParseForm(); err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
-	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_CartService_DeleteCart_0); err != nil {
+	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_CartService_DeleteCart_1); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	msg, err := client.DeleteCart(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	return msg, metadata, err
+}
+
+func local_request_CartService_DeleteCart_1(ctx context.Context, marshaler runtime.Marshaler, server CartServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq DeleteCartRequest
+		metadata runtime.ServerMetadata
+		err      error
+	)
+	val, ok := pathParams["store_uuid"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "store_uuid")
+	}
+	protoReq.StoreUuid, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "store_uuid", err)
+	}
+	val, ok = pathParams["user_phone_no"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "user_phone_no")
+	}
+	protoReq.UserPhoneNo, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "user_phone_no", err)
+	}
+	if err := req.ParseForm(); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_CartService_DeleteCart_1); err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
 	msg, err := server.DeleteCart(ctx, &protoReq)
@@ -158,7 +506,23 @@ func request_CartService_AddCartItem_0(ctx context.Context, marshaler runtime.Ma
 	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && !errors.Is(err, io.EOF) {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
-	val, ok := pathParams["cart_uuid"]
+	val, ok := pathParams["store_uuid"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "store_uuid")
+	}
+	protoReq.StoreUuid, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "store_uuid", err)
+	}
+	val, ok = pathParams["user_phone_no"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "user_phone_no")
+	}
+	protoReq.UserPhoneNo, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "user_phone_no", err)
+	}
+	val, ok = pathParams["cart_uuid"]
 	if !ok {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "cart_uuid")
 	}
@@ -179,7 +543,23 @@ func local_request_CartService_AddCartItem_0(ctx context.Context, marshaler runt
 	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && !errors.Is(err, io.EOF) {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
-	val, ok := pathParams["cart_uuid"]
+	val, ok := pathParams["store_uuid"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "store_uuid")
+	}
+	protoReq.StoreUuid, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "store_uuid", err)
+	}
+	val, ok = pathParams["user_phone_no"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "user_phone_no")
+	}
+	protoReq.UserPhoneNo, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "user_phone_no", err)
+	}
+	val, ok = pathParams["cart_uuid"]
 	if !ok {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "cart_uuid")
 	}
@@ -191,6 +571,8 @@ func local_request_CartService_AddCartItem_0(ctx context.Context, marshaler runt
 	return msg, metadata, err
 }
 
+var filter_CartService_RemoveCartItem_0 = &utilities.DoubleArray{Encoding: map[string]int{"store_uuid": 0, "user_phone_no": 1, "cart_uuid": 2}, Base: []int{1, 1, 2, 3, 0, 0, 0}, Check: []int{0, 1, 1, 1, 2, 3, 4}}
+
 func request_CartService_RemoveCartItem_0(ctx context.Context, marshaler runtime.Marshaler, client CartServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var (
 		protoReq RemoveCartItemRequest
@@ -198,7 +580,23 @@ func request_CartService_RemoveCartItem_0(ctx context.Context, marshaler runtime
 		err      error
 	)
 	io.Copy(io.Discard, req.Body)
-	val, ok := pathParams["cart_uuid"]
+	val, ok := pathParams["store_uuid"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "store_uuid")
+	}
+	protoReq.StoreUuid, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "store_uuid", err)
+	}
+	val, ok = pathParams["user_phone_no"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "user_phone_no")
+	}
+	protoReq.UserPhoneNo, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "user_phone_no", err)
+	}
+	val, ok = pathParams["cart_uuid"]
 	if !ok {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "cart_uuid")
 	}
@@ -206,13 +604,11 @@ func request_CartService_RemoveCartItem_0(ctx context.Context, marshaler runtime
 	if err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "cart_uuid", err)
 	}
-	val, ok = pathParams["cart_item_uuid"]
-	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "cart_item_uuid")
+	if err := req.ParseForm(); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
-	protoReq.CartItemUuid, err = runtime.String(val)
-	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "cart_item_uuid", err)
+	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_CartService_RemoveCartItem_0); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
 	msg, err := client.RemoveCartItem(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
 	return msg, metadata, err
@@ -224,7 +620,23 @@ func local_request_CartService_RemoveCartItem_0(ctx context.Context, marshaler r
 		metadata runtime.ServerMetadata
 		err      error
 	)
-	val, ok := pathParams["cart_uuid"]
+	val, ok := pathParams["store_uuid"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "store_uuid")
+	}
+	protoReq.StoreUuid, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "store_uuid", err)
+	}
+	val, ok = pathParams["user_phone_no"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "user_phone_no")
+	}
+	protoReq.UserPhoneNo, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "user_phone_no", err)
+	}
+	val, ok = pathParams["cart_uuid"]
 	if !ok {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "cart_uuid")
 	}
@@ -232,13 +644,11 @@ func local_request_CartService_RemoveCartItem_0(ctx context.Context, marshaler r
 	if err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "cart_uuid", err)
 	}
-	val, ok = pathParams["cart_item_uuid"]
-	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "cart_item_uuid")
+	if err := req.ParseForm(); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
-	protoReq.CartItemUuid, err = runtime.String(val)
-	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "cart_item_uuid", err)
+	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_CartService_RemoveCartItem_0); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
 	msg, err := server.RemoveCartItem(ctx, &protoReq)
 	return msg, metadata, err
@@ -250,8 +660,26 @@ func request_CartService_AddQuantity_0(ctx context.Context, marshaler runtime.Ma
 		metadata runtime.ServerMetadata
 		err      error
 	)
-	io.Copy(io.Discard, req.Body)
-	val, ok := pathParams["cart_uuid"]
+	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && !errors.Is(err, io.EOF) {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	val, ok := pathParams["store_uuid"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "store_uuid")
+	}
+	protoReq.StoreUuid, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "store_uuid", err)
+	}
+	val, ok = pathParams["user_phone_no"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "user_phone_no")
+	}
+	protoReq.UserPhoneNo, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "user_phone_no", err)
+	}
+	val, ok = pathParams["cart_uuid"]
 	if !ok {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "cart_uuid")
 	}
@@ -277,7 +705,26 @@ func local_request_CartService_AddQuantity_0(ctx context.Context, marshaler runt
 		metadata runtime.ServerMetadata
 		err      error
 	)
-	val, ok := pathParams["cart_uuid"]
+	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && !errors.Is(err, io.EOF) {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	val, ok := pathParams["store_uuid"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "store_uuid")
+	}
+	protoReq.StoreUuid, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "store_uuid", err)
+	}
+	val, ok = pathParams["user_phone_no"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "user_phone_no")
+	}
+	protoReq.UserPhoneNo, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "user_phone_no", err)
+	}
+	val, ok = pathParams["cart_uuid"]
 	if !ok {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "cart_uuid")
 	}
@@ -297,6 +744,8 @@ func local_request_CartService_AddQuantity_0(ctx context.Context, marshaler runt
 	return msg, metadata, err
 }
 
+var filter_CartService_RemoveQuantity_0 = &utilities.DoubleArray{Encoding: map[string]int{"store_uuid": 0, "user_phone_no": 1, "cart_uuid": 2, "cart_item_uuid": 3}, Base: []int{1, 1, 2, 3, 4, 0, 0, 0, 0}, Check: []int{0, 1, 1, 1, 1, 2, 3, 4, 5}}
+
 func request_CartService_RemoveQuantity_0(ctx context.Context, marshaler runtime.Marshaler, client CartServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var (
 		protoReq RemoveQuantityRequest
@@ -304,7 +753,23 @@ func request_CartService_RemoveQuantity_0(ctx context.Context, marshaler runtime
 		err      error
 	)
 	io.Copy(io.Discard, req.Body)
-	val, ok := pathParams["cart_uuid"]
+	val, ok := pathParams["store_uuid"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "store_uuid")
+	}
+	protoReq.StoreUuid, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "store_uuid", err)
+	}
+	val, ok = pathParams["user_phone_no"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "user_phone_no")
+	}
+	protoReq.UserPhoneNo, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "user_phone_no", err)
+	}
+	val, ok = pathParams["cart_uuid"]
 	if !ok {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "cart_uuid")
 	}
@@ -319,6 +784,12 @@ func request_CartService_RemoveQuantity_0(ctx context.Context, marshaler runtime
 	protoReq.CartItemUuid, err = runtime.String(val)
 	if err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "cart_item_uuid", err)
+	}
+	if err := req.ParseForm(); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_CartService_RemoveQuantity_0); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
 	msg, err := client.RemoveQuantity(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
 	return msg, metadata, err
@@ -330,7 +801,23 @@ func local_request_CartService_RemoveQuantity_0(ctx context.Context, marshaler r
 		metadata runtime.ServerMetadata
 		err      error
 	)
-	val, ok := pathParams["cart_uuid"]
+	val, ok := pathParams["store_uuid"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "store_uuid")
+	}
+	protoReq.StoreUuid, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "store_uuid", err)
+	}
+	val, ok = pathParams["user_phone_no"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "user_phone_no")
+	}
+	protoReq.UserPhoneNo, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "user_phone_no", err)
+	}
+	val, ok = pathParams["cart_uuid"]
 	if !ok {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "cart_uuid")
 	}
@@ -345,6 +832,12 @@ func local_request_CartService_RemoveQuantity_0(ctx context.Context, marshaler r
 	protoReq.CartItemUuid, err = runtime.String(val)
 	if err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "cart_item_uuid", err)
+	}
+	if err := req.ParseForm(); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_CartService_RemoveQuantity_0); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
 	msg, err := server.RemoveQuantity(ctx, &protoReq)
 	return msg, metadata, err
@@ -359,7 +852,23 @@ func request_CartService_CreateAddOn_0(ctx context.Context, marshaler runtime.Ma
 	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && !errors.Is(err, io.EOF) {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
-	val, ok := pathParams["cart_uuid"]
+	val, ok := pathParams["store_uuid"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "store_uuid")
+	}
+	protoReq.StoreUuid, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "store_uuid", err)
+	}
+	val, ok = pathParams["user_phone_no"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "user_phone_no")
+	}
+	protoReq.UserPhoneNo, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "user_phone_no", err)
+	}
+	val, ok = pathParams["cart_uuid"]
 	if !ok {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "cart_uuid")
 	}
@@ -388,7 +897,23 @@ func local_request_CartService_CreateAddOn_0(ctx context.Context, marshaler runt
 	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && !errors.Is(err, io.EOF) {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
-	val, ok := pathParams["cart_uuid"]
+	val, ok := pathParams["store_uuid"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "store_uuid")
+	}
+	protoReq.StoreUuid, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "store_uuid", err)
+	}
+	val, ok = pathParams["user_phone_no"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "user_phone_no")
+	}
+	protoReq.UserPhoneNo, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "user_phone_no", err)
+	}
+	val, ok = pathParams["cart_uuid"]
 	if !ok {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "cart_uuid")
 	}
@@ -417,7 +942,23 @@ func request_CartService_UpdateAddOn_0(ctx context.Context, marshaler runtime.Ma
 	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && !errors.Is(err, io.EOF) {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
-	val, ok := pathParams["cart_uuid"]
+	val, ok := pathParams["store_uuid"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "store_uuid")
+	}
+	protoReq.StoreUuid, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "store_uuid", err)
+	}
+	val, ok = pathParams["user_phone_no"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "user_phone_no")
+	}
+	protoReq.UserPhoneNo, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "user_phone_no", err)
+	}
+	val, ok = pathParams["cart_uuid"]
 	if !ok {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "cart_uuid")
 	}
@@ -454,7 +995,23 @@ func local_request_CartService_UpdateAddOn_0(ctx context.Context, marshaler runt
 	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && !errors.Is(err, io.EOF) {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
-	val, ok := pathParams["cart_uuid"]
+	val, ok := pathParams["store_uuid"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "store_uuid")
+	}
+	protoReq.StoreUuid, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "store_uuid", err)
+	}
+	val, ok = pathParams["user_phone_no"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "user_phone_no")
+	}
+	protoReq.UserPhoneNo, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "user_phone_no", err)
+	}
+	val, ok = pathParams["cart_uuid"]
 	if !ok {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "cart_uuid")
 	}
@@ -489,7 +1046,23 @@ func request_CartService_RemoveAddOn_0(ctx context.Context, marshaler runtime.Ma
 		err      error
 	)
 	io.Copy(io.Discard, req.Body)
-	val, ok := pathParams["cart_uuid"]
+	val, ok := pathParams["store_uuid"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "store_uuid")
+	}
+	protoReq.StoreUuid, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "store_uuid", err)
+	}
+	val, ok = pathParams["user_phone_no"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "user_phone_no")
+	}
+	protoReq.UserPhoneNo, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "user_phone_no", err)
+	}
+	val, ok = pathParams["cart_uuid"]
 	if !ok {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "cart_uuid")
 	}
@@ -523,7 +1096,23 @@ func local_request_CartService_RemoveAddOn_0(ctx context.Context, marshaler runt
 		metadata runtime.ServerMetadata
 		err      error
 	)
-	val, ok := pathParams["cart_uuid"]
+	val, ok := pathParams["store_uuid"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "store_uuid")
+	}
+	protoReq.StoreUuid, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "store_uuid", err)
+	}
+	val, ok = pathParams["user_phone_no"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "user_phone_no")
+	}
+	protoReq.UserPhoneNo, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "user_phone_no", err)
+	}
+	val, ok = pathParams["cart_uuid"]
 	if !ok {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "cart_uuid")
 	}
@@ -558,7 +1147,23 @@ func request_CartService_IncreaseAddOnQuantity_0(ctx context.Context, marshaler 
 		err      error
 	)
 	io.Copy(io.Discard, req.Body)
-	val, ok := pathParams["cart_uuid"]
+	val, ok := pathParams["store_uuid"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "store_uuid")
+	}
+	protoReq.StoreUuid, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "store_uuid", err)
+	}
+	val, ok = pathParams["user_phone_no"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "user_phone_no")
+	}
+	protoReq.UserPhoneNo, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "user_phone_no", err)
+	}
+	val, ok = pathParams["cart_uuid"]
 	if !ok {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "cart_uuid")
 	}
@@ -592,7 +1197,23 @@ func local_request_CartService_IncreaseAddOnQuantity_0(ctx context.Context, mars
 		metadata runtime.ServerMetadata
 		err      error
 	)
-	val, ok := pathParams["cart_uuid"]
+	val, ok := pathParams["store_uuid"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "store_uuid")
+	}
+	protoReq.StoreUuid, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "store_uuid", err)
+	}
+	val, ok = pathParams["user_phone_no"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "user_phone_no")
+	}
+	protoReq.UserPhoneNo, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "user_phone_no", err)
+	}
+	val, ok = pathParams["cart_uuid"]
 	if !ok {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "cart_uuid")
 	}
@@ -627,7 +1248,23 @@ func request_CartService_RemoveAddOnQuantity_0(ctx context.Context, marshaler ru
 		err      error
 	)
 	io.Copy(io.Discard, req.Body)
-	val, ok := pathParams["cart_uuid"]
+	val, ok := pathParams["store_uuid"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "store_uuid")
+	}
+	protoReq.StoreUuid, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "store_uuid", err)
+	}
+	val, ok = pathParams["user_phone_no"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "user_phone_no")
+	}
+	protoReq.UserPhoneNo, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "user_phone_no", err)
+	}
+	val, ok = pathParams["cart_uuid"]
 	if !ok {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "cart_uuid")
 	}
@@ -661,7 +1298,23 @@ func local_request_CartService_RemoveAddOnQuantity_0(ctx context.Context, marsha
 		metadata runtime.ServerMetadata
 		err      error
 	)
-	val, ok := pathParams["cart_uuid"]
+	val, ok := pathParams["store_uuid"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "store_uuid")
+	}
+	protoReq.StoreUuid, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "store_uuid", err)
+	}
+	val, ok = pathParams["user_phone_no"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "user_phone_no")
+	}
+	protoReq.UserPhoneNo, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "user_phone_no", err)
+	}
+	val, ok = pathParams["cart_uuid"]
 	if !ok {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "cart_uuid")
 	}
@@ -696,7 +1349,23 @@ func request_CartService_ValidateCoupon_0(ctx context.Context, marshaler runtime
 		err      error
 	)
 	io.Copy(io.Discard, req.Body)
-	val, ok := pathParams["cart_uuid"]
+	val, ok := pathParams["store_uuid"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "store_uuid")
+	}
+	protoReq.StoreUuid, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "store_uuid", err)
+	}
+	val, ok = pathParams["user_phone_no"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "user_phone_no")
+	}
+	protoReq.UserPhoneNo, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "user_phone_no", err)
+	}
+	val, ok = pathParams["cart_uuid"]
 	if !ok {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "cart_uuid")
 	}
@@ -722,7 +1391,23 @@ func local_request_CartService_ValidateCoupon_0(ctx context.Context, marshaler r
 		metadata runtime.ServerMetadata
 		err      error
 	)
-	val, ok := pathParams["cart_uuid"]
+	val, ok := pathParams["store_uuid"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "store_uuid")
+	}
+	protoReq.StoreUuid, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "store_uuid", err)
+	}
+	val, ok = pathParams["user_phone_no"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "user_phone_no")
+	}
+	protoReq.UserPhoneNo, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "user_phone_no", err)
+	}
+	val, ok = pathParams["cart_uuid"]
 	if !ok {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "cart_uuid")
 	}
@@ -749,7 +1434,23 @@ func request_CartService_AddCoupon_0(ctx context.Context, marshaler runtime.Mars
 		err      error
 	)
 	io.Copy(io.Discard, req.Body)
-	val, ok := pathParams["cart_uuid"]
+	val, ok := pathParams["store_uuid"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "store_uuid")
+	}
+	protoReq.StoreUuid, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "store_uuid", err)
+	}
+	val, ok = pathParams["user_phone_no"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "user_phone_no")
+	}
+	protoReq.UserPhoneNo, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "user_phone_no", err)
+	}
+	val, ok = pathParams["cart_uuid"]
 	if !ok {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "cart_uuid")
 	}
@@ -757,13 +1458,13 @@ func request_CartService_AddCoupon_0(ctx context.Context, marshaler runtime.Mars
 	if err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "cart_uuid", err)
 	}
-	val, ok = pathParams["Coupon_code"]
+	val, ok = pathParams["coupon_code"]
 	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "Coupon_code")
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "coupon_code")
 	}
 	protoReq.CouponCode, err = runtime.String(val)
 	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "Coupon_code", err)
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "coupon_code", err)
 	}
 	msg, err := client.AddCoupon(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
 	return msg, metadata, err
@@ -775,7 +1476,23 @@ func local_request_CartService_AddCoupon_0(ctx context.Context, marshaler runtim
 		metadata runtime.ServerMetadata
 		err      error
 	)
-	val, ok := pathParams["cart_uuid"]
+	val, ok := pathParams["store_uuid"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "store_uuid")
+	}
+	protoReq.StoreUuid, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "store_uuid", err)
+	}
+	val, ok = pathParams["user_phone_no"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "user_phone_no")
+	}
+	protoReq.UserPhoneNo, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "user_phone_no", err)
+	}
+	val, ok = pathParams["cart_uuid"]
 	if !ok {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "cart_uuid")
 	}
@@ -783,13 +1500,13 @@ func local_request_CartService_AddCoupon_0(ctx context.Context, marshaler runtim
 	if err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "cart_uuid", err)
 	}
-	val, ok = pathParams["Coupon_code"]
+	val, ok = pathParams["coupon_code"]
 	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "Coupon_code")
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "coupon_code")
 	}
 	protoReq.CouponCode, err = runtime.String(val)
 	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "Coupon_code", err)
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "coupon_code", err)
 	}
 	msg, err := server.AddCoupon(ctx, &protoReq)
 	return msg, metadata, err
@@ -802,7 +1519,23 @@ func request_CartService_RemoveCoupon_0(ctx context.Context, marshaler runtime.M
 		err      error
 	)
 	io.Copy(io.Discard, req.Body)
-	val, ok := pathParams["cart_uuid"]
+	val, ok := pathParams["store_uuid"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "store_uuid")
+	}
+	protoReq.StoreUuid, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "store_uuid", err)
+	}
+	val, ok = pathParams["user_phone_no"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "user_phone_no")
+	}
+	protoReq.UserPhoneNo, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "user_phone_no", err)
+	}
+	val, ok = pathParams["cart_uuid"]
 	if !ok {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "cart_uuid")
 	}
@@ -820,7 +1553,23 @@ func local_request_CartService_RemoveCoupon_0(ctx context.Context, marshaler run
 		metadata runtime.ServerMetadata
 		err      error
 	)
-	val, ok := pathParams["cart_uuid"]
+	val, ok := pathParams["store_uuid"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "store_uuid")
+	}
+	protoReq.StoreUuid, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "store_uuid", err)
+	}
+	val, ok = pathParams["user_phone_no"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "user_phone_no")
+	}
+	protoReq.UserPhoneNo, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "user_phone_no", err)
+	}
+	val, ok = pathParams["cart_uuid"]
 	if !ok {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "cart_uuid")
 	}
@@ -839,7 +1588,23 @@ func request_CartService_ValidateCart_0(ctx context.Context, marshaler runtime.M
 		err      error
 	)
 	io.Copy(io.Discard, req.Body)
-	val, ok := pathParams["cart_uuid"]
+	val, ok := pathParams["store_uuid"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "store_uuid")
+	}
+	protoReq.StoreUuid, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "store_uuid", err)
+	}
+	val, ok = pathParams["user_phone_no"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "user_phone_no")
+	}
+	protoReq.UserPhoneNo, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "user_phone_no", err)
+	}
+	val, ok = pathParams["cart_uuid"]
 	if !ok {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "cart_uuid")
 	}
@@ -857,7 +1622,23 @@ func local_request_CartService_ValidateCart_0(ctx context.Context, marshaler run
 		metadata runtime.ServerMetadata
 		err      error
 	)
-	val, ok := pathParams["cart_uuid"]
+	val, ok := pathParams["store_uuid"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "store_uuid")
+	}
+	protoReq.StoreUuid, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "store_uuid", err)
+	}
+	val, ok = pathParams["user_phone_no"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "user_phone_no")
+	}
+	protoReq.UserPhoneNo, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "user_phone_no", err)
+	}
+	val, ok = pathParams["cart_uuid"]
 	if !ok {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "cart_uuid")
 	}
@@ -873,9 +1654,18 @@ func request_CouponService_CreateCoupon_0(ctx context.Context, marshaler runtime
 	var (
 		protoReq CreateCouponRequest
 		metadata runtime.ServerMetadata
+		err      error
 	)
 	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && !errors.Is(err, io.EOF) {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	val, ok := pathParams["store_uuid"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "store_uuid")
+	}
+	protoReq.StoreUuid, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "store_uuid", err)
 	}
 	msg, err := client.CreateCoupon(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
 	return msg, metadata, err
@@ -885,27 +1675,45 @@ func local_request_CouponService_CreateCoupon_0(ctx context.Context, marshaler r
 	var (
 		protoReq CreateCouponRequest
 		metadata runtime.ServerMetadata
+		err      error
 	)
 	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && !errors.Is(err, io.EOF) {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	val, ok := pathParams["store_uuid"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "store_uuid")
+	}
+	protoReq.StoreUuid, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "store_uuid", err)
 	}
 	msg, err := server.CreateCoupon(ctx, &protoReq)
 	return msg, metadata, err
 }
 
-var filter_CouponService_GetCoupon_0 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
-
 func request_CouponService_GetCoupon_0(ctx context.Context, marshaler runtime.Marshaler, client CouponServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var (
 		protoReq GetCouponRequest
 		metadata runtime.ServerMetadata
+		err      error
 	)
 	io.Copy(io.Discard, req.Body)
-	if err := req.ParseForm(); err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	val, ok := pathParams["store_uuid"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "store_uuid")
 	}
-	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_CouponService_GetCoupon_0); err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	protoReq.StoreUuid, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "store_uuid", err)
+	}
+	val, ok = pathParams["coupon_uuid"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "coupon_uuid")
+	}
+	protoReq.CouponUuid, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "coupon_uuid", err)
 	}
 	msg, err := client.GetCoupon(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
 	return msg, metadata, err
@@ -915,12 +1723,23 @@ func local_request_CouponService_GetCoupon_0(ctx context.Context, marshaler runt
 	var (
 		protoReq GetCouponRequest
 		metadata runtime.ServerMetadata
+		err      error
 	)
-	if err := req.ParseForm(); err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	val, ok := pathParams["store_uuid"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "store_uuid")
 	}
-	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_CouponService_GetCoupon_0); err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	protoReq.StoreUuid, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "store_uuid", err)
+	}
+	val, ok = pathParams["coupon_uuid"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "coupon_uuid")
+	}
+	protoReq.CouponUuid, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "coupon_uuid", err)
 	}
 	msg, err := server.GetCoupon(ctx, &protoReq)
 	return msg, metadata, err
@@ -930,9 +1749,26 @@ func request_CouponService_UpdateCoupon_0(ctx context.Context, marshaler runtime
 	var (
 		protoReq UpdateCouponRequest
 		metadata runtime.ServerMetadata
+		err      error
 	)
 	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && !errors.Is(err, io.EOF) {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	val, ok := pathParams["store_uuid"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "store_uuid")
+	}
+	protoReq.StoreUuid, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "store_uuid", err)
+	}
+	val, ok = pathParams["coupon_uuid"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "coupon_uuid")
+	}
+	protoReq.CouponUuid, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "coupon_uuid", err)
 	}
 	msg, err := client.UpdateCoupon(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
 	return msg, metadata, err
@@ -942,27 +1778,53 @@ func local_request_CouponService_UpdateCoupon_0(ctx context.Context, marshaler r
 	var (
 		protoReq UpdateCouponRequest
 		metadata runtime.ServerMetadata
+		err      error
 	)
 	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && !errors.Is(err, io.EOF) {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	val, ok := pathParams["store_uuid"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "store_uuid")
+	}
+	protoReq.StoreUuid, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "store_uuid", err)
+	}
+	val, ok = pathParams["coupon_uuid"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "coupon_uuid")
+	}
+	protoReq.CouponUuid, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "coupon_uuid", err)
 	}
 	msg, err := server.UpdateCoupon(ctx, &protoReq)
 	return msg, metadata, err
 }
 
-var filter_CouponService_DeleteCoupon_0 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
-
 func request_CouponService_DeleteCoupon_0(ctx context.Context, marshaler runtime.Marshaler, client CouponServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var (
 		protoReq DeleteCouponRequest
 		metadata runtime.ServerMetadata
+		err      error
 	)
 	io.Copy(io.Discard, req.Body)
-	if err := req.ParseForm(); err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	val, ok := pathParams["store_uuid"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "store_uuid")
 	}
-	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_CouponService_DeleteCoupon_0); err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	protoReq.StoreUuid, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "store_uuid", err)
+	}
+	val, ok = pathParams["coupon_uuid"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "coupon_uuid")
+	}
+	protoReq.CouponUuid, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "coupon_uuid", err)
 	}
 	msg, err := client.DeleteCoupon(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
 	return msg, metadata, err
@@ -972,25 +1834,45 @@ func local_request_CouponService_DeleteCoupon_0(ctx context.Context, marshaler r
 	var (
 		protoReq DeleteCouponRequest
 		metadata runtime.ServerMetadata
+		err      error
 	)
-	if err := req.ParseForm(); err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	val, ok := pathParams["store_uuid"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "store_uuid")
 	}
-	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_CouponService_DeleteCoupon_0); err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	protoReq.StoreUuid, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "store_uuid", err)
+	}
+	val, ok = pathParams["coupon_uuid"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "coupon_uuid")
+	}
+	protoReq.CouponUuid, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "coupon_uuid", err)
 	}
 	msg, err := server.DeleteCoupon(ctx, &protoReq)
 	return msg, metadata, err
 }
 
-var filter_CouponService_ListCoupon_0 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
+var filter_CouponService_ListCoupon_0 = &utilities.DoubleArray{Encoding: map[string]int{"store_uuid": 0}, Base: []int{1, 1, 0}, Check: []int{0, 1, 2}}
 
 func request_CouponService_ListCoupon_0(ctx context.Context, marshaler runtime.Marshaler, client CouponServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var (
 		protoReq ListCouponRequest
 		metadata runtime.ServerMetadata
+		err      error
 	)
 	io.Copy(io.Discard, req.Body)
+	val, ok := pathParams["store_uuid"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "store_uuid")
+	}
+	protoReq.StoreUuid, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "store_uuid", err)
+	}
 	if err := req.ParseForm(); err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
@@ -1005,7 +1887,16 @@ func local_request_CouponService_ListCoupon_0(ctx context.Context, marshaler run
 	var (
 		protoReq ListCouponRequest
 		metadata runtime.ServerMetadata
+		err      error
 	)
+	val, ok := pathParams["store_uuid"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "store_uuid")
+	}
+	protoReq.StoreUuid, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "store_uuid", err)
+	}
 	if err := req.ParseForm(); err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
@@ -1016,14 +1907,31 @@ func local_request_CouponService_ListCoupon_0(ctx context.Context, marshaler run
 	return msg, metadata, err
 }
 
-var filter_CouponService_GetCouponUsage_0 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
+var filter_CouponService_GetCouponUsage_0 = &utilities.DoubleArray{Encoding: map[string]int{"store_uuid": 0, "coupon_uuid": 1}, Base: []int{1, 1, 2, 0, 0}, Check: []int{0, 1, 1, 2, 3}}
 
 func request_CouponService_GetCouponUsage_0(ctx context.Context, marshaler runtime.Marshaler, client CouponServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var (
 		protoReq GetCouponUsageRequest
 		metadata runtime.ServerMetadata
+		err      error
 	)
 	io.Copy(io.Discard, req.Body)
+	val, ok := pathParams["store_uuid"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "store_uuid")
+	}
+	protoReq.StoreUuid, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "store_uuid", err)
+	}
+	val, ok = pathParams["coupon_uuid"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "coupon_uuid")
+	}
+	protoReq.CouponUuid, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "coupon_uuid", err)
+	}
 	if err := req.ParseForm(); err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
@@ -1038,7 +1946,24 @@ func local_request_CouponService_GetCouponUsage_0(ctx context.Context, marshaler
 	var (
 		protoReq GetCouponUsageRequest
 		metadata runtime.ServerMetadata
+		err      error
 	)
+	val, ok := pathParams["store_uuid"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "store_uuid")
+	}
+	protoReq.StoreUuid, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "store_uuid", err)
+	}
+	val, ok = pathParams["coupon_uuid"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "coupon_uuid")
+	}
+	protoReq.CouponUuid, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "coupon_uuid", err)
+	}
 	if err := req.ParseForm(); err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
@@ -1061,7 +1986,7 @@ func RegisterCartServiceHandlerServer(ctx context.Context, mux *runtime.ServeMux
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/Cart_v1.CartService/CreateCart", runtime.WithHTTPPathPattern("/v1/cart"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/Cart_v1.CartService/CreateCart", runtime.WithHTTPPathPattern("/v1/store/{store_uuid}/user/{user_phone_no}/cart"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1081,7 +2006,7 @@ func RegisterCartServiceHandlerServer(ctx context.Context, mux *runtime.ServeMux
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/Cart_v1.CartService/GetCart", runtime.WithHTTPPathPattern("/v1/cart"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/Cart_v1.CartService/GetCart", runtime.WithHTTPPathPattern("/v1/store/{store_uuid}/user/{user_phone_no}/cart/{cart_uuid}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1095,13 +2020,33 @@ func RegisterCartServiceHandlerServer(ctx context.Context, mux *runtime.ServeMux
 		}
 		forward_CartService_GetCart_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
+	mux.Handle(http.MethodGet, pattern_CartService_GetCart_1, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		var stream runtime.ServerTransportStream
+		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/Cart_v1.CartService/GetCart", runtime.WithHTTPPathPattern("/v1/store/{store_uuid}/user/{user_phone_no}/cart"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := local_request_CartService_GetCart_1(annotatedContext, inboundMarshaler, server, req, pathParams)
+		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_CartService_GetCart_1(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
 	mux.Handle(http.MethodPut, pattern_CartService_UpdateCart_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/Cart_v1.CartService/UpdateCart", runtime.WithHTTPPathPattern("/v1/cart"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/Cart_v1.CartService/UpdateCart", runtime.WithHTTPPathPattern("/v1/store/{store_uuid}/user/{user_phone_no}/cart/{cart_uuid}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1115,13 +2060,33 @@ func RegisterCartServiceHandlerServer(ctx context.Context, mux *runtime.ServeMux
 		}
 		forward_CartService_UpdateCart_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
+	mux.Handle(http.MethodPut, pattern_CartService_UpdateCart_1, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		var stream runtime.ServerTransportStream
+		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/Cart_v1.CartService/UpdateCart", runtime.WithHTTPPathPattern("/v1/store/{store_uuid}/user/{user_phone_no}/cart"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := local_request_CartService_UpdateCart_1(annotatedContext, inboundMarshaler, server, req, pathParams)
+		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_CartService_UpdateCart_1(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
 	mux.Handle(http.MethodDelete, pattern_CartService_DeleteCart_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/Cart_v1.CartService/DeleteCart", runtime.WithHTTPPathPattern("/v1/cart"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/Cart_v1.CartService/DeleteCart", runtime.WithHTTPPathPattern("/v1/store/{store_uuid}/user/{user_phone_no}/cart/{cart_uuid}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1135,13 +2100,33 @@ func RegisterCartServiceHandlerServer(ctx context.Context, mux *runtime.ServeMux
 		}
 		forward_CartService_DeleteCart_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
+	mux.Handle(http.MethodDelete, pattern_CartService_DeleteCart_1, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		var stream runtime.ServerTransportStream
+		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/Cart_v1.CartService/DeleteCart", runtime.WithHTTPPathPattern("/v1/store/{store_uuid}/user/{user_phone_no}/cart"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := local_request_CartService_DeleteCart_1(annotatedContext, inboundMarshaler, server, req, pathParams)
+		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_CartService_DeleteCart_1(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
 	mux.Handle(http.MethodPost, pattern_CartService_AddCartItem_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/Cart_v1.CartService/AddCartItem", runtime.WithHTTPPathPattern("/v1/cart/{cart_uuid}/cartitem"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/Cart_v1.CartService/AddCartItem", runtime.WithHTTPPathPattern("/v1/store/{store_uuid}/user/{user_phone_no}/cart/{cart_uuid}/cartitem"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1161,7 +2146,7 @@ func RegisterCartServiceHandlerServer(ctx context.Context, mux *runtime.ServeMux
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/Cart_v1.CartService/RemoveCartItem", runtime.WithHTTPPathPattern("/v1/cart/{cart_uuid}/cartitem/{cart_item_uuid}"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/Cart_v1.CartService/RemoveCartItem", runtime.WithHTTPPathPattern("/v1/store/{store_uuid}/user/{user_phone_no}/cart/{cart_uuid}/cartitem"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1175,13 +2160,13 @@ func RegisterCartServiceHandlerServer(ctx context.Context, mux *runtime.ServeMux
 		}
 		forward_CartService_RemoveCartItem_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
-	mux.Handle(http.MethodPut, pattern_CartService_AddQuantity_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle(http.MethodPatch, pattern_CartService_AddQuantity_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/Cart_v1.CartService/AddQuantity", runtime.WithHTTPPathPattern("/v1/cart/{cart_uuid}/cartitem/{cart_item_uuid}/add_quantity"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/Cart_v1.CartService/AddQuantity", runtime.WithHTTPPathPattern("/v1/store/{store_uuid}/user/{user_phone_no}/cart/{cart_uuid}/cartitem/{cart_item_uuid}/Add"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1195,13 +2180,13 @@ func RegisterCartServiceHandlerServer(ctx context.Context, mux *runtime.ServeMux
 		}
 		forward_CartService_AddQuantity_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
-	mux.Handle(http.MethodPut, pattern_CartService_RemoveQuantity_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle(http.MethodPatch, pattern_CartService_RemoveQuantity_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/Cart_v1.CartService/RemoveQuantity", runtime.WithHTTPPathPattern("/v1/cart/{cart_uuid}/cartitem/{cart_item_uuid}/remove_quantity"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/Cart_v1.CartService/RemoveQuantity", runtime.WithHTTPPathPattern("/v1/store/{store_uuid}/user/{user_phone_no}/cart/{cart_uuid}/cartitem/{cart_item_uuid}/Remove"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1221,7 +2206,7 @@ func RegisterCartServiceHandlerServer(ctx context.Context, mux *runtime.ServeMux
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/Cart_v1.CartService/CreateAddOn", runtime.WithHTTPPathPattern("/v1/cart/{cart_uuid}/cartitem/{cart_item_uuid}/addon"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/Cart_v1.CartService/CreateAddOn", runtime.WithHTTPPathPattern("/v1/store/{store_uuid}/user/{user_phone_no}/cart/{cart_uuid}/cartitem/{cart_item_uuid}/addon"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1235,13 +2220,13 @@ func RegisterCartServiceHandlerServer(ctx context.Context, mux *runtime.ServeMux
 		}
 		forward_CartService_CreateAddOn_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
-	mux.Handle(http.MethodPost, pattern_CartService_UpdateAddOn_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle(http.MethodPatch, pattern_CartService_UpdateAddOn_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/Cart_v1.CartService/UpdateAddOn", runtime.WithHTTPPathPattern("/v1/cart/{cart_uuid}/cartitem/{cart_item_uuid}/addon/{add_on_uuid}"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/Cart_v1.CartService/UpdateAddOn", runtime.WithHTTPPathPattern("/v1/store/{store_uuid}/user/{user_phone_no}/cart/{cart_uuid}/cartitem/{cart_item_uuid}/addon/{add_on_uuid}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1261,7 +2246,7 @@ func RegisterCartServiceHandlerServer(ctx context.Context, mux *runtime.ServeMux
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/Cart_v1.CartService/RemoveAddOn", runtime.WithHTTPPathPattern("/v1/cart/{cart_uuid}/cartitem/{cart_item_uuid}/addon/{add_on_uuid}"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/Cart_v1.CartService/RemoveAddOn", runtime.WithHTTPPathPattern("/v1/store/{store_uuid}/user/{user_phone_no}/cart/{cart_uuid}/cartitem/{cart_item_uuid}/addon/{add_on_uuid}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1275,13 +2260,13 @@ func RegisterCartServiceHandlerServer(ctx context.Context, mux *runtime.ServeMux
 		}
 		forward_CartService_RemoveAddOn_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
-	mux.Handle(http.MethodPut, pattern_CartService_IncreaseAddOnQuantity_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle(http.MethodPatch, pattern_CartService_IncreaseAddOnQuantity_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/Cart_v1.CartService/IncreaseAddOnQuantity", runtime.WithHTTPPathPattern("/v1/cart/{cart_uuid}/cartitem/{cart_item_uuid}/addon/{add_on_uuid}/add_quantity"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/Cart_v1.CartService/IncreaseAddOnQuantity", runtime.WithHTTPPathPattern("/v1/store/{store_uuid}/user/{user_phone_no}/cart/{cart_uuid}/cartitem/{cart_item_uuid}/addon/{add_on_uuid}/add_quantity"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1295,13 +2280,13 @@ func RegisterCartServiceHandlerServer(ctx context.Context, mux *runtime.ServeMux
 		}
 		forward_CartService_IncreaseAddOnQuantity_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
-	mux.Handle(http.MethodPut, pattern_CartService_RemoveAddOnQuantity_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle(http.MethodPatch, pattern_CartService_RemoveAddOnQuantity_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/Cart_v1.CartService/RemoveAddOnQuantity", runtime.WithHTTPPathPattern("/v1/cart/{cart_uuid}/cartitem/{cart_item_uuid}/addon/{add_on_uuid}/remove_quantity"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/Cart_v1.CartService/RemoveAddOnQuantity", runtime.WithHTTPPathPattern("/v1/store/{store_uuid}/user/{user_phone_no}/cart/{cart_uuid}/cartitem/{cart_item_uuid}/addon/{add_on_uuid}/remove_quantity"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1321,7 +2306,7 @@ func RegisterCartServiceHandlerServer(ctx context.Context, mux *runtime.ServeMux
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/Cart_v1.CartService/ValidateCoupon", runtime.WithHTTPPathPattern("/v1/cart/{cart_uuid}/validate_coupon/{coupon_code}"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/Cart_v1.CartService/ValidateCoupon", runtime.WithHTTPPathPattern("/v1/store/{store_uuid}/user/{user_phone_no}/cart/{cart_uuid}/validate_coupon/{coupon_code}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1341,7 +2326,7 @@ func RegisterCartServiceHandlerServer(ctx context.Context, mux *runtime.ServeMux
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/Cart_v1.CartService/AddCoupon", runtime.WithHTTPPathPattern("/v1/cart/{cart_uuid}/coupon/{Coupon_code}"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/Cart_v1.CartService/AddCoupon", runtime.WithHTTPPathPattern("/v1/store/{store_uuid}/user/{user_phone_no}/cart/{cart_uuid}/coupon/{coupon_code}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1361,7 +2346,7 @@ func RegisterCartServiceHandlerServer(ctx context.Context, mux *runtime.ServeMux
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/Cart_v1.CartService/RemoveCoupon", runtime.WithHTTPPathPattern("/v1/cart/{cart_uuid}/removecoupon"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/Cart_v1.CartService/RemoveCoupon", runtime.WithHTTPPathPattern("/v1/store/{store_uuid}/user/{user_phone_no}/cart/{cart_uuid}/removecoupon"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1381,7 +2366,7 @@ func RegisterCartServiceHandlerServer(ctx context.Context, mux *runtime.ServeMux
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/Cart_v1.CartService/ValidateCart", runtime.WithHTTPPathPattern("/v1/cart/{cart_uuid}/validate"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/Cart_v1.CartService/ValidateCart", runtime.WithHTTPPathPattern("/v1/store/{store_uuid}/user/{user_phone_no}/cart/{cart_uuid}/validate"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1411,7 +2396,7 @@ func RegisterCouponServiceHandlerServer(ctx context.Context, mux *runtime.ServeM
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/Cart_v1.CouponService/CreateCoupon", runtime.WithHTTPPathPattern("/v1/coupon"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/Cart_v1.CouponService/CreateCoupon", runtime.WithHTTPPathPattern("/v1/store/{store_uuid}/coupon"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1431,7 +2416,7 @@ func RegisterCouponServiceHandlerServer(ctx context.Context, mux *runtime.ServeM
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/Cart_v1.CouponService/GetCoupon", runtime.WithHTTPPathPattern("/v1/coupon"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/Cart_v1.CouponService/GetCoupon", runtime.WithHTTPPathPattern("/v1/store/{store_uuid}/coupon/{coupon_uuid}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1445,13 +2430,13 @@ func RegisterCouponServiceHandlerServer(ctx context.Context, mux *runtime.ServeM
 		}
 		forward_CouponService_GetCoupon_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
-	mux.Handle(http.MethodPut, pattern_CouponService_UpdateCoupon_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle(http.MethodPatch, pattern_CouponService_UpdateCoupon_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/Cart_v1.CouponService/UpdateCoupon", runtime.WithHTTPPathPattern("/v1/coupon"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/Cart_v1.CouponService/UpdateCoupon", runtime.WithHTTPPathPattern("/v1/store/{store_uuid}/coupon/{coupon_uuid}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1471,7 +2456,7 @@ func RegisterCouponServiceHandlerServer(ctx context.Context, mux *runtime.ServeM
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/Cart_v1.CouponService/DeleteCoupon", runtime.WithHTTPPathPattern("/v1/coupon"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/Cart_v1.CouponService/DeleteCoupon", runtime.WithHTTPPathPattern("/v1/store/{store_uuid}/coupon/{coupon_uuid}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1491,7 +2476,7 @@ func RegisterCouponServiceHandlerServer(ctx context.Context, mux *runtime.ServeM
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/Cart_v1.CouponService/ListCoupon", runtime.WithHTTPPathPattern("/v1/coupon/list"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/Cart_v1.CouponService/ListCoupon", runtime.WithHTTPPathPattern("/v1/store/{store_uuid}/coupon/list"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1511,7 +2496,7 @@ func RegisterCouponServiceHandlerServer(ctx context.Context, mux *runtime.ServeM
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/Cart_v1.CouponService/GetCouponUsage", runtime.WithHTTPPathPattern("/v1/couponusage"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/Cart_v1.CouponService/GetCouponUsage", runtime.WithHTTPPathPattern("/v1/store/{store_uuid}/coupon/{coupon_uuid}/couponusage"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1569,7 +2554,7 @@ func RegisterCartServiceHandlerClient(ctx context.Context, mux *runtime.ServeMux
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/Cart_v1.CartService/CreateCart", runtime.WithHTTPPathPattern("/v1/cart"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/Cart_v1.CartService/CreateCart", runtime.WithHTTPPathPattern("/v1/store/{store_uuid}/user/{user_phone_no}/cart"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1586,7 +2571,7 @@ func RegisterCartServiceHandlerClient(ctx context.Context, mux *runtime.ServeMux
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/Cart_v1.CartService/GetCart", runtime.WithHTTPPathPattern("/v1/cart"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/Cart_v1.CartService/GetCart", runtime.WithHTTPPathPattern("/v1/store/{store_uuid}/user/{user_phone_no}/cart/{cart_uuid}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1599,11 +2584,28 @@ func RegisterCartServiceHandlerClient(ctx context.Context, mux *runtime.ServeMux
 		}
 		forward_CartService_GetCart_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
+	mux.Handle(http.MethodGet, pattern_CartService_GetCart_1, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/Cart_v1.CartService/GetCart", runtime.WithHTTPPathPattern("/v1/store/{store_uuid}/user/{user_phone_no}/cart"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := request_CartService_GetCart_1(annotatedContext, inboundMarshaler, client, req, pathParams)
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_CartService_GetCart_1(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
 	mux.Handle(http.MethodPut, pattern_CartService_UpdateCart_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/Cart_v1.CartService/UpdateCart", runtime.WithHTTPPathPattern("/v1/cart"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/Cart_v1.CartService/UpdateCart", runtime.WithHTTPPathPattern("/v1/store/{store_uuid}/user/{user_phone_no}/cart/{cart_uuid}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1616,11 +2618,28 @@ func RegisterCartServiceHandlerClient(ctx context.Context, mux *runtime.ServeMux
 		}
 		forward_CartService_UpdateCart_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
+	mux.Handle(http.MethodPut, pattern_CartService_UpdateCart_1, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/Cart_v1.CartService/UpdateCart", runtime.WithHTTPPathPattern("/v1/store/{store_uuid}/user/{user_phone_no}/cart"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := request_CartService_UpdateCart_1(annotatedContext, inboundMarshaler, client, req, pathParams)
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_CartService_UpdateCart_1(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
 	mux.Handle(http.MethodDelete, pattern_CartService_DeleteCart_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/Cart_v1.CartService/DeleteCart", runtime.WithHTTPPathPattern("/v1/cart"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/Cart_v1.CartService/DeleteCart", runtime.WithHTTPPathPattern("/v1/store/{store_uuid}/user/{user_phone_no}/cart/{cart_uuid}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1633,11 +2652,28 @@ func RegisterCartServiceHandlerClient(ctx context.Context, mux *runtime.ServeMux
 		}
 		forward_CartService_DeleteCart_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
+	mux.Handle(http.MethodDelete, pattern_CartService_DeleteCart_1, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/Cart_v1.CartService/DeleteCart", runtime.WithHTTPPathPattern("/v1/store/{store_uuid}/user/{user_phone_no}/cart"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := request_CartService_DeleteCart_1(annotatedContext, inboundMarshaler, client, req, pathParams)
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_CartService_DeleteCart_1(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
 	mux.Handle(http.MethodPost, pattern_CartService_AddCartItem_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/Cart_v1.CartService/AddCartItem", runtime.WithHTTPPathPattern("/v1/cart/{cart_uuid}/cartitem"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/Cart_v1.CartService/AddCartItem", runtime.WithHTTPPathPattern("/v1/store/{store_uuid}/user/{user_phone_no}/cart/{cart_uuid}/cartitem"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1654,7 +2690,7 @@ func RegisterCartServiceHandlerClient(ctx context.Context, mux *runtime.ServeMux
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/Cart_v1.CartService/RemoveCartItem", runtime.WithHTTPPathPattern("/v1/cart/{cart_uuid}/cartitem/{cart_item_uuid}"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/Cart_v1.CartService/RemoveCartItem", runtime.WithHTTPPathPattern("/v1/store/{store_uuid}/user/{user_phone_no}/cart/{cart_uuid}/cartitem"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1667,11 +2703,11 @@ func RegisterCartServiceHandlerClient(ctx context.Context, mux *runtime.ServeMux
 		}
 		forward_CartService_RemoveCartItem_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
-	mux.Handle(http.MethodPut, pattern_CartService_AddQuantity_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle(http.MethodPatch, pattern_CartService_AddQuantity_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/Cart_v1.CartService/AddQuantity", runtime.WithHTTPPathPattern("/v1/cart/{cart_uuid}/cartitem/{cart_item_uuid}/add_quantity"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/Cart_v1.CartService/AddQuantity", runtime.WithHTTPPathPattern("/v1/store/{store_uuid}/user/{user_phone_no}/cart/{cart_uuid}/cartitem/{cart_item_uuid}/Add"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1684,11 +2720,11 @@ func RegisterCartServiceHandlerClient(ctx context.Context, mux *runtime.ServeMux
 		}
 		forward_CartService_AddQuantity_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
-	mux.Handle(http.MethodPut, pattern_CartService_RemoveQuantity_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle(http.MethodPatch, pattern_CartService_RemoveQuantity_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/Cart_v1.CartService/RemoveQuantity", runtime.WithHTTPPathPattern("/v1/cart/{cart_uuid}/cartitem/{cart_item_uuid}/remove_quantity"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/Cart_v1.CartService/RemoveQuantity", runtime.WithHTTPPathPattern("/v1/store/{store_uuid}/user/{user_phone_no}/cart/{cart_uuid}/cartitem/{cart_item_uuid}/Remove"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1705,7 +2741,7 @@ func RegisterCartServiceHandlerClient(ctx context.Context, mux *runtime.ServeMux
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/Cart_v1.CartService/CreateAddOn", runtime.WithHTTPPathPattern("/v1/cart/{cart_uuid}/cartitem/{cart_item_uuid}/addon"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/Cart_v1.CartService/CreateAddOn", runtime.WithHTTPPathPattern("/v1/store/{store_uuid}/user/{user_phone_no}/cart/{cart_uuid}/cartitem/{cart_item_uuid}/addon"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1718,11 +2754,11 @@ func RegisterCartServiceHandlerClient(ctx context.Context, mux *runtime.ServeMux
 		}
 		forward_CartService_CreateAddOn_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
-	mux.Handle(http.MethodPost, pattern_CartService_UpdateAddOn_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle(http.MethodPatch, pattern_CartService_UpdateAddOn_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/Cart_v1.CartService/UpdateAddOn", runtime.WithHTTPPathPattern("/v1/cart/{cart_uuid}/cartitem/{cart_item_uuid}/addon/{add_on_uuid}"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/Cart_v1.CartService/UpdateAddOn", runtime.WithHTTPPathPattern("/v1/store/{store_uuid}/user/{user_phone_no}/cart/{cart_uuid}/cartitem/{cart_item_uuid}/addon/{add_on_uuid}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1739,7 +2775,7 @@ func RegisterCartServiceHandlerClient(ctx context.Context, mux *runtime.ServeMux
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/Cart_v1.CartService/RemoveAddOn", runtime.WithHTTPPathPattern("/v1/cart/{cart_uuid}/cartitem/{cart_item_uuid}/addon/{add_on_uuid}"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/Cart_v1.CartService/RemoveAddOn", runtime.WithHTTPPathPattern("/v1/store/{store_uuid}/user/{user_phone_no}/cart/{cart_uuid}/cartitem/{cart_item_uuid}/addon/{add_on_uuid}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1752,11 +2788,11 @@ func RegisterCartServiceHandlerClient(ctx context.Context, mux *runtime.ServeMux
 		}
 		forward_CartService_RemoveAddOn_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
-	mux.Handle(http.MethodPut, pattern_CartService_IncreaseAddOnQuantity_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle(http.MethodPatch, pattern_CartService_IncreaseAddOnQuantity_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/Cart_v1.CartService/IncreaseAddOnQuantity", runtime.WithHTTPPathPattern("/v1/cart/{cart_uuid}/cartitem/{cart_item_uuid}/addon/{add_on_uuid}/add_quantity"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/Cart_v1.CartService/IncreaseAddOnQuantity", runtime.WithHTTPPathPattern("/v1/store/{store_uuid}/user/{user_phone_no}/cart/{cart_uuid}/cartitem/{cart_item_uuid}/addon/{add_on_uuid}/add_quantity"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1769,11 +2805,11 @@ func RegisterCartServiceHandlerClient(ctx context.Context, mux *runtime.ServeMux
 		}
 		forward_CartService_IncreaseAddOnQuantity_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
-	mux.Handle(http.MethodPut, pattern_CartService_RemoveAddOnQuantity_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle(http.MethodPatch, pattern_CartService_RemoveAddOnQuantity_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/Cart_v1.CartService/RemoveAddOnQuantity", runtime.WithHTTPPathPattern("/v1/cart/{cart_uuid}/cartitem/{cart_item_uuid}/addon/{add_on_uuid}/remove_quantity"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/Cart_v1.CartService/RemoveAddOnQuantity", runtime.WithHTTPPathPattern("/v1/store/{store_uuid}/user/{user_phone_no}/cart/{cart_uuid}/cartitem/{cart_item_uuid}/addon/{add_on_uuid}/remove_quantity"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1790,7 +2826,7 @@ func RegisterCartServiceHandlerClient(ctx context.Context, mux *runtime.ServeMux
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/Cart_v1.CartService/ValidateCoupon", runtime.WithHTTPPathPattern("/v1/cart/{cart_uuid}/validate_coupon/{coupon_code}"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/Cart_v1.CartService/ValidateCoupon", runtime.WithHTTPPathPattern("/v1/store/{store_uuid}/user/{user_phone_no}/cart/{cart_uuid}/validate_coupon/{coupon_code}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1807,7 +2843,7 @@ func RegisterCartServiceHandlerClient(ctx context.Context, mux *runtime.ServeMux
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/Cart_v1.CartService/AddCoupon", runtime.WithHTTPPathPattern("/v1/cart/{cart_uuid}/coupon/{Coupon_code}"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/Cart_v1.CartService/AddCoupon", runtime.WithHTTPPathPattern("/v1/store/{store_uuid}/user/{user_phone_no}/cart/{cart_uuid}/coupon/{coupon_code}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1824,7 +2860,7 @@ func RegisterCartServiceHandlerClient(ctx context.Context, mux *runtime.ServeMux
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/Cart_v1.CartService/RemoveCoupon", runtime.WithHTTPPathPattern("/v1/cart/{cart_uuid}/removecoupon"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/Cart_v1.CartService/RemoveCoupon", runtime.WithHTTPPathPattern("/v1/store/{store_uuid}/user/{user_phone_no}/cart/{cart_uuid}/removecoupon"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1841,7 +2877,7 @@ func RegisterCartServiceHandlerClient(ctx context.Context, mux *runtime.ServeMux
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/Cart_v1.CartService/ValidateCart", runtime.WithHTTPPathPattern("/v1/cart/{cart_uuid}/validate"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/Cart_v1.CartService/ValidateCart", runtime.WithHTTPPathPattern("/v1/store/{store_uuid}/user/{user_phone_no}/cart/{cart_uuid}/validate"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1858,30 +2894,36 @@ func RegisterCartServiceHandlerClient(ctx context.Context, mux *runtime.ServeMux
 }
 
 var (
-	pattern_CartService_CreateCart_0            = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1}, []string{"v1", "cart"}, ""))
-	pattern_CartService_GetCart_0               = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1}, []string{"v1", "cart"}, ""))
-	pattern_CartService_UpdateCart_0            = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1}, []string{"v1", "cart"}, ""))
-	pattern_CartService_DeleteCart_0            = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1}, []string{"v1", "cart"}, ""))
-	pattern_CartService_AddCartItem_0           = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3}, []string{"v1", "cart", "cart_uuid", "cartitem"}, ""))
-	pattern_CartService_RemoveCartItem_0        = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"v1", "cart", "cart_uuid", "cartitem", "cart_item_uuid"}, ""))
-	pattern_CartService_AddQuantity_0           = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"v1", "cart", "cart_uuid", "cartitem", "cart_item_uuid", "add_quantity"}, ""))
-	pattern_CartService_RemoveQuantity_0        = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"v1", "cart", "cart_uuid", "cartitem", "cart_item_uuid", "remove_quantity"}, ""))
-	pattern_CartService_CreateAddOn_0           = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"v1", "cart", "cart_uuid", "cartitem", "cart_item_uuid", "addon"}, ""))
-	pattern_CartService_UpdateAddOn_0           = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5, 1, 0, 4, 1, 5, 6}, []string{"v1", "cart", "cart_uuid", "cartitem", "cart_item_uuid", "addon", "add_on_uuid"}, ""))
-	pattern_CartService_RemoveAddOn_0           = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5, 1, 0, 4, 1, 5, 6}, []string{"v1", "cart", "cart_uuid", "cartitem", "cart_item_uuid", "addon", "add_on_uuid"}, ""))
-	pattern_CartService_IncreaseAddOnQuantity_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5, 1, 0, 4, 1, 5, 6, 2, 7}, []string{"v1", "cart", "cart_uuid", "cartitem", "cart_item_uuid", "addon", "add_on_uuid", "add_quantity"}, ""))
-	pattern_CartService_RemoveAddOnQuantity_0   = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5, 1, 0, 4, 1, 5, 6, 2, 7}, []string{"v1", "cart", "cart_uuid", "cartitem", "cart_item_uuid", "addon", "add_on_uuid", "remove_quantity"}, ""))
-	pattern_CartService_ValidateCoupon_0        = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"v1", "cart", "cart_uuid", "validate_coupon", "coupon_code"}, ""))
-	pattern_CartService_AddCoupon_0             = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"v1", "cart", "cart_uuid", "coupon", "Coupon_code"}, ""))
-	pattern_CartService_RemoveCoupon_0          = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3}, []string{"v1", "cart", "cart_uuid", "removecoupon"}, ""))
-	pattern_CartService_ValidateCart_0          = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3}, []string{"v1", "cart", "cart_uuid", "validate"}, ""))
+	pattern_CartService_CreateCart_0            = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"v1", "store", "store_uuid", "user", "user_phone_no", "cart"}, ""))
+	pattern_CartService_GetCart_0               = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5, 1, 0, 4, 1, 5, 6}, []string{"v1", "store", "store_uuid", "user", "user_phone_no", "cart", "cart_uuid"}, ""))
+	pattern_CartService_GetCart_1               = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"v1", "store", "store_uuid", "user", "user_phone_no", "cart"}, ""))
+	pattern_CartService_UpdateCart_0            = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5, 1, 0, 4, 1, 5, 6}, []string{"v1", "store", "store_uuid", "user", "user_phone_no", "cart", "cart_uuid"}, ""))
+	pattern_CartService_UpdateCart_1            = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"v1", "store", "store_uuid", "user", "user_phone_no", "cart"}, ""))
+	pattern_CartService_DeleteCart_0            = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5, 1, 0, 4, 1, 5, 6}, []string{"v1", "store", "store_uuid", "user", "user_phone_no", "cart", "cart_uuid"}, ""))
+	pattern_CartService_DeleteCart_1            = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"v1", "store", "store_uuid", "user", "user_phone_no", "cart"}, ""))
+	pattern_CartService_AddCartItem_0           = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5, 1, 0, 4, 1, 5, 6, 2, 7}, []string{"v1", "store", "store_uuid", "user", "user_phone_no", "cart", "cart_uuid", "cartitem"}, ""))
+	pattern_CartService_RemoveCartItem_0        = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5, 1, 0, 4, 1, 5, 6, 2, 7}, []string{"v1", "store", "store_uuid", "user", "user_phone_no", "cart", "cart_uuid", "cartitem"}, ""))
+	pattern_CartService_AddQuantity_0           = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5, 1, 0, 4, 1, 5, 6, 2, 7, 1, 0, 4, 1, 5, 8, 2, 9}, []string{"v1", "store", "store_uuid", "user", "user_phone_no", "cart", "cart_uuid", "cartitem", "cart_item_uuid", "Add"}, ""))
+	pattern_CartService_RemoveQuantity_0        = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5, 1, 0, 4, 1, 5, 6, 2, 7, 1, 0, 4, 1, 5, 8, 2, 9}, []string{"v1", "store", "store_uuid", "user", "user_phone_no", "cart", "cart_uuid", "cartitem", "cart_item_uuid", "Remove"}, ""))
+	pattern_CartService_CreateAddOn_0           = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5, 1, 0, 4, 1, 5, 6, 2, 7, 1, 0, 4, 1, 5, 8, 2, 9}, []string{"v1", "store", "store_uuid", "user", "user_phone_no", "cart", "cart_uuid", "cartitem", "cart_item_uuid", "addon"}, ""))
+	pattern_CartService_UpdateAddOn_0           = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5, 1, 0, 4, 1, 5, 6, 2, 7, 1, 0, 4, 1, 5, 8, 2, 9, 1, 0, 4, 1, 5, 10}, []string{"v1", "store", "store_uuid", "user", "user_phone_no", "cart", "cart_uuid", "cartitem", "cart_item_uuid", "addon", "add_on_uuid"}, ""))
+	pattern_CartService_RemoveAddOn_0           = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5, 1, 0, 4, 1, 5, 6, 2, 7, 1, 0, 4, 1, 5, 8, 2, 9, 1, 0, 4, 1, 5, 10}, []string{"v1", "store", "store_uuid", "user", "user_phone_no", "cart", "cart_uuid", "cartitem", "cart_item_uuid", "addon", "add_on_uuid"}, ""))
+	pattern_CartService_IncreaseAddOnQuantity_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5, 1, 0, 4, 1, 5, 6, 2, 7, 1, 0, 4, 1, 5, 8, 2, 9, 1, 0, 4, 1, 5, 10, 2, 11}, []string{"v1", "store", "store_uuid", "user", "user_phone_no", "cart", "cart_uuid", "cartitem", "cart_item_uuid", "addon", "add_on_uuid", "add_quantity"}, ""))
+	pattern_CartService_RemoveAddOnQuantity_0   = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5, 1, 0, 4, 1, 5, 6, 2, 7, 1, 0, 4, 1, 5, 8, 2, 9, 1, 0, 4, 1, 5, 10, 2, 11}, []string{"v1", "store", "store_uuid", "user", "user_phone_no", "cart", "cart_uuid", "cartitem", "cart_item_uuid", "addon", "add_on_uuid", "remove_quantity"}, ""))
+	pattern_CartService_ValidateCoupon_0        = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5, 1, 0, 4, 1, 5, 6, 2, 7, 1, 0, 4, 1, 5, 8}, []string{"v1", "store", "store_uuid", "user", "user_phone_no", "cart", "cart_uuid", "validate_coupon", "coupon_code"}, ""))
+	pattern_CartService_AddCoupon_0             = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5, 1, 0, 4, 1, 5, 6, 2, 7, 1, 0, 4, 1, 5, 8}, []string{"v1", "store", "store_uuid", "user", "user_phone_no", "cart", "cart_uuid", "coupon", "coupon_code"}, ""))
+	pattern_CartService_RemoveCoupon_0          = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5, 1, 0, 4, 1, 5, 6, 2, 7}, []string{"v1", "store", "store_uuid", "user", "user_phone_no", "cart", "cart_uuid", "removecoupon"}, ""))
+	pattern_CartService_ValidateCart_0          = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5, 1, 0, 4, 1, 5, 6, 2, 7}, []string{"v1", "store", "store_uuid", "user", "user_phone_no", "cart", "cart_uuid", "validate"}, ""))
 )
 
 var (
 	forward_CartService_CreateCart_0            = runtime.ForwardResponseMessage
 	forward_CartService_GetCart_0               = runtime.ForwardResponseMessage
+	forward_CartService_GetCart_1               = runtime.ForwardResponseMessage
 	forward_CartService_UpdateCart_0            = runtime.ForwardResponseMessage
+	forward_CartService_UpdateCart_1            = runtime.ForwardResponseMessage
 	forward_CartService_DeleteCart_0            = runtime.ForwardResponseMessage
+	forward_CartService_DeleteCart_1            = runtime.ForwardResponseMessage
 	forward_CartService_AddCartItem_0           = runtime.ForwardResponseMessage
 	forward_CartService_RemoveCartItem_0        = runtime.ForwardResponseMessage
 	forward_CartService_AddQuantity_0           = runtime.ForwardResponseMessage
@@ -1937,7 +2979,7 @@ func RegisterCouponServiceHandlerClient(ctx context.Context, mux *runtime.ServeM
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/Cart_v1.CouponService/CreateCoupon", runtime.WithHTTPPathPattern("/v1/coupon"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/Cart_v1.CouponService/CreateCoupon", runtime.WithHTTPPathPattern("/v1/store/{store_uuid}/coupon"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1954,7 +2996,7 @@ func RegisterCouponServiceHandlerClient(ctx context.Context, mux *runtime.ServeM
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/Cart_v1.CouponService/GetCoupon", runtime.WithHTTPPathPattern("/v1/coupon"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/Cart_v1.CouponService/GetCoupon", runtime.WithHTTPPathPattern("/v1/store/{store_uuid}/coupon/{coupon_uuid}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1967,11 +3009,11 @@ func RegisterCouponServiceHandlerClient(ctx context.Context, mux *runtime.ServeM
 		}
 		forward_CouponService_GetCoupon_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
-	mux.Handle(http.MethodPut, pattern_CouponService_UpdateCoupon_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle(http.MethodPatch, pattern_CouponService_UpdateCoupon_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/Cart_v1.CouponService/UpdateCoupon", runtime.WithHTTPPathPattern("/v1/coupon"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/Cart_v1.CouponService/UpdateCoupon", runtime.WithHTTPPathPattern("/v1/store/{store_uuid}/coupon/{coupon_uuid}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1988,7 +3030,7 @@ func RegisterCouponServiceHandlerClient(ctx context.Context, mux *runtime.ServeM
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/Cart_v1.CouponService/DeleteCoupon", runtime.WithHTTPPathPattern("/v1/coupon"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/Cart_v1.CouponService/DeleteCoupon", runtime.WithHTTPPathPattern("/v1/store/{store_uuid}/coupon/{coupon_uuid}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2005,7 +3047,7 @@ func RegisterCouponServiceHandlerClient(ctx context.Context, mux *runtime.ServeM
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/Cart_v1.CouponService/ListCoupon", runtime.WithHTTPPathPattern("/v1/coupon/list"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/Cart_v1.CouponService/ListCoupon", runtime.WithHTTPPathPattern("/v1/store/{store_uuid}/coupon/list"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2022,7 +3064,7 @@ func RegisterCouponServiceHandlerClient(ctx context.Context, mux *runtime.ServeM
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/Cart_v1.CouponService/GetCouponUsage", runtime.WithHTTPPathPattern("/v1/couponusage"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/Cart_v1.CouponService/GetCouponUsage", runtime.WithHTTPPathPattern("/v1/store/{store_uuid}/coupon/{coupon_uuid}/couponusage"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2039,12 +3081,12 @@ func RegisterCouponServiceHandlerClient(ctx context.Context, mux *runtime.ServeM
 }
 
 var (
-	pattern_CouponService_CreateCoupon_0   = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1}, []string{"v1", "coupon"}, ""))
-	pattern_CouponService_GetCoupon_0      = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1}, []string{"v1", "coupon"}, ""))
-	pattern_CouponService_UpdateCoupon_0   = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1}, []string{"v1", "coupon"}, ""))
-	pattern_CouponService_DeleteCoupon_0   = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1}, []string{"v1", "coupon"}, ""))
-	pattern_CouponService_ListCoupon_0     = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "coupon", "list"}, ""))
-	pattern_CouponService_GetCouponUsage_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1}, []string{"v1", "couponusage"}, ""))
+	pattern_CouponService_CreateCoupon_0   = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3}, []string{"v1", "store", "store_uuid", "coupon"}, ""))
+	pattern_CouponService_GetCoupon_0      = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"v1", "store", "store_uuid", "coupon", "coupon_uuid"}, ""))
+	pattern_CouponService_UpdateCoupon_0   = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"v1", "store", "store_uuid", "coupon", "coupon_uuid"}, ""))
+	pattern_CouponService_DeleteCoupon_0   = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"v1", "store", "store_uuid", "coupon", "coupon_uuid"}, ""))
+	pattern_CouponService_ListCoupon_0     = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 2, 4}, []string{"v1", "store", "store_uuid", "coupon", "list"}, ""))
+	pattern_CouponService_GetCouponUsage_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"v1", "store", "store_uuid", "coupon", "coupon_uuid", "couponusage"}, ""))
 )
 
 var (

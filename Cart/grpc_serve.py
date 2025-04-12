@@ -1,6 +1,5 @@
-import sys
+
 import os
-import jwt
 from  datetime import datetime
 import logging
 from concurrent import futures
@@ -15,12 +14,13 @@ import jwt.utils
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'Cart.settings')
 django.setup()
 
-
+from typing import Any, Callable
 import grpc
-import traceback
-from decimal import Decimal as DecimalType
+from grpc import RpcError,StatusCode
+from grpc_interceptor import ServerInterceptor
+from grpc_interceptor.exceptions import GrpcException,Unauthenticated,FailedPrecondition
 from dotenv import load_dotenv
-
+from google.protobuf.timestamp_pb2 import Timestamp
 import google.protobuf.json_format as json_format
 
 from google.protobuf import empty_pb2 
@@ -135,6 +135,51 @@ def handle_error(func):
             context.abort(grpc.StatusCode.INTERNAL, "Internal Server Error")
     return wrapper
 
+def check_access(roles:list[str]):
+    def decorator(func):
+        def wrapper(self, request, context):
+            metadata = dict(context.invocation_metadata() or [])
+            role = metadata.get("role")
+
+            if not role:
+                logger.warning("Missing role in metadata")
+                raise Unauthenticated("Role missing from metadata")
+
+            if role == "internal":
+                # TODO: Add internal service verification here
+                return func(self, request, context)
+
+            if role not in roles:
+                logger.warning(f"Unauthorized role: {role}")
+                raise Unauthenticated(f"Unauthorized role: {role}")
+
+            # Role-specific access checks
+            try:
+                if role == "store":
+                    store_uuid_in_token = metadata["store_uuid"]
+                    if not getattr(request, "store_uuid", None):
+                        logger.warning("Store UUID missing in request")
+                        raise Unauthenticated("Store UUID is missing in the request")
+                    if store_uuid_in_token != getattr(request, "store_uuid", None):
+                        logger.warning("Store UUID mismatch")
+                        raise Unauthenticated("Store UUID does not match token")
+
+                elif role == "user":
+                    phone_in_token = metadata["user_phone_no"]
+                    if not getattr(request, "user_phone_no", None):
+                        logger.warning("User phone number missing in request")
+                        raise Unauthenticated("User phone number is missing in the request")
+                    if phone_in_token != getattr(request, "user_phone_no", None):
+                        logger.warning("User phone mismatch")
+                        raise Unauthenticated("User phone does not match token")
+
+            except KeyError as e:
+                logger.warning(f"Missing required metadata for role '{role}': {e}")
+                raise Unauthenticated(f"Missing metadata: {e}")
+
+            return func(self, request, context)
+        return wrapper
+    return decorator
 
 
 class CartService(Cart_pb2_grpc.CartServiceServicer):
@@ -401,37 +446,40 @@ class CartService(Cart_pb2_grpc.CartServiceServicer):
 
 
     @handle_error
-    @transaction.atomic
+    @check_access(roles=["user","store","internal"])
     def CreateCart(self, request, context):
-        
+
         try:
-            cart = Cart.objects.get_active_cart(store_uuid =  request.store_uuid ,user_phone_no = request.user_phone_no)
-            cart.order_type = ORDERTYPE.Name(request.order_type)
-            cart.table_no = request.table_no or ""
-            cart.vehicle_no = request.vehicle_no or ""
-            cart.vehicle_description = request.vehicle_description or ""
-            logger.info(f"Fetched Cart{cart.cart_uuid} for Phone No:{cart.user_phone_no} at store: {cart.store_uuid}")
-            return self._Cart_to_response(cart)
+            with transaction.atomic():
+                cart = Cart.objects.get_active_cart(store_uuid =  request.store_uuid ,user_phone_no = request.user_phone_no)
+                cart.order_type = ORDERTYPE.Name(request.order_type)
+                cart.table_no = request.table_no or ""
+                cart.vehicle_no = request.vehicle_no or ""
+                cart.vehicle_description = request.vehicle_description or ""
+                logger.info(f"Fetched Cart{cart.cart_uuid} for Phone No:{cart.user_phone_no} at store: {cart.store_uuid}")
+                return self._Cart_to_response(cart)
         except Cart.DoesNotExist:
-            cart = Cart.objects.create(store_uuid = request.store_uuid,
-                user_phone_no = request.user_phone_no,
-                order_type = ORDERTYPE.Name(request.order_type),
-                table_no = request.table_no or "",
-                vehicle_no = request.vehicle_no or "",
-                vehicle_description = request.vehicle_description or "")
+            with transaction.atomic():
+                cart = Cart.objects.create(store_uuid = request.store_uuid,
+                    user_phone_no = request.user_phone_no,
+                    order_type = ORDERTYPE.Name(request.order_type),
+                    table_no = request.table_no or "",
+                    vehicle_no = request.vehicle_no or "",
+                    vehicle_description = request.vehicle_description or "")
+                
+                logger.info(f"Created Cart{cart.cart_uuid} for Phone No:{cart.user_phone_no} at store: {cart.store_uuid}")
+                return self._Cart_to_response(cart)
             
-            logger.info(f"Created Cart{cart.cart_uuid} for Phone No:{cart.user_phone_no} at store: {cart.store_uuid}")
-            return self._Cart_to_response(cart)
-        
-    @handle_error    
+    @handle_error
+    @check_access(roles=["user","store","internal"])
     def GetCart(self, request, context):
-        # Check for cart_uuid first since it's more specific
-        if request.cart_uuid:
+        
+        if getattr(request,"cart_uuid",None):
             cart = Cart.objects.get_active_cart(cart_uuid=request.cart_uuid)
             return self._Cart_to_response(cart)
         
         # Fall back to store_uuid + user_phone_no combination
-        elif request.store_uuid and request.user_phone_no:
+        elif getattr(request,"store_uuid",None) and getattr(request,"user_phone_no",None):
             cart = Cart.objects.get_active_cart(
                 store_uuid=request.store_uuid,
                 user_phone_no=request.user_phone_no
@@ -443,187 +491,196 @@ class CartService(Cart_pb2_grpc.CartServiceServicer):
 
         
     @handle_error    
-    @transaction.atomic
+    @check_access(roles=["user","store","internal"])
     def UpdateCart(self, request, context):
-        if request.cart_uuid:
-            cart = Cart.objects.get_active_cart(cart_uuid=request.cart_uuid)
+        cart
+
+        if getattr(request,"cart_uuid",None):
+            cart = Cart.objects.get_active_cart(cart_uuid = request.cart_uuid,user_phone_no = request.user_phone_no,store_uuid = request.store_uuid)
         
         # Fall back to store_uuid + user_phone_no combination
-        elif request.store_uuid and request.user_phone_no:
+        elif getattr(request,"store_uuid",None) and getattr(request,"user_phone_no",None):
             cart = Cart.objects.get_active_cart(
                 store_uuid=request.store_uuid,
                 user_phone_no=request.user_phone_no
             )
         else:
             raise ValueError("Must provide either cart_uuid or both store_uuid and user_phone_no")
-        
-        logger.debug(f"Before Update:{cart}")
-        if request.cart.order_type:
-            cart.order_type = ORDERTYPE.Name(request.cart.order_type)
-        if request.cart.table_no:
-            cart.cart.table_no = request.cart.table_no
-        if request.cart.vehicle_no:
-            cart.vehicle_no = request.cart.vehicle_no    
-        if request.cart.vehicle_description:
-            cart.vehicle_description = request.cart.vehicle_description
-        if request.cart.speacial_instructions:
-            cart.speacial_instructions = request.cart.speacial_instructions
-        
-        logger.debug(f"After Update:{cart}")
-        cart.full_clean()
-        cart.save() 
-        
+        with transaction.atomic():
+            logger.debug(f"Before Update:{cart}")
+            if request.cart.order_type:
+                cart.order_type = ORDERTYPE.Name(request.cart.order_type)
+            if request.cart.table_no:
+                cart.cart.table_no = request.cart.table_no
+            if request.cart.vehicle_no:
+                cart.vehicle_no = request.cart.vehicle_no    
+            if request.cart.vehicle_description:
+                cart.vehicle_description = request.cart.vehicle_description
+            if request.cart.speacial_instructions:
+                cart.speacial_instructions = request.cart.speacial_instructions
+            
+            logger.debug(f"After Update:{cart}")
+            cart.full_clean()
+            cart.save() 
+            
 
-        logger.info(f"Cart:{cart.cart_uuid} Updated for {cart.store_uuid} and {cart.user_phone_no}")
-        return self._Cart_to_response(cart)
+            logger.info(f"Cart:{cart.cart_uuid} Updated for {cart.store_uuid} and {cart.user_phone_no}")
+            return self._Cart_to_response(cart)
 
-    @transaction.atomic
+    @handle_error
+    @check_access(roles=["user","store","internal"])
     def DeleteCart(self, request, context):
 
-        if request.HasField("cart_uuid"):
-            cart = Cart.objects.get_active_cart(cart_uuid = request.cart_uuid)
+        if getattr(request,"cart_uuid",None):
+            cart = Cart.objects.get_active_cart(cart_uuid = request.cart_uuid,user_phone_no = request.user_phone_no,store_uuid = request.store_uuid)
             cart.delete()
             logger.info(f"Cart:{cart.cart_uuid} for Phone_no:{cart.user_phone_no} at store:{cart.store_uuid} ")
             return empty_pb2()
         
 
-        if request.HasField("store_uuid") and request.HasField("user_phone_no"):
+        if getattr(request,"store_uuid",None) and getattr(request,"user_phone_no",None):
             cart = Cart.objects.get_active_cart(store_uuid = request.store_uuid,user_phone_no = request.user_phone_no)
             cart.delete()
             logger.info(f"Cart:{cart.cart_uuid} for Phone_no:{cart.user_phone_no} at store:{cart.store_uuid} ")
             return empty_pb2()
         
     @handle_error    
-    @transaction.atomic
+    @check_access(roles=["user","store","internal"])
     def AddCartItem(self, request, context):
-        cart = Cart.objects.get_active_cart(cart_uuid = request.cart_uuid)
+        cart = Cart.objects.get_active_cart(cart_uuid = request.cart_uuid,user_phone_no = request.user_phone_no,store_uuid = request.store_uuid)
 
-        cart_item = CartItem.objects.create(
-            cart = cart,
-            product_name = request.cart_item.product_name,
-            product_uuid = request.cart_item.product_uuid,
-            tax_percentage = request.cart_item.tax_percentage,
-            packaging_cost = request.cart_item.packaging_cost,
-            unit_price = request.cart_item.unit_price,
-            quantity = request.cart_item.quantity
-        )
+        with transaction.atomic():
+            cart_item = CartItem.objects.create(
+                cart = cart,
+                product_name = request.cart_item.product_name,
+                product_uuid = request.cart_item.product_uuid,
+                tax_percentage = request.cart_item.tax_percentage,
+                packaging_cost = request.cart_item.packaging_cost,
+                unit_price = request.cart_item.unit_price,
+                quantity = request.cart_item.quantity
+            )
 
-        logger.info(f"Cart-Item:{cart_item.cart_item_uuid} added to cart:{cart_item.cart.cart_uuid}")
-        return self._Cart_to_response(cart)
+            logger.info(f"Cart-Item:{cart_item.cart_item_uuid} added to cart:{cart_item.cart.cart_uuid}")
+            return self._Cart_to_response(cart)
 
     @handle_error
-    @transaction.atomic
+    @check_access(roles=["user","store","internal"])
     def RemoveCartItem(self, request, context):
-        cart = Cart.objects.get_active_cart(cart_uuid = request.cart_uuid)
+        cart = Cart.objects.get_active_cart(cart_uuid = request.cart_uuid,user_phone_no = request.user_phone_no,store_uuid = request.store_uuid)
 
         cart_item = CartItem.objects.get(cart = cart,cart_item_uuid = request.cart_item_uuid)
-
-        cart_item.delete()
-        logger.info(f"Cart_item:{cart_item.cart_item_uuid} in Cart:{cart.cart_uuid}")
-        return self._Cart_to_response(cart)
-
-
-    @handle_error
-    @transaction.atomic
-    def CreateAddOn(self, request, context):
-        cart = Cart.objects.get_active_cart(cart_uuid = request.cart_uuid)
-        cart_item = CartItem.objects.get(cart = cart,cart_item_uuid = request.cart_item_uuid)
-
-        add_on = AddOn.objects.create(
-            cart_item = cart_item,
-            add_on_name = request.add_on.add_on_name,
-            add_on_uuid = request.add_on.add_on_uuid,
-            quantity = request.add_on.quantity,
-            unit_price = request.add_on.unit_price,
-            is_free = request.add_on.is_free
-        )
-        logger.info(f"Add-on:{add_on.add_on_uuid} to Cart_item:{cart_item.cart_item_uuid} in Cart:{cart.cart_uuid}")
-        return self._Cart_to_response(cart)
-
-    @handle_error
-    @transaction.atomic
-    def UpdateAddOn(self, request, context):
-        cart = Cart.objects.get_active_cart(cart_uuid = request.cart_uuid)
-        cart_item = CartItem.objects.get(cart = cart,cart_item_uuid = request.cart_item_uuid)
-        add_on = AddOn.objects.get(cart_item = cart_item,add_on_uuid = request.add_on_uuid)
-
-        if request.add_on.add_on_name:
-            add_on.add_on_name = request.add_on.add_on_name
-        if request.add_on.quantity:
-            add_on.quantity = request.add_on.quantity
-        if request.add_on.unit_price:
-            add_on.unit_price = request.add_on.unit_price
-        if request.add_on.is_free:
-            add_on.is_free = request.add_on.is_free
-
-        add_on.save()
-        logger.info(f"Updated Add-on:{add_on.add_on_uuid} in Cart_item:{cart_item.cart_item_uuid} in Cart:{cart.cart_uuid}")
-        return self._Cart_to_response(cart)
-
-    @handle_error
-    @transaction.atomic
-    def RemoveAddOn(self, request, context):
-        cart = Cart.objects.get_active_cart(cart_uuid = request.cart_uuid)
-        cart_item = CartItem.objects.get(cart = cart,cart_item_uuid = request.cart_item_uuid)
-        add_on = AddOn.objects.get(cart_item = cart_item,add_on_uuid = request.add_on_uuid)
-        add_on.delete()
-        logger.info(f"Removed Add-on:{add_on.add_on_uuid} from Cart_item:{cart_item.cart_item_uuid} in Cart:{cart.cart_uuid}")
-        return self._Cart_to_response(cart)
-
-    @handle_error
-    @transaction.atomic
-    def AddQuantity(self, request, context):
-        cart = Cart.objects.get_active_cart(cart_uuid = request.cart_uuid)
-
-        cart_item = CartItem.objects.get(cart = cart,cart_item_uuid = request.cart_item_uuid)
-
-        cart_item.add_quantity(1)
-        logger.info(f"Add Quantity t0 Cart_item:{cart_item.cart_item_uuid} in Cart:{cart.cart_uuid}")
-        return self._Cart_to_response(cart)
-
-    @handle_error
-    @transaction.atomic
-    def RemoveQuantity(self, request, context):
-        cart = Cart.objects.get_active_cart(cart_uuid = request.cart_uuid)
-
-        cart_item = CartItem.objects.get(cart = cart,cart_item_uuid = request.cart_item_uuid)
-        if cart_item.quantity == 1:
+        with transaction.atomic():
             cart_item.delete()
-            logger.info(f"Deleted Cart_item:{cart_item.cart_item_uuid} in Cart:{cart.cart_uuid}")
+            logger.info(f"Cart_item:{cart_item.cart_item_uuid} in Cart:{cart.cart_uuid}")
             return self._Cart_to_response(cart)
-        cart_item.remove_quantity(1)
-        logger.info(f"Removed Quantity t0 Cart_item:{cart_item.cart_item_uuid} in Cart:{cart.cart_uuid}")
-        return self._Cart_to_response(cart)
+
 
     @handle_error
-    @transaction.atomic
-    def IncreaseAddOnQuantity(self, request, context):
-        cart = Cart.objects.get_active_cart(cart_uuid = request.cart_uuid)
+    @check_access(roles=["user","store","internal"])
+    def CreateAddOn(self, request, context):
+        cart = Cart.objects.get_active_cart(cart_uuid = request.cart_uuid,user_phone_no = request.user_phone_no,store_uuid = request.store_uuid)
         cart_item = CartItem.objects.get(cart = cart,cart_item_uuid = request.cart_item_uuid)
-        add_on = AddOn.objects.get(cart_item = cart_item,add_on_uuid = request.add_on_uuid)
-        add_on.add_quantity(1)
-        logger.info(f"Increased Quantity to Add-on:{add_on.add_on_uuid} in Cart_item:{cart_item.cart_item_uuid} in Cart:{cart.cart_uuid}")
-        return self._Cart_to_response(cart)
+        with transaction.atomic():
+            add_on = AddOn.objects.create(
+                cart_item = cart_item,
+                add_on_name = request.add_on.add_on_name,
+                add_on_uuid = request.add_on.add_on_uuid,
+                quantity = request.add_on.quantity,
+                unit_price = request.add_on.unit_price,
+                is_free = request.add_on.is_free
+            )
+            logger.info(f"Add-on:{add_on.add_on_uuid} to Cart_item:{cart_item.cart_item_uuid} in Cart:{cart.cart_uuid}")
+            return self._Cart_to_response(cart)
 
     @handle_error
-    @transaction.atomic
-    def RemoveAddOnQuantity(self, request, context):
-        cart = Cart.objects.get_active_cart(cart_uuid = request.cart_uuid)
+    @check_access(roles=["user","store","internal"])
+    def UpdateAddOn(self, request, context):
+        cart = Cart.objects.get_active_cart(cart_uuid = request.cart_uuid,user_phone_no = request.user_phone_no,store_uuid = request.store_uuid)
         cart_item = CartItem.objects.get(cart = cart,cart_item_uuid = request.cart_item_uuid)
         add_on = AddOn.objects.get(cart_item = cart_item,add_on_uuid = request.add_on_uuid)
-        if add_on.quantity == 1:
+        with transaction.atomic():
+            if request.add_on.add_on_name:
+                add_on.add_on_name = request.add_on.add_on_name
+            if request.add_on.quantity:
+                add_on.quantity = request.add_on.quantity
+            if request.add_on.unit_price:
+                add_on.unit_price = request.add_on.unit_price
+            if request.add_on.is_free:
+                add_on.is_free = request.add_on.is_free
+
+            add_on.save()
+            logger.info(f"Updated Add-on:{add_on.add_on_uuid} in Cart_item:{cart_item.cart_item_uuid} in Cart:{cart.cart_uuid}")
+            return self._Cart_to_response(cart)
+
+    @handle_error
+    @check_access(roles=["user","store","internal"])
+    def RemoveAddOn(self, request, context):
+        cart = Cart.objects.get_active_cart(cart_uuid = request.cart_uuid,user_phone_no = request.user_phone_no,store_uuid = request.store_uuid)
+        cart_item = CartItem.objects.get(cart = cart,cart_item_uuid = request.cart_item_uuid)
+        add_on = AddOn.objects.get(cart_item = cart_item,add_on_uuid = request.add_on_uuid)
+        with transaction.atomic():
             add_on.delete()
-            logger.info(f"Deleted Add-on:{add_on.add_on_uuid} in Cart_item:{cart_item.cart_item_uuid} in Cart:{cart.cart_uuid}")
+            logger.info(f"Removed Add-on:{add_on.add_on_uuid} from Cart_item:{cart_item.cart_item_uuid} in Cart:{cart.cart_uuid}")
             return self._Cart_to_response(cart)
-        add_on.remove_quantity(1)
-        logger.info(f"Removed Quantity to Add-on:{add_on.add_on_uuid} in Cart_item:{cart_item.cart_item_uuid} in Cart:{cart.cart_uuid}")
-        return self._Cart_to_response(cart)
+
+    @handle_error
+    @check_access(roles=["user","store","internal"])
+    def AddQuantity(self, request, context):
+        cart = Cart.objects.get_active_cart(cart_uuid = request.cart_uuid,user_phone_no = request.user_phone_no,store_uuid = request.store_uuid)
+
+        cart_item = CartItem.objects.get(cart = cart,cart_item_uuid = request.cart_item_uuid)
+        with transaction.atomic():
+            cart_item.add_quantity(1)
+            logger.info(f"Add Quantity t0 Cart_item:{cart_item.cart_item_uuid} in Cart:{cart.cart_uuid}")
+            return self._Cart_to_response(cart)
+
+    @handle_error
+    @check_access(roles=["user","store","internal"])
+    def RemoveQuantity(self, request, context):
+        cart = Cart.objects.get_active_cart(cart_uuid = request.cart_uuid,user_phone_no = request.user_phone_no,store_uuid = request.store_uuid)
+
+        cart_item = CartItem.objects.get(cart = cart,cart_item_uuid = request.cart_item_uuid)
+        with transaction.atomic():
+            if cart_item.quantity == 1:
+                cart_item.delete()
+                logger.info(f"Deleted Cart_item:{cart_item.cart_item_uuid} in Cart:{cart.cart_uuid}")
+                return self._Cart_to_response(cart)
+            cart_item.remove_quantity(1)
+            logger.info(f"Removed Quantity t0 Cart_item:{cart_item.cart_item_uuid} in Cart:{cart.cart_uuid}")
+            return self._Cart_to_response(cart)
+
+    @handle_error
+    @check_access(roles=["user","store","internal"])
+    def IncreaseAddOnQuantity(self, request, context):
+        cart = Cart.objects.get_active_cart(cart_uuid = request.cart_uuid,user_phone_no = request.user_phone_no,store_uuid = request.store_uuid)
+        cart_item = CartItem.objects.get(cart = cart,cart_item_uuid = request.cart_item_uuid)
+        add_on = AddOn.objects.get(cart_item = cart_item,add_on_uuid = request.add_on_uuid)
+        with transaction.atomic():
+            add_on.add_quantity(1)
+            logger.info(f"Increased Quantity to Add-on:{add_on.add_on_uuid} in Cart_item:{cart_item.cart_item_uuid} in Cart:{cart.cart_uuid}")
+            return self._Cart_to_response(cart)
+
+    @handle_error
+    @check_access(roles=["user","store","internal"])
+    def RemoveAddOnQuantity(self, request, context):
+        cart = Cart.objects.get_active_cart(cart_uuid = request.cart_uuid,user_phone_no = request.user_phone_no,store_uuid = request.store_uuid)
+        cart_item = CartItem.objects.get(cart = cart,cart_item_uuid = request.cart_item_uuid)
+        add_on = AddOn.objects.get(cart_item = cart_item,add_on_uuid = request.add_on_uuid)
+        
+        with transaction.atomic():
+            if add_on.quantity == 1:
+                add_on.delete()
+                logger.info(f"Deleted Add-on:{add_on.add_on_uuid} in Cart_item:{cart_item.cart_item_uuid} in Cart:{cart.cart_uuid}")
+                return self._Cart_to_response(cart)
+            add_on.remove_quantity(1)
+            logger.info(f"Removed Quantity to Add-on:{add_on.add_on_uuid} in Cart_item:{cart_item.cart_item_uuid} in Cart:{cart.cart_uuid}")
+            return self._Cart_to_response(cart)
 
    
     @handle_error
-    @transaction.atomic
+    @check_access(roles=["user","store","internal"])
     def ValidateCoupon(self, request, context):
-        cart = Cart.objects.get_active_cart(cart_uuid = request.cart_uuid,store_uuid = request.store_uuid)
+        cart = Cart.objects.get_active_cart(cart_uuid = request.cart_uuid,user_phone_no = request.user_phone_no,store_uuid = request.store_uuid)
 
         coupon  = Coupon.objects.get(coupon_code = request.coupon_code,store_uuid = cart.store_uuid)
         Valid,message = Coupon_Validator.validate(coupon=coupon,cart=cart)
@@ -635,10 +692,10 @@ class CartService(Cart_pb2_grpc.CartServiceServicer):
         return Cart_pb2.ValidCouponResponse(Valid=Valid,message=message)
 
     @handle_error
-    @transaction.atomic
+    @check_access(roles=["user","store","internal"])
     def AddCoupon(self, request, context):
         
-        cart = Cart.objects.get_active_cart(cart_uuid = request.cart_uuid)
+        cart = Cart.objects.get_active_cart(cart_uuid = request.cart_uuid,user_phone_no = request.user_phone_no,store_uuid = request.store_uuid)
 
         coupon  = Coupon.objects.get(coupon_code = request.coupon_code,cart_uuid = request.cart_uuid)
         
@@ -647,53 +704,54 @@ class CartService(Cart_pb2_grpc.CartServiceServicer):
         if not Valid:
             raise ValidationError(message=message)
         
-        cart.apply_discount(discount=coupon.discount)
-        logger.info(f"Applied discount to Cart:{cart.cart_uuid} from coupon {coupon.coupon_uuid}")
-        return self._Cart_to_response(cart=cart)
+        with transaction.atomic():
+            cart.apply_discount(discount=coupon.discount)
+            logger.info(f"Applied discount to Cart:{cart.cart_uuid} from coupon {coupon.coupon_uuid}")
+            return self._Cart_to_response(cart=cart)
 
     @handle_error
-    @transaction.atomic
+    @check_access(roles=["user","store","internal"])
     def RemoveCoupon(self, request, context):
-        cart = Cart.objects.get_active_cart(cart_uuid = request.cart_uuid)
-        cart.remove_discount()
-
-        return self._Cart_to_response(cart)
+        cart = Cart.objects.get_active_cart(cart_uuid = request.cart_uuid,user_phone_no = request.user_phone_no,store_uuid = request.store_uuid)
+        with transaction.atomic():
+            cart.remove_discount()
+            return self._Cart_to_response(cart)
 
     @handle_error
-    @transaction.atomic
+    @check_access(roles=["user","store","internal"])
     def ValidateCart(self,request,context):
         # Get the cart based on cart_uuid
-            cart = Cart.objects.get_active_cart(cart_uuid=request.cart_uuid)
+            cart = Cart.objects.get_active_cart(cart_uuid = request.cart_uuid,user_phone_no = request.user_phone_no,store_uuid = request.store_uuid)
+            with transaction.atomic():
+                # Check if the cart has a coupon code
+                if cart.coupon_code:
+                    try:
+                        # Get the coupon object
+                        coupon = Coupon.objects.get(store_uuid=cart.store_uuid, coupon_code=cart.coupon_code)
 
-            # Check if the cart has a coupon code
-            if cart.coupon_code:
-                try:
-                    # Get the coupon object
-                    coupon = Coupon.objects.get(store_uuid=cart.store_uuid, coupon_code=cart.coupon_code)
+                        # Validate the cart with the coupon using CartValidator
+                        temp = CartVaildator.validate_cart(cart=cart, coupon=coupon)
+                        if temp["valid"]:
+                            # If the coupon is valid, record its usage
+                            coupon_usage = CouponUsage.objects.create(
+                                coupon=coupon,
+                                user_phone_no=cart.user_phone_no,
+                                cart_uuid=cart.cart_uuid
+                            )
+                            logger.info(f"Coupon Usage recorded for coupon:{coupon.coupon_code} by User:{coupon_usage.user_phone_no}")
+                        else:
+                            logger.warning(f"Cart validation failed for coupon: {cart.coupon_code} and cart: {cart.cart_uuid} for {temp["messeage"]}")
+                            raise ValidationError(f"Cart validation failed for coupon: {cart.coupon_code} and cart: {cart.cart_uuid} for {temp["messeage"]}")
 
-                    # Validate the cart with the coupon using CartValidator
-                    temp = CartVaildator.validate_cart(cart=cart, coupon=coupon)
-                    if temp["valid"]:
-                        # If the coupon is valid, record its usage
-                        coupon_usage = CouponUsage.objects.create(
-                            coupon=coupon,
-                            user_phone_no=cart.user_phone_no,
-                            cart_uuid=cart.cart_uuid
-                        )
-                        logger.info(f"Coupon Usage recorded for coupon:{coupon.coupon_code} by User:{coupon_usage.user_phone_no}")
-                    else:
-                        logger.warning(f"Cart validation failed for coupon: {cart.coupon_code} and cart: {cart.cart_uuid} for {temp["messeage"]}")
-                        raise ValidationError(f"Cart validation failed for coupon: {cart.coupon_code} and cart: {cart.cart_uuid} for {temp["messeage"]}")
+                    except ObjectDoesNotExist:
+                        logger.error(f"Coupon with code {cart.coupon_code} not found for store {cart.store_uuid}")
+                        raise
+                cart.lock_cart()
 
-                except ObjectDoesNotExist:
-                    logger.error(f"Coupon with code {cart.coupon_code} not found for store {cart.store_uuid}")
-                    raise
-            cart.lock_cart()
+                logger.info(f"Cart {cart.cart_uuid} locked at {cart.updated_at}")
 
-            logger.info(f"Cart {cart.cart_uuid} locked at {cart.updated_at}")
-
-            # Indicate successful validation and locking
-            return self._Cart_to_response(cart)
+                # Indicate successful validation and locking
+                return self._Cart_to_response(cart)
 
 class CouponService(Cart_pb2_grpc.CouponServiceServicer):
     
@@ -875,37 +933,37 @@ class CouponService(Cart_pb2_grpc.CouponServiceServicer):
             raise
     
     @handle_error
-    @transaction.atomic
+    @check_access(roles=["store","internal"])
     def CreateCoupon(self,request,context):
-        logger.info(request.coupon.valid_from.seconds)
-        coupon =  Coupon.objects.create(
+        with transaction.atomic():
+            coupon =  Coupon.objects.create(
 
-            store_uuid = request.store_uuid,
-            coupon_code = request.coupon.coupon_code,
-            discount_type = DISCOUNTTYPE.Name(request.coupon.discount_type),
-            
-            valid_from = datetime.fromtimestamp(request.coupon.valid_from.seconds),
-            valid_to = datetime.fromtimestamp(request.coupon.valid_to.seconds),
+                store_uuid = request.store_uuid,
+                coupon_code = request.coupon.coupon_code,
+                discount_type = DISCOUNTTYPE.Name(request.coupon.discount_type),
+                
+                valid_from = datetime.fromtimestamp(request.coupon.valid_from.seconds),
+                valid_to = datetime.fromtimestamp(request.coupon.valid_to.seconds),
 
-            usage_limit_per_user = request.coupon.usage_limit_per_user,
-            total_usage_limit = request.coupon.total_usage_limit,
+                usage_limit_per_user = request.coupon.usage_limit_per_user,
+                total_usage_limit = request.coupon.total_usage_limit,
 
-            discount = request.coupon.discount,
+                discount = request.coupon.discount,
 
-            min_spend = request.coupon.min_spend,
-            max_discount = request.coupon.max_discount,
-            is_for_new_users = request.coupon.is_for_new_users,
-            description = request.coupon.description,
-            is_active = request.coupon.is_active,
-        )
-        logger.info(
-            f"Created Coupon:{coupon.coupon_uuid} at store:{coupon.store_uuid}"
-        )
+                min_spend = request.coupon.min_spend,
+                max_discount = request.coupon.max_discount,
+                is_for_new_users = request.coupon.is_for_new_users,
+                description = request.coupon.description,
+                is_active = request.coupon.is_active,
+            )
+            logger.info(
+                f"Created Coupon:{coupon.coupon_uuid} at store:{coupon.store_uuid}"
+            )
 
-        return self._Coupon_to_response(coupon=coupon)
+            return self._Coupon_to_response(coupon=coupon)
 
-    @transaction.atomic
-    @handle_error       
+    @handle_error
+    @check_access(roles=["store","internal"])       
     def GetCoupon(self,request,context):
 
         coupon = Coupon.objects.get(coupon_uuid=request.coupon_uuid,
@@ -915,51 +973,52 @@ class CouponService(Cart_pb2_grpc.CouponServiceServicer):
 
 
     @handle_error    
-    @transaction.atomic
+    @check_access(roles=["store","internal"])
     def UpdateCoupon(self,request,context):
         coupon = Coupon.objects.get(coupon_uuid=request.coupon_uuid, store_uuid=request.store_uuid)
+        with transaction.atomic():
+            if request.coupon_code:
+                coupon.coupon_code = request.coupon_code
+            
+            if request.discount_type:
+                try:
+                    coupon.discount_type = DISCOUNTTYPE.Value(request.discount_type)
+                except KeyError:
+                    logger.warning(f"Invalid discount_type: {request.discount_type}")
+                    raise ValueError("Invalid discount type provided")
 
-        if request.coupon_code:
-            coupon.coupon_code = request.coupon_code
-        
-        if request.discount_type:
-            try:
-                coupon.discount_type = DISCOUNTTYPE.Value(request.discount_type)
-            except KeyError:
-                logger.warning(f"Invalid discount_type: {request.discount_type}")
-                raise ValueError("Invalid discount type provided")
+            if request.valid_from:
+                coupon.valid_from = request.valid_from
+            if request.valid_to:
+                coupon.valid_to = request.valid_to
+            
+            coupon.usage_limit_per_user = request.usage_limit_per_user or coupon.usage_limit_per_user
+            coupon.total_usage_limit = request.total_usage_limit or coupon.total_usage_limit
+            coupon.discount = request.discount or coupon.discount
+            coupon.min_spend = request.min_spend or coupon.min_spend
+            coupon.max_discount = request.max_discount or coupon.max_discount
+            coupon.is_for_new_users = request.is_for_new_users
+            coupon.description = request.description or coupon.description
+            coupon.max_cart_value = request.max_cart_value or coupon.max_cart_value
+            coupon.is_active = request.is_active
 
-        if request.valid_from:
-            coupon.valid_from = request.valid_from
-        if request.valid_to:
-            coupon.valid_to = request.valid_to
-        
-        coupon.usage_limit_per_user = request.usage_limit_per_user or coupon.usage_limit_per_user
-        coupon.total_usage_limit = request.total_usage_limit or coupon.total_usage_limit
-        coupon.discount = request.discount or coupon.discount
-        coupon.min_spend = request.min_spend or coupon.min_spend
-        coupon.max_discount = request.max_discount or coupon.max_discount
-        coupon.is_for_new_users = request.is_for_new_users
-        coupon.description = request.description or coupon.description
-        coupon.max_cart_value = request.max_cart_value or coupon.max_cart_value
-        coupon.is_active = request.is_active
+            coupon.save()  # ✅ Save the updated coupon
 
-        coupon.save()  # ✅ Save the updated coupon
-
-        return self._Coupon_to_response(coupon)
+            return self._Coupon_to_response(coupon)
 
         
     @handle_error
-    @transaction.atomic
+    @check_access(roles=["store","internal"])
     def DeleteCoupon(self,request,context):
         coupon = Coupon.objects.get(coupon_uuid=request.coupon_uuid,
                                     store_uuid = request.store_uuid)
-        coupon.delete()
-        logger.info(f"Coupon:{coupon.coupon_uuid} at store_uuid:{coupon.store_uuid}")        
-        return self._Coupon_to_response(coupon)
+        with transaction.atomic():
+            coupon.delete()
+            logger.info(f"Coupon:{coupon.coupon_uuid} at store_uuid:{coupon.store_uuid}")        
+            return self._Coupon_to_response(coupon)
         
     @handle_error
-    @transaction.atomic        
+    @check_access(roles=["store","internal"])
     def listCoupon(self,request,context):
         coupons,next_page,prev_page = Coupon.objects.get_coupons()
 
@@ -969,8 +1028,8 @@ class CouponService(Cart_pb2_grpc.CouponServiceServicer):
             prev_page=prev_page
             )   
 
-    @transaction.atomic
     @handle_error
+    @check_access(roles=["store","internal"])
     def GetCouponUsage(self, request, context):
         coupon  = Coupon.objects.get(store_uuid= request.store_uuid,coupon_uuid = request.coupon_uuid)
 

@@ -122,7 +122,6 @@ SECRET_KEY = 'django-insecure-!(n#c47aq7onde1dn4(7#fz@h_7^8m0-p32%*p%rr+g7jowydd
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
 
 
 # Application definition
@@ -170,26 +169,6 @@ WSGI_APPLICATION = 'Orders.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
-
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.sqlite3',
-#         'NAME': BASE_DIR / 'db.sqlite3',
-#     }
-
-# }
-logging.info(f"name {os.getenv("ORDER_DB_NAME")} user {os.getenv("ORDER_DB_USER")} pass {os.getenv("ORDER_DB_PASSWORD")} 'HOST':{os.getenv("ORDER_DB_ADDRESS")}")
-# DATABASES = {
-#     'default':
-#     {
-#         'ENGINE': 'django.db.backends.postgresql',
-#         'NAME' : f"{os.getenv("ORDER_DB_NAME","Cart")}",
-#         'USER' : f"{os.getenv("ORDER_DB_USER","postgres")}",
-#         'PASSWORD': f"{os.getenv("ORDER_DB_PASSWORD")}",
-#         'HOST':f"{os.getenv("ORDER_DB_ADDRESS")}",
-#         'PORT' : "5432"
-#     }
-# }
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',

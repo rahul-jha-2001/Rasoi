@@ -191,126 +191,184 @@ class DeleteCartRequest(_message.Message):
     def __init__(self, store_uuid: _Optional[str] = ..., user_phone_no: _Optional[str] = ..., cart_uuid: _Optional[str] = ...) -> None: ...
 
 class AddCartItemRequest(_message.Message):
-    __slots__ = ("cart_uuid", "cart_item")
-    CART_UUID_FIELD_NUMBER: _ClassVar[int]
-    CART_ITEM_FIELD_NUMBER: _ClassVar[int]
-    cart_uuid: str
-    cart_item: CartItem
-    def __init__(self, cart_uuid: _Optional[str] = ..., cart_item: _Optional[_Union[CartItem, _Mapping]] = ...) -> None: ...
-
-class RemoveCartItemRequest(_message.Message):
-    __slots__ = ("cart_item_uuid", "cart_uuid")
-    CART_ITEM_UUID_FIELD_NUMBER: _ClassVar[int]
-    CART_UUID_FIELD_NUMBER: _ClassVar[int]
-    cart_item_uuid: str
-    cart_uuid: str
-    def __init__(self, cart_item_uuid: _Optional[str] = ..., cart_uuid: _Optional[str] = ...) -> None: ...
-
-class AddQuantityRequest(_message.Message):
-    __slots__ = ("cart_uuid", "cart_item_uuid")
-    CART_UUID_FIELD_NUMBER: _ClassVar[int]
-    CART_ITEM_UUID_FIELD_NUMBER: _ClassVar[int]
-    cart_uuid: str
-    cart_item_uuid: str
-    def __init__(self, cart_uuid: _Optional[str] = ..., cart_item_uuid: _Optional[str] = ...) -> None: ...
-
-class RemoveQuantityRequest(_message.Message):
-    __slots__ = ("cart_uuid", "cart_item_uuid")
-    CART_UUID_FIELD_NUMBER: _ClassVar[int]
-    CART_ITEM_UUID_FIELD_NUMBER: _ClassVar[int]
-    cart_uuid: str
-    cart_item_uuid: str
-    def __init__(self, cart_uuid: _Optional[str] = ..., cart_item_uuid: _Optional[str] = ...) -> None: ...
-
-class CreateAddOnRequest(_message.Message):
-    __slots__ = ("cart_uuid", "cart_item_uuid", "add_on")
-    CART_UUID_FIELD_NUMBER: _ClassVar[int]
-    CART_ITEM_UUID_FIELD_NUMBER: _ClassVar[int]
-    ADD_ON_FIELD_NUMBER: _ClassVar[int]
-    cart_uuid: str
-    cart_item_uuid: str
-    add_on: AddOn
-    def __init__(self, cart_uuid: _Optional[str] = ..., cart_item_uuid: _Optional[str] = ..., add_on: _Optional[_Union[AddOn, _Mapping]] = ...) -> None: ...
-
-class UpdateAddOnRequest(_message.Message):
-    __slots__ = ("cart_uuid", "cart_item_uuid", "add_on_uuid", "add_on")
-    CART_UUID_FIELD_NUMBER: _ClassVar[int]
-    CART_ITEM_UUID_FIELD_NUMBER: _ClassVar[int]
-    ADD_ON_UUID_FIELD_NUMBER: _ClassVar[int]
-    ADD_ON_FIELD_NUMBER: _ClassVar[int]
-    cart_uuid: str
-    cart_item_uuid: str
-    add_on_uuid: str
-    add_on: AddOn
-    def __init__(self, cart_uuid: _Optional[str] = ..., cart_item_uuid: _Optional[str] = ..., add_on_uuid: _Optional[str] = ..., add_on: _Optional[_Union[AddOn, _Mapping]] = ...) -> None: ...
-
-class RemoveAddOnRequest(_message.Message):
-    __slots__ = ("cart_uuid", "cart_item_uuid", "add_on_uuid")
-    CART_UUID_FIELD_NUMBER: _ClassVar[int]
-    CART_ITEM_UUID_FIELD_NUMBER: _ClassVar[int]
-    ADD_ON_UUID_FIELD_NUMBER: _ClassVar[int]
-    cart_uuid: str
-    cart_item_uuid: str
-    add_on_uuid: str
-    def __init__(self, cart_uuid: _Optional[str] = ..., cart_item_uuid: _Optional[str] = ..., add_on_uuid: _Optional[str] = ...) -> None: ...
-
-class IncreaseAddOnQuantityRequest(_message.Message):
-    __slots__ = ("cart_uuid", "cart_item_uuid", "add_on_uuid")
-    CART_UUID_FIELD_NUMBER: _ClassVar[int]
-    CART_ITEM_UUID_FIELD_NUMBER: _ClassVar[int]
-    ADD_ON_UUID_FIELD_NUMBER: _ClassVar[int]
-    cart_uuid: str
-    cart_item_uuid: str
-    add_on_uuid: str
-    def __init__(self, cart_uuid: _Optional[str] = ..., cart_item_uuid: _Optional[str] = ..., add_on_uuid: _Optional[str] = ...) -> None: ...
-
-class RemoveAddOnQuantityRequest(_message.Message):
-    __slots__ = ("cart_uuid", "cart_item_uuid", "add_on_uuid")
-    CART_UUID_FIELD_NUMBER: _ClassVar[int]
-    CART_ITEM_UUID_FIELD_NUMBER: _ClassVar[int]
-    ADD_ON_UUID_FIELD_NUMBER: _ClassVar[int]
-    cart_uuid: str
-    cart_item_uuid: str
-    add_on_uuid: str
-    def __init__(self, cart_uuid: _Optional[str] = ..., cart_item_uuid: _Optional[str] = ..., add_on_uuid: _Optional[str] = ...) -> None: ...
-
-class ValidCouponResquest(_message.Message):
-    __slots__ = ("cart_uuid", "coupon_code")
-    CART_UUID_FIELD_NUMBER: _ClassVar[int]
-    COUPON_CODE_FIELD_NUMBER: _ClassVar[int]
-    cart_uuid: str
-    coupon_code: str
-    def __init__(self, cart_uuid: _Optional[str] = ..., coupon_code: _Optional[str] = ...) -> None: ...
-
-class ValidCouponResponse(_message.Message):
-    __slots__ = ("Valid", "message")
-    VALID_FIELD_NUMBER: _ClassVar[int]
-    MESSAGE_FIELD_NUMBER: _ClassVar[int]
-    Valid: bool
-    message: str
-    def __init__(self, Valid: bool = ..., message: _Optional[str] = ...) -> None: ...
-
-class AddCouponRequest(_message.Message):
-    __slots__ = ("cart_uuid", "Coupon_code")
-    CART_UUID_FIELD_NUMBER: _ClassVar[int]
-    COUPON_CODE_FIELD_NUMBER: _ClassVar[int]
-    cart_uuid: str
-    Coupon_code: str
-    def __init__(self, cart_uuid: _Optional[str] = ..., Coupon_code: _Optional[str] = ...) -> None: ...
-
-class RemoveCouponRequest(_message.Message):
-    __slots__ = ("cart_uuid",)
-    CART_UUID_FIELD_NUMBER: _ClassVar[int]
-    cart_uuid: str
-    def __init__(self, cart_uuid: _Optional[str] = ...) -> None: ...
-
-class ValidateCartRequest(_message.Message):
-    __slots__ = ("cart_uuid", "store_uuid")
+    __slots__ = ("cart_uuid", "store_uuid", "user_phone_no", "cart_item")
     CART_UUID_FIELD_NUMBER: _ClassVar[int]
     STORE_UUID_FIELD_NUMBER: _ClassVar[int]
+    USER_PHONE_NO_FIELD_NUMBER: _ClassVar[int]
+    CART_ITEM_FIELD_NUMBER: _ClassVar[int]
     cart_uuid: str
     store_uuid: str
-    def __init__(self, cart_uuid: _Optional[str] = ..., store_uuid: _Optional[str] = ...) -> None: ...
+    user_phone_no: str
+    cart_item: CartItem
+    def __init__(self, cart_uuid: _Optional[str] = ..., store_uuid: _Optional[str] = ..., user_phone_no: _Optional[str] = ..., cart_item: _Optional[_Union[CartItem, _Mapping]] = ...) -> None: ...
+
+class RemoveCartItemRequest(_message.Message):
+    __slots__ = ("cart_item_uuid", "cart_uuid", "product_uuid", "store_uuid", "user_phone_no")
+    CART_ITEM_UUID_FIELD_NUMBER: _ClassVar[int]
+    CART_UUID_FIELD_NUMBER: _ClassVar[int]
+    PRODUCT_UUID_FIELD_NUMBER: _ClassVar[int]
+    STORE_UUID_FIELD_NUMBER: _ClassVar[int]
+    USER_PHONE_NO_FIELD_NUMBER: _ClassVar[int]
+    cart_item_uuid: str
+    cart_uuid: str
+    product_uuid: str
+    store_uuid: str
+    user_phone_no: str
+    def __init__(self, cart_item_uuid: _Optional[str] = ..., cart_uuid: _Optional[str] = ..., product_uuid: _Optional[str] = ..., store_uuid: _Optional[str] = ..., user_phone_no: _Optional[str] = ...) -> None: ...
+
+class AddQuantityRequest(_message.Message):
+    __slots__ = ("cart_uuid", "cart_item_uuid", "product_uuid", "store_uuid", "user_phone_no")
+    CART_UUID_FIELD_NUMBER: _ClassVar[int]
+    CART_ITEM_UUID_FIELD_NUMBER: _ClassVar[int]
+    PRODUCT_UUID_FIELD_NUMBER: _ClassVar[int]
+    STORE_UUID_FIELD_NUMBER: _ClassVar[int]
+    USER_PHONE_NO_FIELD_NUMBER: _ClassVar[int]
+    cart_uuid: str
+    cart_item_uuid: str
+    product_uuid: str
+    store_uuid: str
+    user_phone_no: str
+    def __init__(self, cart_uuid: _Optional[str] = ..., cart_item_uuid: _Optional[str] = ..., product_uuid: _Optional[str] = ..., store_uuid: _Optional[str] = ..., user_phone_no: _Optional[str] = ...) -> None: ...
+
+class RemoveQuantityRequest(_message.Message):
+    __slots__ = ("cart_uuid", "cart_item_uuid", "product_uuid", "store_uuid", "user_phone_no")
+    CART_UUID_FIELD_NUMBER: _ClassVar[int]
+    CART_ITEM_UUID_FIELD_NUMBER: _ClassVar[int]
+    PRODUCT_UUID_FIELD_NUMBER: _ClassVar[int]
+    STORE_UUID_FIELD_NUMBER: _ClassVar[int]
+    USER_PHONE_NO_FIELD_NUMBER: _ClassVar[int]
+    cart_uuid: str
+    cart_item_uuid: str
+    product_uuid: str
+    store_uuid: str
+    user_phone_no: str
+    def __init__(self, cart_uuid: _Optional[str] = ..., cart_item_uuid: _Optional[str] = ..., product_uuid: _Optional[str] = ..., store_uuid: _Optional[str] = ..., user_phone_no: _Optional[str] = ...) -> None: ...
+
+class CreateAddOnRequest(_message.Message):
+    __slots__ = ("cart_uuid", "cart_item_uuid", "product_uuid", "add_on", "store_uuid", "user_phone_no")
+    CART_UUID_FIELD_NUMBER: _ClassVar[int]
+    CART_ITEM_UUID_FIELD_NUMBER: _ClassVar[int]
+    PRODUCT_UUID_FIELD_NUMBER: _ClassVar[int]
+    ADD_ON_FIELD_NUMBER: _ClassVar[int]
+    STORE_UUID_FIELD_NUMBER: _ClassVar[int]
+    USER_PHONE_NO_FIELD_NUMBER: _ClassVar[int]
+    cart_uuid: str
+    cart_item_uuid: str
+    product_uuid: str
+    add_on: AddOn
+    store_uuid: str
+    user_phone_no: str
+    def __init__(self, cart_uuid: _Optional[str] = ..., cart_item_uuid: _Optional[str] = ..., product_uuid: _Optional[str] = ..., add_on: _Optional[_Union[AddOn, _Mapping]] = ..., store_uuid: _Optional[str] = ..., user_phone_no: _Optional[str] = ...) -> None: ...
+
+class UpdateAddOnRequest(_message.Message):
+    __slots__ = ("cart_uuid", "cart_item_uuid", "add_on_uuid", "add_on", "store_uuid", "user_phone_no")
+    CART_UUID_FIELD_NUMBER: _ClassVar[int]
+    CART_ITEM_UUID_FIELD_NUMBER: _ClassVar[int]
+    ADD_ON_UUID_FIELD_NUMBER: _ClassVar[int]
+    ADD_ON_FIELD_NUMBER: _ClassVar[int]
+    STORE_UUID_FIELD_NUMBER: _ClassVar[int]
+    USER_PHONE_NO_FIELD_NUMBER: _ClassVar[int]
+    cart_uuid: str
+    cart_item_uuid: str
+    add_on_uuid: str
+    add_on: AddOn
+    store_uuid: str
+    user_phone_no: str
+    def __init__(self, cart_uuid: _Optional[str] = ..., cart_item_uuid: _Optional[str] = ..., add_on_uuid: _Optional[str] = ..., add_on: _Optional[_Union[AddOn, _Mapping]] = ..., store_uuid: _Optional[str] = ..., user_phone_no: _Optional[str] = ...) -> None: ...
+
+class RemoveAddOnRequest(_message.Message):
+    __slots__ = ("cart_uuid", "cart_item_uuid", "add_on_uuid", "store_uuid", "user_phone_no")
+    CART_UUID_FIELD_NUMBER: _ClassVar[int]
+    CART_ITEM_UUID_FIELD_NUMBER: _ClassVar[int]
+    ADD_ON_UUID_FIELD_NUMBER: _ClassVar[int]
+    STORE_UUID_FIELD_NUMBER: _ClassVar[int]
+    USER_PHONE_NO_FIELD_NUMBER: _ClassVar[int]
+    cart_uuid: str
+    cart_item_uuid: str
+    add_on_uuid: str
+    store_uuid: str
+    user_phone_no: str
+    def __init__(self, cart_uuid: _Optional[str] = ..., cart_item_uuid: _Optional[str] = ..., add_on_uuid: _Optional[str] = ..., store_uuid: _Optional[str] = ..., user_phone_no: _Optional[str] = ...) -> None: ...
+
+class IncreaseAddOnQuantityRequest(_message.Message):
+    __slots__ = ("cart_uuid", "cart_item_uuid", "add_on_uuid", "store_uuid", "user_phone_no")
+    CART_UUID_FIELD_NUMBER: _ClassVar[int]
+    CART_ITEM_UUID_FIELD_NUMBER: _ClassVar[int]
+    ADD_ON_UUID_FIELD_NUMBER: _ClassVar[int]
+    STORE_UUID_FIELD_NUMBER: _ClassVar[int]
+    USER_PHONE_NO_FIELD_NUMBER: _ClassVar[int]
+    cart_uuid: str
+    cart_item_uuid: str
+    add_on_uuid: str
+    store_uuid: str
+    user_phone_no: str
+    def __init__(self, cart_uuid: _Optional[str] = ..., cart_item_uuid: _Optional[str] = ..., add_on_uuid: _Optional[str] = ..., store_uuid: _Optional[str] = ..., user_phone_no: _Optional[str] = ...) -> None: ...
+
+class RemoveAddOnQuantityRequest(_message.Message):
+    __slots__ = ("cart_uuid", "cart_item_uuid", "add_on_uuid", "store_uuid", "user_phone_no")
+    CART_UUID_FIELD_NUMBER: _ClassVar[int]
+    CART_ITEM_UUID_FIELD_NUMBER: _ClassVar[int]
+    ADD_ON_UUID_FIELD_NUMBER: _ClassVar[int]
+    STORE_UUID_FIELD_NUMBER: _ClassVar[int]
+    USER_PHONE_NO_FIELD_NUMBER: _ClassVar[int]
+    cart_uuid: str
+    cart_item_uuid: str
+    add_on_uuid: str
+    store_uuid: str
+    user_phone_no: str
+    def __init__(self, cart_uuid: _Optional[str] = ..., cart_item_uuid: _Optional[str] = ..., add_on_uuid: _Optional[str] = ..., store_uuid: _Optional[str] = ..., user_phone_no: _Optional[str] = ...) -> None: ...
+
+class ValidCouponResquest(_message.Message):
+    __slots__ = ("cart_uuid", "coupon_code", "store_uuid", "user_phone_no")
+    CART_UUID_FIELD_NUMBER: _ClassVar[int]
+    COUPON_CODE_FIELD_NUMBER: _ClassVar[int]
+    STORE_UUID_FIELD_NUMBER: _ClassVar[int]
+    USER_PHONE_NO_FIELD_NUMBER: _ClassVar[int]
+    cart_uuid: str
+    coupon_code: str
+    store_uuid: str
+    user_phone_no: str
+    def __init__(self, cart_uuid: _Optional[str] = ..., coupon_code: _Optional[str] = ..., store_uuid: _Optional[str] = ..., user_phone_no: _Optional[str] = ...) -> None: ...
+
+class ValidCouponResponse(_message.Message):
+    __slots__ = ("valid", "message")
+    VALID_FIELD_NUMBER: _ClassVar[int]
+    MESSAGE_FIELD_NUMBER: _ClassVar[int]
+    valid: bool
+    message: str
+    def __init__(self, valid: bool = ..., message: _Optional[str] = ...) -> None: ...
+
+class AddCouponRequest(_message.Message):
+    __slots__ = ("cart_uuid", "coupon_code", "store_uuid", "user_phone_no")
+    CART_UUID_FIELD_NUMBER: _ClassVar[int]
+    COUPON_CODE_FIELD_NUMBER: _ClassVar[int]
+    STORE_UUID_FIELD_NUMBER: _ClassVar[int]
+    USER_PHONE_NO_FIELD_NUMBER: _ClassVar[int]
+    cart_uuid: str
+    coupon_code: str
+    store_uuid: str
+    user_phone_no: str
+    def __init__(self, cart_uuid: _Optional[str] = ..., coupon_code: _Optional[str] = ..., store_uuid: _Optional[str] = ..., user_phone_no: _Optional[str] = ...) -> None: ...
+
+class RemoveCouponRequest(_message.Message):
+    __slots__ = ("cart_uuid", "store_uuid", "user_phone_no")
+    CART_UUID_FIELD_NUMBER: _ClassVar[int]
+    STORE_UUID_FIELD_NUMBER: _ClassVar[int]
+    USER_PHONE_NO_FIELD_NUMBER: _ClassVar[int]
+    cart_uuid: str
+    store_uuid: str
+    user_phone_no: str
+    def __init__(self, cart_uuid: _Optional[str] = ..., store_uuid: _Optional[str] = ..., user_phone_no: _Optional[str] = ...) -> None: ...
+
+class ValidateCartRequest(_message.Message):
+    __slots__ = ("cart_uuid", "store_uuid", "user_phone_no")
+    CART_UUID_FIELD_NUMBER: _ClassVar[int]
+    STORE_UUID_FIELD_NUMBER: _ClassVar[int]
+    USER_PHONE_NO_FIELD_NUMBER: _ClassVar[int]
+    cart_uuid: str
+    store_uuid: str
+    user_phone_no: str
+    def __init__(self, cart_uuid: _Optional[str] = ..., store_uuid: _Optional[str] = ..., user_phone_no: _Optional[str] = ...) -> None: ...
 
 class Coupon(_message.Message):
     __slots__ = ("coupon_uuid", "store_uuid", "coupon_code", "discount_type", "valid_from", "valid_to", "usage_limit_per_user", "total_usage_limit", "discount", "min_spend", "is_for_new_users", "description", "max_cart_value", "is_active", "max_discount")
@@ -347,18 +405,18 @@ class Coupon(_message.Message):
     def __init__(self, coupon_uuid: _Optional[str] = ..., store_uuid: _Optional[str] = ..., coupon_code: _Optional[str] = ..., discount_type: _Optional[_Union[DISCOUNTTYPE, str]] = ..., valid_from: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ..., valid_to: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ..., usage_limit_per_user: _Optional[int] = ..., total_usage_limit: _Optional[int] = ..., discount: _Optional[float] = ..., min_spend: _Optional[float] = ..., is_for_new_users: bool = ..., description: _Optional[str] = ..., max_cart_value: _Optional[float] = ..., is_active: bool = ..., max_discount: _Optional[float] = ...) -> None: ...
 
 class CouponUsage(_message.Message):
-    __slots__ = ("usage_uuid", "Coupon_uuid", "user_phone_no", "used_at", "order_uuid")
+    __slots__ = ("usage_uuid", "coupon_uuid", "user_phone_no", "used_at", "order_uuid")
     USAGE_UUID_FIELD_NUMBER: _ClassVar[int]
     COUPON_UUID_FIELD_NUMBER: _ClassVar[int]
     USER_PHONE_NO_FIELD_NUMBER: _ClassVar[int]
     USED_AT_FIELD_NUMBER: _ClassVar[int]
     ORDER_UUID_FIELD_NUMBER: _ClassVar[int]
     usage_uuid: str
-    Coupon_uuid: str
+    coupon_uuid: str
     user_phone_no: str
     used_at: _timestamp_pb2.Timestamp
     order_uuid: str
-    def __init__(self, usage_uuid: _Optional[str] = ..., Coupon_uuid: _Optional[str] = ..., user_phone_no: _Optional[str] = ..., used_at: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ..., order_uuid: _Optional[str] = ...) -> None: ...
+    def __init__(self, usage_uuid: _Optional[str] = ..., coupon_uuid: _Optional[str] = ..., user_phone_no: _Optional[str] = ..., used_at: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ..., order_uuid: _Optional[str] = ...) -> None: ...
 
 class CreateCouponRequest(_message.Message):
     __slots__ = ("store_uuid", "coupon")

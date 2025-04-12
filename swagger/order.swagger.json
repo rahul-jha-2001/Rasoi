@@ -1,0 +1,908 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "order.proto",
+    "version": "version not set"
+  },
+  "tags": [
+    {
+      "name": "OrderService"
+    }
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/store/{storeUuid}/order": {
+      "post": {
+        "operationId": "OrderService_CreateOrder",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/Order_v1StoreOrderResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "storeUuid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/OrderServiceCreateOrderBody"
+            }
+          }
+        ],
+        "tags": [
+          "OrderService"
+        ]
+      }
+    },
+    "/store/{storeUuid}/order/stream": {
+      "get": {
+        "operationId": "OrderService_StreamOrders",
+        "responses": {
+          "200": {
+            "description": "A successful response.(streaming responses)",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "result": {
+                  "$ref": "#/definitions/Order_v1StoreOrderResponse"
+                },
+                "error": {
+                  "$ref": "#/definitions/rpcStatus"
+                }
+              },
+              "title": "Stream result of Order_v1StoreOrderResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "storeUuid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "OrderService"
+        ]
+      }
+    },
+    "/store/{storeUuid}/order/{orderUuid}": {
+      "put": {
+        "operationId": "OrderService_UpdateOrderState",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/Order_v1StoreOrderResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "storeUuid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "orderUuid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/OrderServiceUpdateOrderStateBody"
+            }
+          }
+        ],
+        "tags": [
+          "OrderService"
+        ]
+      }
+    },
+    "/store/{storeUuid}/orders": {
+      "get": {
+        "operationId": "OrderService_ListOrder",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/Order_v1ListStoreOrderResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "storeUuid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "userPhoneNo",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "OrderService"
+        ]
+      }
+    },
+    "/store/{storeUuid}/user/{userPhoneNo}/order/{orderUuid}": {
+      "get": {
+        "operationId": "OrderService_GetOrder",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/Order_v1StoreOrderResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "storeUuid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "userPhoneNo",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "orderUuid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "orderNo",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "OrderService"
+        ]
+      }
+    },
+    "/store/{storeUuid}/user/{userPhoneNo}/order/{orderUuid}/cancel": {
+      "put": {
+        "operationId": "OrderService_CancelOrder",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/Order_v1StoreOrderResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "storeUuid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "userPhoneNo",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "orderUuid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/OrderServiceCancelOrderBody"
+            }
+          }
+        ],
+        "tags": [
+          "OrderService"
+        ]
+      }
+    },
+    "/user/{userPhoneNo}/store/{storeUuid}/order/{orderUuid}": {
+      "get": {
+        "operationId": "OrderService_GetUserOrder",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/Order_v1UserOrderResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "userPhoneNo",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "storeUuid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "orderUuid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "orderNo",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "OrderService"
+        ]
+      }
+    },
+    "/user/{userPhoneNo}/store/{storeUuid}/order/{orderUuid}/cancel": {
+      "get": {
+        "operationId": "OrderService_CancelUserOrder",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/Order_v1UserOrderResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "userPhoneNo",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "storeUuid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "orderUuid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "orderNo",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "OrderService"
+        ]
+      }
+    },
+    "/user/{userPhoneNo}/store/{storeUuid}/orders": {
+      "get": {
+        "operationId": "OrderService_listUserOrder",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/Order_v1ListUserOrderResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "userPhoneNo",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "storeUuid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "OrderService"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "OrderServiceCancelOrderBody": {
+      "type": "object",
+      "properties": {
+        "orderNo": {
+          "type": "string"
+        }
+      }
+    },
+    "OrderServiceCreateOrderBody": {
+      "type": "object",
+      "properties": {
+        "userPhoneNo": {
+          "type": "string"
+        },
+        "cartUuid": {
+          "type": "string"
+        }
+      },
+      "title": "Request/Response Structures"
+    },
+    "OrderServiceUpdateOrderStateBody": {
+      "type": "object",
+      "properties": {
+        "orderState": {
+          "$ref": "#/definitions/Order_v1OrderState"
+        }
+      }
+    },
+    "Order_v1ListStoreOrderResponse": {
+      "type": "object",
+      "properties": {
+        "orders": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/Order_v1OrderStoreView"
+          }
+        },
+        "nextPage": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "prevPage": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "Order_v1ListUserOrderResponse": {
+      "type": "object",
+      "properties": {
+        "orders": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/Order_v1OrderUserView"
+          }
+        },
+        "nextPage": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "prevPage": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "Order_v1OrderItem": {
+      "type": "object",
+      "properties": {
+        "itemUuid": {
+          "type": "string"
+        },
+        "productName": {
+          "type": "string"
+        },
+        "productUuid": {
+          "type": "string"
+        },
+        "taxPercentage": {
+          "type": "number",
+          "format": "float"
+        },
+        "discount": {
+          "type": "number",
+          "format": "float"
+        },
+        "unitPrice": {
+          "type": "number",
+          "format": "float",
+          "description": "Price of a single unit of the item (before any discount or tax)."
+        },
+        "quantity": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of units of the item in the cart."
+        },
+        "addOnsTotal": {
+          "type": "number",
+          "format": "float"
+        },
+        "subtotalAmount": {
+          "type": "number",
+          "format": "float",
+          "description": "unit_price * quantity (total before discounts and tax)."
+        },
+        "discountAmount": {
+          "type": "number",
+          "format": "float",
+          "description": "Discount applied to this specific item."
+        },
+        "priceBeforeTax": {
+          "type": "number",
+          "format": "float",
+          "description": "(subtotal_amount - discount_amount)."
+        },
+        "taxAmount": {
+          "type": "number",
+          "format": "float",
+          "description": "Tax applied to the item."
+        },
+        "finalPrice": {
+          "type": "number",
+          "format": "float",
+          "description": "price_before_tax + tax_amount (final amount for the item)."
+        },
+        "packagingCost": {
+          "type": "number",
+          "format": "float",
+          "title": "Price for Packaging if required"
+        },
+        "addOns": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/Order_v1OrderItemAddOn"
+          }
+        }
+      }
+    },
+    "Order_v1OrderItemAddOn": {
+      "type": "object",
+      "properties": {
+        "addOnName": {
+          "type": "string"
+        },
+        "addOnUuid": {
+          "type": "string"
+        },
+        "quantity": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "unitPrice": {
+          "type": "number",
+          "format": "float"
+        },
+        "isFree": {
+          "type": "boolean"
+        },
+        "subtotalAmount": {
+          "type": "number",
+          "format": "float"
+        }
+      }
+    },
+    "Order_v1OrderPayment": {
+      "type": "object",
+      "properties": {
+        "paymentUuid": {
+          "type": "string"
+        },
+        "rzOrderId": {
+          "type": "string"
+        },
+        "rzPaymentId": {
+          "type": "string"
+        },
+        "rzSignature": {
+          "type": "string"
+        },
+        "amount": {
+          "type": "number",
+          "format": "float"
+        },
+        "paymentStatus": {
+          "$ref": "#/definitions/Order_v1PaymentState"
+        },
+        "paymentMethod": {
+          "$ref": "#/definitions/Order_v1PaymentMethod"
+        },
+        "notes": {
+          "type": "string"
+        },
+        "paymentTime": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "title": "Payment \u0026 History (if needed for responses)"
+    },
+    "Order_v1OrderState": {
+      "type": "string",
+      "enum": [
+        "ORDER_STATE_UNSPECIFIED",
+        "ORDER_STATE_PAYMENT_PENDING",
+        "ORDER_STATE_PLACED",
+        "ORDER_STATE_PREPARING",
+        "ORDER_STATE_READY",
+        "ORDER_STATE_COMPLETED",
+        "ORDER_STATE_CANCELED"
+      ],
+      "default": "ORDER_STATE_UNSPECIFIED",
+      "title": "Enums"
+    },
+    "Order_v1OrderStoreView": {
+      "type": "object",
+      "properties": {
+        "orderUuid": {
+          "type": "string",
+          "title": "Primary key"
+        },
+        "orderNo": {
+          "type": "string",
+          "title": "Public order number"
+        },
+        "storeUuid": {
+          "type": "string"
+        },
+        "userPhoneNo": {
+          "type": "string"
+        },
+        "orderType": {
+          "$ref": "#/definitions/Order_v1OrderType"
+        },
+        "tableNo": {
+          "type": "string"
+        },
+        "vehicleNo": {
+          "type": "string"
+        },
+        "vehicleDescription": {
+          "type": "string"
+        },
+        "couponCode": {
+          "type": "string"
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/Order_v1OrderItem"
+          }
+        },
+        "specialInstructions": {
+          "type": "string"
+        },
+        "orderStatus": {
+          "$ref": "#/definitions/Order_v1OrderState"
+        },
+        "payment": {
+          "$ref": "#/definitions/Order_v1OrderPayment"
+        },
+        "subtotalAmount": {
+          "type": "number",
+          "format": "float",
+          "title": "Financial fields"
+        },
+        "discountAmount": {
+          "type": "number",
+          "format": "float"
+        },
+        "priceBeforeTax": {
+          "type": "number",
+          "format": "float"
+        },
+        "taxAmount": {
+          "type": "number",
+          "format": "float"
+        },
+        "packagingCost": {
+          "type": "number",
+          "format": "float"
+        },
+        "finalAmount": {
+          "type": "number",
+          "format": "float",
+          "title": "Added from model property"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "cartUuid": {
+          "type": "string"
+        }
+      },
+      "title": "Messages"
+    },
+    "Order_v1OrderType": {
+      "type": "string",
+      "enum": [
+        "ORDER_TYPE_UNSPECIFIED",
+        "ORDER_TYPE_DINE_IN",
+        "ORDER_TYPE_TAKE_AWAY",
+        "ORDER_TYPE_DRIVE_THRU"
+      ],
+      "default": "ORDER_TYPE_UNSPECIFIED"
+    },
+    "Order_v1OrderUserView": {
+      "type": "object",
+      "properties": {
+        "orderUuid": {
+          "type": "string",
+          "title": "Primary key"
+        },
+        "orderNo": {
+          "type": "string",
+          "title": "Public order number"
+        },
+        "storeUuid": {
+          "type": "string"
+        },
+        "cartUuid": {
+          "type": "string"
+        },
+        "userPhoneNo": {
+          "type": "string"
+        },
+        "orderType": {
+          "$ref": "#/definitions/Order_v1OrderType"
+        },
+        "tableNo": {
+          "type": "string"
+        },
+        "vehicleNo": {
+          "type": "string"
+        },
+        "vehicleDescription": {
+          "type": "string"
+        },
+        "couponCode": {
+          "type": "string"
+        },
+        "specialInstructions": {
+          "type": "string"
+        },
+        "orderStatus": {
+          "$ref": "#/definitions/Order_v1OrderState"
+        },
+        "paymentMethod": {
+          "$ref": "#/definitions/Order_v1PaymentMethod"
+        },
+        "paymentState": {
+          "$ref": "#/definitions/Order_v1PaymentState"
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/Order_v1OrderItem"
+          }
+        },
+        "totalSubtotal": {
+          "type": "number",
+          "format": "float",
+          "title": "Sum of all the total amounts of a"
+        },
+        "totalDiscount": {
+          "type": "number",
+          "format": "float"
+        },
+        "totalPriceBeforeTax": {
+          "type": "number",
+          "format": "float"
+        },
+        "totalTax": {
+          "type": "number",
+          "format": "float"
+        },
+        "packagingCost": {
+          "type": "number",
+          "format": "float"
+        },
+        "finalAmount": {
+          "type": "number",
+          "format": "float",
+          "description": "Sum of all the final amounts of all the items in the cart."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "Order_v1PaymentMethod": {
+      "type": "string",
+      "enum": [
+        "PAYMENT_METHOD_UNSPECIFIED",
+        "PAYMENT_METHOD_RAZORPAY",
+        "PAYMENT_METHOD_CASH",
+        "PAYMENT_METHOD_CARD",
+        "PAYMENT_METHOD_UPI",
+        "PAYMENT_METHOD_NETBANKING"
+      ],
+      "default": "PAYMENT_METHOD_UNSPECIFIED"
+    },
+    "Order_v1PaymentState": {
+      "type": "string",
+      "enum": [
+        "PAYMENT_STATE_UNSPECIFIED",
+        "PAYMENT_STATE_PENDING",
+        "PAYMENT_STATE_COMPLETE",
+        "PAYMENT_STATE_FAILED",
+        "PAYMENT_STATE_REFUNDED"
+      ],
+      "default": "PAYMENT_STATE_UNSPECIFIED"
+    },
+    "Order_v1StoreOrderResponse": {
+      "type": "object",
+      "properties": {
+        "order": {
+          "$ref": "#/definitions/Order_v1OrderStoreView"
+        }
+      }
+    },
+    "Order_v1UserOrderResponse": {
+      "type": "object",
+      "properties": {
+        "order": {
+          "$ref": "#/definitions/Order_v1OrderUserView"
+        }
+      }
+    },
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "@type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": {}
+    },
+    "rpcStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    }
+  }
+}

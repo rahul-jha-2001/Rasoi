@@ -16,7 +16,46 @@
     "application/json"
   ],
   "paths": {
-    "/v1/stores/{storeUuid}/categories": {
+    "/v1/store/{storeUuid}/category": {
+      "post": {
+        "summary": "Categories",
+        "operationId": "ProductService_CreateCategory",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/product_v1CategoryResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "storeUuid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ProductServiceCreateCategoryBody"
+            }
+          }
+        ],
+        "tags": [
+          "ProductService"
+        ]
+      }
+    },
+    "/v1/store/{storeUuid}/category/list": {
       "get": {
         "operationId": "ProductService_ListCategory",
         "responses": {
@@ -58,46 +97,9 @@
         "tags": [
           "ProductService"
         ]
-      },
-      "post": {
-        "summary": "Categories",
-        "operationId": "ProductService_CreateCategory",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/product_v1CategoryResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "storeUuid",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/ProductServiceCreateCategoryBody"
-            }
-          }
-        ],
-        "tags": [
-          "ProductService"
-        ]
       }
     },
-    "/v1/stores/{storeUuid}/categories/{categoryUuid}": {
+    "/v1/store/{storeUuid}/category/{categoryUuid}": {
       "get": {
         "operationId": "ProductService_GetCategory",
         "responses": {
@@ -209,7 +211,7 @@
         ]
       }
     },
-    "/v1/stores/{storeUuid}/categories/{categoryUuid}/products": {
+    "/v1/store/{storeUuid}/category/{categoryUuid}/product": {
       "get": {
         "operationId": "ProductService_ListProducts",
         "responses": {
@@ -302,7 +304,7 @@
         ]
       }
     },
-    "/v1/stores/{storeUuid}/categories/{categoryUuid}/products/{productUuid}": {
+    "/v1/store/{storeUuid}/category/{categoryUuid}/product/{productUuid}": {
       "get": {
         "operationId": "ProductService_GetProduct",
         "responses": {
@@ -432,7 +434,7 @@
         ]
       }
     },
-    "/v1/stores/{storeUuid}/products/{productUuid}/add_ons": {
+    "/v1/store/{storeUuid}/product/{productUuid}/add_on/list": {
       "get": {
         "operationId": "ProductService_ListAddOn",
         "responses": {
@@ -480,52 +482,9 @@
         "tags": [
           "ProductService"
         ]
-      },
-      "post": {
-        "summary": "Add-ons",
-        "operationId": "ProductService_CreateAddOn",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/product_v1AddOnResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "storeUuid",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "productUuid",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "addOn",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/product_v1add_on"
-            }
-          }
-        ],
-        "tags": [
-          "ProductService"
-        ]
       }
     },
-    "/v1/stores/{storeUuid}/products/{productUuid}/add_ons/{addOnUuid}": {
+    "/v1/store/{storeUuid}/product/{productUuid}/add_on/{addOnUuid}": {
       "get": {
         "operationId": "ProductService_GetAddOn",
         "responses": {
@@ -637,6 +596,51 @@
           },
           {
             "name": "addOnUuid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "addOn",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/product_v1add_on"
+            }
+          }
+        ],
+        "tags": [
+          "ProductService"
+        ]
+      }
+    },
+    "/v1/store/{storeUuid}/product/{productUuid}/add_ons": {
+      "post": {
+        "summary": "Add-ons",
+        "operationId": "ProductService_CreateAddOn",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/product_v1AddOnResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "storeUuid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "productUuid",
             "in": "path",
             "required": true,
             "type": "string"

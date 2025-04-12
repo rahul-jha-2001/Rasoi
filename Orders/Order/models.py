@@ -137,6 +137,12 @@ class Order(models.Model):
             models.Index(fields=["order_status"]),
             models.Index(fields=["created_at"]),
         ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=['cart_uuid', 'store_uuid'], 
+                name='unique_cart_store_order'
+            )
+        ]
 
     def __str__(self):
         return f"{self.user_phone_no} - {self.order_uuid}"

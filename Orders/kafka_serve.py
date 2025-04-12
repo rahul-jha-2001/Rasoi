@@ -1,8 +1,5 @@
 import os
-import logging
-import traceback
-import uuid
-from confluent_kafka import Consumer
+from confluent_kafka import Consumer, KafkaException, KafkaError
 from google.protobuf.message import DecodeError
 from dotenv import load_dotenv
 
@@ -22,14 +19,14 @@ from Proto.cart_pb2 import CartResponse,GetCartRequest
 from grpc import RpcError,StatusCode
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError
-from confluent_kafka import KafkaException, KafkaError
 from decimal import Decimal
 
 
-logger = Logger("Kafka_Order")
+logger = Logger("KAFKA_service")
 JWT_SECRET = os.getenv("JWT_SECRET","Rahul")
 CART_SERVICE_ADDR = os.getenv("CART_SERVICE_ADDR","localhost:50051")
-KAFKA_SERVER = os.getenv("KAFKA_SERVER",'localhost:29092')
+KAFKA_HOST = os.getenv("KAFKA_HOST",'localhost')
+KAFKA_PORT = os.getenv("KAFKA_PORT","29092")
 class OrderOpreation:
     def __init__(self,Cart_stub):
         self.DeserializedOrder = KafkaOrderMessage()
@@ -51,7 +48,6 @@ class OrderOpreation:
                 raise Exception(error_message)
         return response
     
-
     def _payment_order(self,orderpayment: order_pb2.OrderPayment,order:Order) -> OrderPayment:
             try:
                 # Debug logging
@@ -196,9 +192,18 @@ class OrderOpreation:
             payment = self.DeserializedOrder.payment
         except (DecodeError, AttributeError) as e:
             logger.error(f"Protobuf deserialization failed: {str(e)}")
-            raise ValueError("Invalid message format") from e
+            raise ValueError("Invalid message format") from e  
 
-        # Process order
+        try:
+            existing_order = Order.objects.select_related('payment').get(
+                cart_uuid=cart_uuid,
+                store_uuid=store_uuid
+            )
+            logger.info(f"Found existing order {existing_order.order_uuid} - skipping creation")
+            return existing_order
+        except Order.DoesNotExist:
+            pass        
+            # Process order
         try:
             response = self._call_cart(cart_uuid=cart_uuid, store_uuid=store_uuid)
             order = self._cart_to_order(response)
@@ -232,7 +237,7 @@ class OrderOpreation:
             raise ValueError("Invalid message format") from e
         
         try:
-            order = Order.objects.prefetch_related("payment").get(
+            order =  Order.objects.select_for_update().prefetch_related("payment").get(
                 cart_uuid=cart_uuid,
                 store_uuid=store_uuid
             )
@@ -269,7 +274,7 @@ class KafkaServer:
     def __init__(self):
         try:
             load_dotenv()
-            kafka_brokers = KAFKA_SERVER
+            kafka_brokers = f"{KAFKA_HOST}:{KAFKA_PORT}"
             group_id = 'order_service_group'
             self.consumer_config = {
                 'bootstrap.servers': kafka_brokers,
@@ -378,9 +383,9 @@ class KafkaServer:
         if error.code() == KafkaError._PARTITION_EOF:
             logger.info(f"End of partition reached: {error}")
         elif error.code() == KafkaError.UNKNOWN_TOPIC_OR_PART:
-            logger.error(f"Topic/partition error: {error}",e)
+            logger.error(f"Topic/partition error: {error}")
         else:
-            logger.error(f"Kafka protocol error: {error}",e)
+            logger.error(f"Kafka protocol error: {error}")
 
     def _shutdown(self):
         """Graceful shutdown procedure"""

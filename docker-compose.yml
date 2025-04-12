@@ -8,9 +8,6 @@ services:
         container_name: product_grpc    
         ports:
             - "50052:50051"
-        depends_on:
-                product-database:
-                    condition: service_healthy
         healthcheck:
             test: ["CMD-SHELL", "supervisorctl status | grep -q 'RUNNING' || exit 1"]
             interval: 30s
@@ -22,16 +19,14 @@ services:
             backend:
                 ipv4_address : 10.10.10.2
         env_file:
-            - ./env/products.env           
+            - Product\.env       
     cart_grpc:
         build:
             context: ./
             dockerfile: cart.dockerfile
+        container_name: cart_grpc
         ports:
             - "50053:50051"
-        depends_on:
-            cart-database:
-                condition: service_healthy
         healthcheck:
             test: ["CMD-SHELL", "supervisorctl status | grep -q 'RUNNING' || exit 1"]
             interval: 30s
@@ -43,15 +38,15 @@ services:
             backend:
                 ipv4_address : 10.10.10.6
         env_file:
-            - ./env/cart.env
+            - Cart\.env
     user_grpc:
         build:
             context: ./
             dockerfile: userauth.dockerfile
+        container_name: user_grpc
         ports:
             - "50054:50051"
         depends_on:
-            - user-database
             - redis
         healthcheck:
             test: ["CMD", "grpc_health_probe", "-addr=:50051"]
@@ -67,44 +62,53 @@ services:
         build:
             context: ./
             dockerfile: order_kafka.dockerfile
+        container_name: order_kafka
         depends_on:
-            - order-database
-            - kafka
+            kafka:
+                condition: service_healthy
+            cart_grpc:
+                condition: service_healthy
         healthcheck:
-            test: ["CMD", "kafka-topics", "--list", "--bootstrap-server", "kafka:9092"]
+            test: ["CMD-SHELL", "supervisorctl status | grep -q 'RUNNING' || exit 1"]
             interval: 30s
             timeout: 10s
             retries: 3
+            start_period: 40s
         restart: unless-stopped
         networks:
             backend:
                 ipv4_address: 10.10.10.8
-
+        env_file:
+            - Orders\.env
     order_grpc:
         build:
             context: ./
             dockerfile: order_grpc.dockerfile
+        container_name: order_grpc
         ports:
             - "50055:50051"
         depends_on:
-            - order-database
+            cart_grpc:
+                condition: service_healthy
         healthcheck:
-            test: ["CMD", "grpc_health_probe", "-addr=:50051"]
-            interval: 10s
-            timeout: 5s
-            retries: 5
+            test: ["CMD-SHELL", "supervisorctl status | grep -q 'RUNNING' || exit 1"]
+            interval: 30s
+            timeout: 10s
+            retries: 3
+            start_period: 40s
         restart: unless-stopped
         networks:
             backend:
-                ipv4_address: 10.10.10.12           
+                ipv4_address: 10.10.10.12
+        env_file:
+            - Orders\.env    
 
     notifications_kafka:
         build:
             context: ./
             dockerfile: notifications_kafka.dockerfile
+        container_name: notifications_kafka
         depends_on:
-            notifications-database:
-                condition: service_healthy
             kafka:
                 condition: service_healthy
         healthcheck:
@@ -118,16 +122,15 @@ services:
             backend:
                 ipv4_address: 10.10.10.13
         env_file:
-            - ./env/notifications.env
+            - Notifications\.env
     notifications_grpc:
         build:
             context: ./
             dockerfile: notifications_grpc.dockerfile
+        container_name: notifications_grpc
         ports:
             - "50056:50051"
         depends_on:
-            notifications-database: 
-                condition: service_healthy
             kafka:
                 condition: service_healthy
         healthcheck:
@@ -141,101 +144,103 @@ services:
             backend:
                 ipv4_address: 10.10.10.14
         env_file:
-            - ./env/notifications.env        
-    product-database:
-        image: postgres:latest
-        container_name: product_db
-        ports:
-            - "5434:5432"
-        volumes:
-            - product_db_data:/var/lib/postgresql/data
-        healthcheck:               # Adding healthcheck for database
-            test: ["CMD-SHELL", "pg_isready -U postgres"]
-            interval: 10s
-            timeout: 5s
-            retries: 5
-        restart: unless-stopped                     
-        networks:
-            backend:
-                ipv4_address : 10.10.10.3  
-    
-    cart-database:
-        image: postgres:latest
-        container_name: cart-database
-        ports:
-            - "5435:5432"
-        volumes:
-            - cart_db_data:/var/lib/postgresql/data
-        healthcheck:               # Adding healthcheck for database
-            test: ["CMD-SHELL", "pg_isready -U postgres"]
-            interval: 10s
-            timeout: 5s
-            retries: 5
-        networks:
-            backend:
-                ipv4_address : 10.10.10.7
-        restart: unless-stopped
+            - Notifications\.env    
    
-    user-database:
-        image: postgres:latest
-        container_name: user-database
-        ports:
-            - "5436:5432"
-        volumes:
-            - user_db_data:/var/lib/postgresql/data
-        environment:            #Enviroment varible 
-            POSTGRES_USER: postgres
-            POSTGRES_PASSWORD: postgres
-            POSTGRES_DB: User
-        healthcheck:               # Adding healthcheck for database
-            test: ["CMD-SHELL", "pg_isready -U postgres"]
-            interval: 10s
-            timeout: 5s
-            retries: 5
-        networks:
-            backend:
-                ipv4_address : 10.10.10.5
-        restart: unless-stopped                     
+   
+    # product-database:
+    #     image: postgres:latest
+    #     container_name: product_db
+    #     ports:
+    #         - "5434:5432"
+    #     volumes:
+    #         - product_db_data:/var/lib/postgresql/data
+    #     healthcheck:               # Adding healthcheck for database
+    #         test: ["CMD-SHELL", "pg_isready -U postgres"]
+    #         interval: 10s
+    #         timeout: 5s
+    #         retries: 5
+    #     restart: unless-stopped                     
+    #     networks:
+    #         backend:
+    #             ipv4_address : 10.10.10.3  
+    
+    # cart-database:
+    #     image: postgres:latest
+    #     container_name: cart_database
+    #     ports:
+    #         - "5435:5432"
+    #     volumes:
+    #         - cart_db_data:/var/lib/postgresql/data
+    #     healthcheck:               # Adding healthcheck for database
+    #         test: ["CMD-SHELL", "pg_isready -U postgres"]
+    #         interval: 10s
+    #         timeout: 5s
+    #         retries: 5
+    #     networks:
+    #         backend:
+    #             ipv4_address : 10.10.10.7
+    #     restart: unless-stopped
+   
+    # user-database:
+    #     image: postgres:latest
+    #     container_name: user_database
+    #     ports:
+    #         - "5436:5432"
+    #     volumes:
+    #         - user_db_data:/var/lib/postgresql/data
+    #     environment:            #Enviroment varible 
+    #         POSTGRES_USER: postgres
+    #         POSTGRES_PASSWORD: postgres
+    #         POSTGRES_DB: User
+    #     healthcheck:               # Adding healthcheck for database
+    #         test: ["CMD-SHELL", "pg_isready -U postgres"]
+    #         interval: 10s
+    #         timeout: 5s
+    #         retries: 5
+    #     networks:
+    #         backend:
+    #             ipv4_address : 10.10.10.5
+    #     restart: unless-stopped                     
 
-    order-database:
-        image: postgres:latest
-        container_name: order-database
-        ports:
-            - "5437:5432"
-        volumes:
-            - order_db_data:/var/lib/postgresql/data
-        environment:            #Enviroment varible 
-            POSTGRES_USER: postgres
-            POSTGRES_PASSWORD: postgres
-            POSTGRES_DB: order
-        healthcheck:               # Adding healthcheck for database
-            test: ["CMD-SHELL", "pg_isready -U postgres"]
-            interval: 10s
-            timeout: 5s
-            retries: 5
-        networks:
-            backend:
-                ipv4_address : 10.10.10.9
-        restart: unless-stopped                     
+    # order-database:
+    #     image: postgres:latest
+    #     container_name: order_database
+    #     ports:
+    #         - "5437:5432"
+    #     volumes:
+    #         - order_db_data:/var/lib/postgresql/data
+    #     environment:            #Enviroment varible 
+    #         POSTGRES_USER: postgres
+    #         POSTGRES_PASSWORD: postgres
+    #         POSTGRES_DB: order
+    #     healthcheck:               # Adding healthcheck for database
+    #         test: ["CMD-SHELL", "pg_isready -U postgres"]
+    #         interval: 10s
+    #         timeout: 5s
+    #         retries: 5
+    #     networks:
+    #         backend:
+    #             ipv4_address : 10.10.10.9
+    #     restart: unless-stopped                     
 
-    notifications-database:
-        image: postgres:latest
-        container_name: notifications-database
-        ports:
-            - "5436:5432"
-        volumes:
-            - notifications_db_data:/var/lib/postgresql/data
-        env_file:
-            - ./env/notifications.env
-        healthcheck:
-            test: ["CMD-SHELL", "pg_isready -U postgres"]
-            interval: 10s
-            timeout: 5s
-            retries: 5
-        networks:
-            backend:
-                ipv4_address : 10.10.10.16
-        restart: unless-stopped
+    # notifications-database:
+    #     image: postgres:latest
+    #     container_name: notifications_database
+    #     ports:
+    #         - "5436:5432"
+    #     volumes:
+    #         - notifications_db_data:/var/lib/postgresql/data
+    #     env_file:
+    #         - ./env/notifications.env
+    #     healthcheck:
+    #         test: ["CMD-SHELL", "pg_isready -U postgres"]
+    #         interval: 10s
+    #         timeout: 5s
+    #         retries: 5
+    #     networks:
+    #         backend:
+    #             ipv4_address : 10.10.10.16
+    #     restart: unless-stopped
 
     zookeeper:
         image: confluentinc/cp-zookeeper:7.5.1
@@ -318,7 +323,7 @@ services:
             backend:
                 ipv4_address : 10.10.10.20
         env_file:
-            - ./env/gateway.env
+            - grpc_gateway\.env
 
 networks:
     backend:

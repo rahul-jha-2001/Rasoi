@@ -978,7 +978,7 @@ func RegisterProductServiceHandlerServer(ctx context.Context, mux *runtime.Serve
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/product_v1.ProductService/CreateCategory", runtime.WithHTTPPathPattern("/v1/stores/{store_uuid}/categories"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/product_v1.ProductService/CreateCategory", runtime.WithHTTPPathPattern("/v1/store/{store_uuid}/category"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -998,7 +998,7 @@ func RegisterProductServiceHandlerServer(ctx context.Context, mux *runtime.Serve
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/product_v1.ProductService/UpdateCategory", runtime.WithHTTPPathPattern("/v1/stores/{store_uuid}/categories/{category_uuid}"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/product_v1.ProductService/UpdateCategory", runtime.WithHTTPPathPattern("/v1/store/{store_uuid}/category/{category_uuid}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1018,7 +1018,7 @@ func RegisterProductServiceHandlerServer(ctx context.Context, mux *runtime.Serve
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/product_v1.ProductService/GetCategory", runtime.WithHTTPPathPattern("/v1/stores/{store_uuid}/categories/{category_uuid}"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/product_v1.ProductService/GetCategory", runtime.WithHTTPPathPattern("/v1/store/{store_uuid}/category/{category_uuid}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1038,7 +1038,7 @@ func RegisterProductServiceHandlerServer(ctx context.Context, mux *runtime.Serve
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/product_v1.ProductService/ListCategory", runtime.WithHTTPPathPattern("/v1/stores/{store_uuid}/categories"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/product_v1.ProductService/ListCategory", runtime.WithHTTPPathPattern("/v1/store/{store_uuid}/category/list"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1058,7 +1058,7 @@ func RegisterProductServiceHandlerServer(ctx context.Context, mux *runtime.Serve
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/product_v1.ProductService/DeleteCategory", runtime.WithHTTPPathPattern("/v1/stores/{store_uuid}/categories/{category_uuid}"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/product_v1.ProductService/DeleteCategory", runtime.WithHTTPPathPattern("/v1/store/{store_uuid}/category/{category_uuid}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1078,7 +1078,7 @@ func RegisterProductServiceHandlerServer(ctx context.Context, mux *runtime.Serve
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/product_v1.ProductService/CreateProduct", runtime.WithHTTPPathPattern("/v1/stores/{store_uuid}/categories/{category_uuid}/products"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/product_v1.ProductService/CreateProduct", runtime.WithHTTPPathPattern("/v1/store/{store_uuid}/category/{category_uuid}/product"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1098,7 +1098,7 @@ func RegisterProductServiceHandlerServer(ctx context.Context, mux *runtime.Serve
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/product_v1.ProductService/GetProduct", runtime.WithHTTPPathPattern("/v1/stores/{store_uuid}/categories/{category_uuid}/products/{product_uuid}"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/product_v1.ProductService/GetProduct", runtime.WithHTTPPathPattern("/v1/store/{store_uuid}/category/{category_uuid}/product/{product_uuid}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1118,7 +1118,7 @@ func RegisterProductServiceHandlerServer(ctx context.Context, mux *runtime.Serve
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/product_v1.ProductService/UpdateProduct", runtime.WithHTTPPathPattern("/v1/stores/{store_uuid}/categories/{category_uuid}/products/{product_uuid}"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/product_v1.ProductService/UpdateProduct", runtime.WithHTTPPathPattern("/v1/store/{store_uuid}/category/{category_uuid}/product/{product_uuid}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1138,7 +1138,7 @@ func RegisterProductServiceHandlerServer(ctx context.Context, mux *runtime.Serve
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/product_v1.ProductService/DeleteProduct", runtime.WithHTTPPathPattern("/v1/stores/{store_uuid}/categories/{category_uuid}/products/{product_uuid}"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/product_v1.ProductService/DeleteProduct", runtime.WithHTTPPathPattern("/v1/store/{store_uuid}/category/{category_uuid}/product/{product_uuid}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1158,7 +1158,7 @@ func RegisterProductServiceHandlerServer(ctx context.Context, mux *runtime.Serve
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/product_v1.ProductService/ListProducts", runtime.WithHTTPPathPattern("/v1/stores/{store_uuid}/categories/{category_uuid}/products"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/product_v1.ProductService/ListProducts", runtime.WithHTTPPathPattern("/v1/store/{store_uuid}/category/{category_uuid}/product"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1178,7 +1178,7 @@ func RegisterProductServiceHandlerServer(ctx context.Context, mux *runtime.Serve
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/product_v1.ProductService/CreateAddOn", runtime.WithHTTPPathPattern("/v1/stores/{store_uuid}/products/{product_uuid}/add_ons"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/product_v1.ProductService/CreateAddOn", runtime.WithHTTPPathPattern("/v1/store/{store_uuid}/product/{product_uuid}/add_ons"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1198,7 +1198,7 @@ func RegisterProductServiceHandlerServer(ctx context.Context, mux *runtime.Serve
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/product_v1.ProductService/GetAddOn", runtime.WithHTTPPathPattern("/v1/stores/{store_uuid}/products/{product_uuid}/add_ons/{add_on_uuid}"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/product_v1.ProductService/GetAddOn", runtime.WithHTTPPathPattern("/v1/store/{store_uuid}/product/{product_uuid}/add_on/{add_on_uuid}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1218,7 +1218,7 @@ func RegisterProductServiceHandlerServer(ctx context.Context, mux *runtime.Serve
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/product_v1.ProductService/UpdateAddOn", runtime.WithHTTPPathPattern("/v1/stores/{store_uuid}/products/{product_uuid}/add_ons/{add_on_uuid}"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/product_v1.ProductService/UpdateAddOn", runtime.WithHTTPPathPattern("/v1/store/{store_uuid}/product/{product_uuid}/add_on/{add_on_uuid}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1238,7 +1238,7 @@ func RegisterProductServiceHandlerServer(ctx context.Context, mux *runtime.Serve
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/product_v1.ProductService/DeleteAddOn", runtime.WithHTTPPathPattern("/v1/stores/{store_uuid}/products/{product_uuid}/add_ons/{add_on_uuid}"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/product_v1.ProductService/DeleteAddOn", runtime.WithHTTPPathPattern("/v1/store/{store_uuid}/product/{product_uuid}/add_on/{add_on_uuid}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1258,7 +1258,7 @@ func RegisterProductServiceHandlerServer(ctx context.Context, mux *runtime.Serve
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/product_v1.ProductService/ListAddOn", runtime.WithHTTPPathPattern("/v1/stores/{store_uuid}/products/{product_uuid}/add_ons"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/product_v1.ProductService/ListAddOn", runtime.WithHTTPPathPattern("/v1/store/{store_uuid}/product/{product_uuid}/add_on/list"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1316,7 +1316,7 @@ func RegisterProductServiceHandlerClient(ctx context.Context, mux *runtime.Serve
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/product_v1.ProductService/CreateCategory", runtime.WithHTTPPathPattern("/v1/stores/{store_uuid}/categories"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/product_v1.ProductService/CreateCategory", runtime.WithHTTPPathPattern("/v1/store/{store_uuid}/category"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1333,7 +1333,7 @@ func RegisterProductServiceHandlerClient(ctx context.Context, mux *runtime.Serve
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/product_v1.ProductService/UpdateCategory", runtime.WithHTTPPathPattern("/v1/stores/{store_uuid}/categories/{category_uuid}"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/product_v1.ProductService/UpdateCategory", runtime.WithHTTPPathPattern("/v1/store/{store_uuid}/category/{category_uuid}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1350,7 +1350,7 @@ func RegisterProductServiceHandlerClient(ctx context.Context, mux *runtime.Serve
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/product_v1.ProductService/GetCategory", runtime.WithHTTPPathPattern("/v1/stores/{store_uuid}/categories/{category_uuid}"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/product_v1.ProductService/GetCategory", runtime.WithHTTPPathPattern("/v1/store/{store_uuid}/category/{category_uuid}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1367,7 +1367,7 @@ func RegisterProductServiceHandlerClient(ctx context.Context, mux *runtime.Serve
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/product_v1.ProductService/ListCategory", runtime.WithHTTPPathPattern("/v1/stores/{store_uuid}/categories"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/product_v1.ProductService/ListCategory", runtime.WithHTTPPathPattern("/v1/store/{store_uuid}/category/list"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1384,7 +1384,7 @@ func RegisterProductServiceHandlerClient(ctx context.Context, mux *runtime.Serve
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/product_v1.ProductService/DeleteCategory", runtime.WithHTTPPathPattern("/v1/stores/{store_uuid}/categories/{category_uuid}"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/product_v1.ProductService/DeleteCategory", runtime.WithHTTPPathPattern("/v1/store/{store_uuid}/category/{category_uuid}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1401,7 +1401,7 @@ func RegisterProductServiceHandlerClient(ctx context.Context, mux *runtime.Serve
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/product_v1.ProductService/CreateProduct", runtime.WithHTTPPathPattern("/v1/stores/{store_uuid}/categories/{category_uuid}/products"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/product_v1.ProductService/CreateProduct", runtime.WithHTTPPathPattern("/v1/store/{store_uuid}/category/{category_uuid}/product"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1418,7 +1418,7 @@ func RegisterProductServiceHandlerClient(ctx context.Context, mux *runtime.Serve
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/product_v1.ProductService/GetProduct", runtime.WithHTTPPathPattern("/v1/stores/{store_uuid}/categories/{category_uuid}/products/{product_uuid}"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/product_v1.ProductService/GetProduct", runtime.WithHTTPPathPattern("/v1/store/{store_uuid}/category/{category_uuid}/product/{product_uuid}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1435,7 +1435,7 @@ func RegisterProductServiceHandlerClient(ctx context.Context, mux *runtime.Serve
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/product_v1.ProductService/UpdateProduct", runtime.WithHTTPPathPattern("/v1/stores/{store_uuid}/categories/{category_uuid}/products/{product_uuid}"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/product_v1.ProductService/UpdateProduct", runtime.WithHTTPPathPattern("/v1/store/{store_uuid}/category/{category_uuid}/product/{product_uuid}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1452,7 +1452,7 @@ func RegisterProductServiceHandlerClient(ctx context.Context, mux *runtime.Serve
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/product_v1.ProductService/DeleteProduct", runtime.WithHTTPPathPattern("/v1/stores/{store_uuid}/categories/{category_uuid}/products/{product_uuid}"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/product_v1.ProductService/DeleteProduct", runtime.WithHTTPPathPattern("/v1/store/{store_uuid}/category/{category_uuid}/product/{product_uuid}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1469,7 +1469,7 @@ func RegisterProductServiceHandlerClient(ctx context.Context, mux *runtime.Serve
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/product_v1.ProductService/ListProducts", runtime.WithHTTPPathPattern("/v1/stores/{store_uuid}/categories/{category_uuid}/products"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/product_v1.ProductService/ListProducts", runtime.WithHTTPPathPattern("/v1/store/{store_uuid}/category/{category_uuid}/product"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1486,7 +1486,7 @@ func RegisterProductServiceHandlerClient(ctx context.Context, mux *runtime.Serve
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/product_v1.ProductService/CreateAddOn", runtime.WithHTTPPathPattern("/v1/stores/{store_uuid}/products/{product_uuid}/add_ons"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/product_v1.ProductService/CreateAddOn", runtime.WithHTTPPathPattern("/v1/store/{store_uuid}/product/{product_uuid}/add_ons"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1503,7 +1503,7 @@ func RegisterProductServiceHandlerClient(ctx context.Context, mux *runtime.Serve
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/product_v1.ProductService/GetAddOn", runtime.WithHTTPPathPattern("/v1/stores/{store_uuid}/products/{product_uuid}/add_ons/{add_on_uuid}"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/product_v1.ProductService/GetAddOn", runtime.WithHTTPPathPattern("/v1/store/{store_uuid}/product/{product_uuid}/add_on/{add_on_uuid}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1520,7 +1520,7 @@ func RegisterProductServiceHandlerClient(ctx context.Context, mux *runtime.Serve
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/product_v1.ProductService/UpdateAddOn", runtime.WithHTTPPathPattern("/v1/stores/{store_uuid}/products/{product_uuid}/add_ons/{add_on_uuid}"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/product_v1.ProductService/UpdateAddOn", runtime.WithHTTPPathPattern("/v1/store/{store_uuid}/product/{product_uuid}/add_on/{add_on_uuid}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1537,7 +1537,7 @@ func RegisterProductServiceHandlerClient(ctx context.Context, mux *runtime.Serve
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/product_v1.ProductService/DeleteAddOn", runtime.WithHTTPPathPattern("/v1/stores/{store_uuid}/products/{product_uuid}/add_ons/{add_on_uuid}"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/product_v1.ProductService/DeleteAddOn", runtime.WithHTTPPathPattern("/v1/store/{store_uuid}/product/{product_uuid}/add_on/{add_on_uuid}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1554,7 +1554,7 @@ func RegisterProductServiceHandlerClient(ctx context.Context, mux *runtime.Serve
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/product_v1.ProductService/ListAddOn", runtime.WithHTTPPathPattern("/v1/stores/{store_uuid}/products/{product_uuid}/add_ons"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/product_v1.ProductService/ListAddOn", runtime.WithHTTPPathPattern("/v1/store/{store_uuid}/product/{product_uuid}/add_on/list"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1571,21 +1571,21 @@ func RegisterProductServiceHandlerClient(ctx context.Context, mux *runtime.Serve
 }
 
 var (
-	pattern_ProductService_CreateCategory_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3}, []string{"v1", "stores", "store_uuid", "categories"}, ""))
-	pattern_ProductService_UpdateCategory_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"v1", "stores", "store_uuid", "categories", "category_uuid"}, ""))
-	pattern_ProductService_GetCategory_0    = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"v1", "stores", "store_uuid", "categories", "category_uuid"}, ""))
-	pattern_ProductService_ListCategory_0   = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3}, []string{"v1", "stores", "store_uuid", "categories"}, ""))
-	pattern_ProductService_DeleteCategory_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"v1", "stores", "store_uuid", "categories", "category_uuid"}, ""))
-	pattern_ProductService_CreateProduct_0  = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"v1", "stores", "store_uuid", "categories", "category_uuid", "products"}, ""))
-	pattern_ProductService_GetProduct_0     = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5, 1, 0, 4, 1, 5, 6}, []string{"v1", "stores", "store_uuid", "categories", "category_uuid", "products", "product_uuid"}, ""))
-	pattern_ProductService_UpdateProduct_0  = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5, 1, 0, 4, 1, 5, 6}, []string{"v1", "stores", "store_uuid", "categories", "category_uuid", "products", "product_uuid"}, ""))
-	pattern_ProductService_DeleteProduct_0  = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5, 1, 0, 4, 1, 5, 6}, []string{"v1", "stores", "store_uuid", "categories", "category_uuid", "products", "product_uuid"}, ""))
-	pattern_ProductService_ListProducts_0   = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"v1", "stores", "store_uuid", "categories", "category_uuid", "products"}, ""))
-	pattern_ProductService_CreateAddOn_0    = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"v1", "stores", "store_uuid", "products", "product_uuid", "add_ons"}, ""))
-	pattern_ProductService_GetAddOn_0       = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5, 1, 0, 4, 1, 5, 6}, []string{"v1", "stores", "store_uuid", "products", "product_uuid", "add_ons", "add_on_uuid"}, ""))
-	pattern_ProductService_UpdateAddOn_0    = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5, 1, 0, 4, 1, 5, 6}, []string{"v1", "stores", "store_uuid", "products", "product_uuid", "add_ons", "add_on_uuid"}, ""))
-	pattern_ProductService_DeleteAddOn_0    = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5, 1, 0, 4, 1, 5, 6}, []string{"v1", "stores", "store_uuid", "products", "product_uuid", "add_ons", "add_on_uuid"}, ""))
-	pattern_ProductService_ListAddOn_0      = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"v1", "stores", "store_uuid", "products", "product_uuid", "add_ons"}, ""))
+	pattern_ProductService_CreateCategory_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3}, []string{"v1", "store", "store_uuid", "category"}, ""))
+	pattern_ProductService_UpdateCategory_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"v1", "store", "store_uuid", "category", "category_uuid"}, ""))
+	pattern_ProductService_GetCategory_0    = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"v1", "store", "store_uuid", "category", "category_uuid"}, ""))
+	pattern_ProductService_ListCategory_0   = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 2, 4}, []string{"v1", "store", "store_uuid", "category", "list"}, ""))
+	pattern_ProductService_DeleteCategory_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"v1", "store", "store_uuid", "category", "category_uuid"}, ""))
+	pattern_ProductService_CreateProduct_0  = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"v1", "store", "store_uuid", "category", "category_uuid", "product"}, ""))
+	pattern_ProductService_GetProduct_0     = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5, 1, 0, 4, 1, 5, 6}, []string{"v1", "store", "store_uuid", "category", "category_uuid", "product", "product_uuid"}, ""))
+	pattern_ProductService_UpdateProduct_0  = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5, 1, 0, 4, 1, 5, 6}, []string{"v1", "store", "store_uuid", "category", "category_uuid", "product", "product_uuid"}, ""))
+	pattern_ProductService_DeleteProduct_0  = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5, 1, 0, 4, 1, 5, 6}, []string{"v1", "store", "store_uuid", "category", "category_uuid", "product", "product_uuid"}, ""))
+	pattern_ProductService_ListProducts_0   = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"v1", "store", "store_uuid", "category", "category_uuid", "product"}, ""))
+	pattern_ProductService_CreateAddOn_0    = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"v1", "store", "store_uuid", "product", "product_uuid", "add_ons"}, ""))
+	pattern_ProductService_GetAddOn_0       = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5, 1, 0, 4, 1, 5, 6}, []string{"v1", "store", "store_uuid", "product", "product_uuid", "add_on", "add_on_uuid"}, ""))
+	pattern_ProductService_UpdateAddOn_0    = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5, 1, 0, 4, 1, 5, 6}, []string{"v1", "store", "store_uuid", "product", "product_uuid", "add_on", "add_on_uuid"}, ""))
+	pattern_ProductService_DeleteAddOn_0    = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5, 1, 0, 4, 1, 5, 6}, []string{"v1", "store", "store_uuid", "product", "product_uuid", "add_on", "add_on_uuid"}, ""))
+	pattern_ProductService_ListAddOn_0      = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5, 2, 6}, []string{"v1", "store", "store_uuid", "product", "product_uuid", "add_on", "list"}, ""))
 )
 
 var (

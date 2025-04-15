@@ -52,7 +52,7 @@ class Logger:
 
             # Process exception chain
             current_error = error
-            while current_error and len(error_info['chain']) < 3:  # Limit chain depth
+            while current_error and len(error_info['chain']) < 8:  # Limit chain depth
                 tb = current_error.__traceback__
                 frames = []
                 frame_count = 0

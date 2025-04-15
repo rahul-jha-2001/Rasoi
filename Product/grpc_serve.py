@@ -20,19 +20,21 @@ load_dotenv()
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'Product.settings')
 django.setup()
 
-from proto import Product_pb2,Product_pb2_grpc
-from proto.Product_pb2 import (
+from google.protobuf import empty_pb2
+from Proto import product_pb2,product_pb2_grpc
+from Proto.product_pb2 import (
     product,
     category,
     add_on,
-    product,
-    error,
-    Productstatus
+    Productstatus,
+    dietary_preference
+    
 )
 from decimal import Decimal
-from product_app.models import Category,Product as Product_model,Add_on
+from product_app.models import Category,Product,DietaryPreference,Add_on,ProductStatus
 from datetime import datetime
 from utils.logger import Logger
+from utils.check_access import check_access
 
 import boto3
 from botocore.exceptions import ClientError
@@ -50,13 +52,17 @@ def handle_error(func):
     def wrapper(self, request, context):
         try:
             return func(self, request, context)
-        except Product_model.DoesNotExist:
+        except Product.DoesNotExist:
             logger.warning(f"Product Not Found: {getattr(request, 'product_uuid', '')}")
             context.abort(grpc.StatusCode.NOT_FOUND, "Product Not Found")
 
         except Category.DoesNotExist:
             logger.error(f"Category Not Found: {getattr(request, 'category_uuid', '')}")
             context.abort(grpc.StatusCode.NOT_FOUND, "Category Not Found")
+        
+        except DietaryPreference.DoesNotExist:
+            logger.error(f"DietaryPreference Not Found: {getattr(request, 'diet_pref_uuid', '')}")
+            context.abort(grpc.StatusCode.NOT_FOUND, "DietaryPreference Not Found")
             
         except Add_on.DoesNotExist:
             logger.error(f"Add-on Not Found: {getattr(request, 'add_on_uuid', '')}")
@@ -76,7 +82,7 @@ def handle_error(func):
 
         except IntegrityError as e:
             logger.error(f"Integrity Error: {str(e)}")
-            context.abort(grpc.StatusCode.ALREADY_EXISTS, "Integrity constraint violated")
+            context.abort(grpc.StatusCode.ALREADY_EXISTS, f"Object Already Exists")
 
         except DatabaseError as e:
             logger.error(f"Database Error: {str(e)}",e)
@@ -91,7 +97,7 @@ def handle_error(func):
             context.abort(grpc.StatusCode.INVALID_ARGUMENT, f"Invalid Value: {str(e)}")
 
         except TypeError as e:
-            logger.error(f"Type Error: {str(e)}")
+            logger.error(f"Type Error: {str(e)}",e)
             context.abort(grpc.StatusCode.INVALID_ARGUMENT, f"Type Error: {str(e)}")
 
         except TimeoutError as e:
@@ -106,9 +112,18 @@ def handle_error(func):
             logger.error(f"RPC Error: {str(e)}")
             # Don't re-abort as this is likely a propagated error
             raise
-            
+
+        except FailedPrecondition as e:
+            context.abort(e.status_code,e.details)
+
+        except Unauthenticated as e:
+            context.abort(grpc.StatusCode.PERMISSION_DENIED,f"User Not Allowed To make this Call")
+        
+        except GrpcException as e:
+            context.abort(e.status_code,e.details)    
+        
         except AttributeError as e:
-            logger.error(f"Attribute Error: {str(e)}")
+            logger.error(f"Attribute Error: {str(e)}",e)
             context.abort(grpc.StatusCode.INVALID_ARGUMENT, f"Attribute Error: {str(e)}")
             
         except transaction.TransactionManagementError as e:
@@ -121,57 +136,7 @@ def handle_error(func):
     return wrapper
 
 
-def check_access(roles:list[str]):
-    def decorator(func):
-        def wrapper(self, request, context):
-            metadata = dict(context.invocation_metadata() or [])
-            role = metadata.get("role")
-
-            if not role:
-                logger.warning("Missing role in metadata")
-                raise Unauthenticated("Role missing from metadata")
-
-            if role == "internal":
-                # TODO: Add internal service verification here
-                return func(self, request, context)
-
-            if role not in roles:
-                logger.warning(f"Unauthorized role: {role}")
-                raise Unauthenticated(f"Unauthorized role: {role}")
-
-            # Role-specific access checks
-            try:
-                if role == "store":
-                    store_uuid_in_token = metadata["store_uuid"]
-                    if not getattr(request, "store_uuid", None):
-                        logger.warning("Store UUID missing in request")
-                        raise Unauthenticated("Store UUID is missing in the request")
-                    if store_uuid_in_token != getattr(request, "store_uuid", None):
-                        logger.warning("Store UUID mismatch")
-                        raise Unauthenticated("Store UUID does not match token")
-
-                elif role == "user":
-                    phone_in_token = metadata["user_phone_no"]
-                    if not getattr(request, "user_phone_no", None):
-                        logger.warning("User phone number missing in request")
-                        raise Unauthenticated("User phone number is missing in the request")
-                    if phone_in_token != getattr(request, "user_phone_no", None):
-                        logger.warning("User phone mismatch")
-                        raise Unauthenticated("User phone does not match token")
-
-            except KeyError as e:
-                logger.warning(f"Missing required metadata for role '{role}': {e}")
-                raise Unauthenticated(f"Missing metadata: {e}")
-
-            return func(self, request, context)
-        return wrapper
-    return decorator
-
-class ProductService(Product_pb2_grpc.ProductServiceServicer):
-
-    def __init__(self):
-        super().__init__()
-
+class ProductService(product_pb2_grpc.ProductServiceServicer):
 
     def _verify_wire_format(self,GRPC_message,GRPC_message_type,context_info = ""):
         """
@@ -210,10 +175,10 @@ class ProductService(Product_pb2_grpc.ProductServiceServicer):
                 pass
             return False
     
-    def _category_to_proto(self,category:Category|None) -> Product_pb2.category:
+    def _category_to_proto(self,category:Category|None) -> product_pb2.category:
         try:
         # Create an empty response object
-            response = Product_pb2.category()
+            response = product_pb2.category()
             
             # Add UUID fields with specific error handling
             try:
@@ -230,13 +195,13 @@ class ProductService(Product_pb2_grpc.ProductServiceServicer):
                 
             # Add string fields
             try:
-                response.name = category.name or ""
+                response.name = category.name
             except AttributeError as e:
                 logger.warning(f"Failed to get name: {e}")
                 response.name = ""
                 
             try:
-                response.description = category.description or ""
+                response.description = category.description
             except AttributeError as e:
                 logger.warning(f"Failed to get description: {e}")
                 response.description = ""
@@ -274,20 +239,26 @@ class ProductService(Product_pb2_grpc.ProductServiceServicer):
                 logger.warning(f"Failed to convert updated_at: {e}")
                 # Leave timestamp at default (epoch)
             
-            if not self._verify_wire_format(response, Product_pb2.category, f"category_id={category.category_uuid}"):
+            if not self._verify_wire_format(response, product_pb2.category, f"category_id={category.category_uuid}"):
                 raise grpc.RpcError(grpc.StatusCode.INTERNAL, f"Failed to serialize category {category.category_uuid}")
             return response
         except Exception as e:
             logger.error("Error Creating ",e)
 
-    def _add_on_to_proto(self,add_on:Add_on|None) -> Product_pb2.add_on:
+    def _add_on_to_proto(self,add_on:Add_on|None) -> product_pb2.add_on:
         try:
-            response  = Product_pb2.add_on()
+            response  = product_pb2.add_on()
             try:
                 response.add_on_uuid = str(add_on.add_on_uuid)
             except (AttributeError, TypeError) as e:
                 logger.warning(f"Failed to convert add_on_uuid: {e}")
                 response.add_on_uuid = ""  # Or some default value
+            
+            try:
+                response.product_uuid = str(add_on.product_uuid)
+            except (AttributeError, TypeError) as e:
+                logger.warning(f"Failed to convert product_uuid: {e}")
+                response.product_uuid = ""  # Or some default value
             
             try:
                 response.name = str(add_on.name)
@@ -335,12 +306,49 @@ class ProductService(Product_pb2_grpc.ProductServiceServicer):
             logger.error("Error Creating ",e)
             raise
 
+    def _diet_pref_to_proto(self,diet_pref:DietaryPreference|None) -> product_pb2.dietary_preference:
 
-    def _product_to_proto(self,Product_obj:Product_model|None) -> Product_pb2.product:
+        try:
+            response = product_pb2.dietary_preference()
+            try:
+                response.store_uuid = str(diet_pref.store_uuid)
+            except (AttributeError, TypeError) as e:
+                logger.warning(f"Failed to convert store_uuid: {e}")
+                response.store_uuid = ""  # Or some default value
+            try:
+                response.diet_pref_uuid = str(diet_pref.diet_pref_uuid)
+            except (AttributeError, TypeError) as e:
+                logger.warning(f"Failed to convert diet_pref_uuid: {e}")
+                response.diet_pref_uuid = ""  # Or some default value
+            try:
+                response.name = str(diet_pref.name)
+            except (AttributeError, TypeError) as e:
+                logger.warning(f"Failed to convert name: {e}")
+                response.name = ""  # Or some default value
+            try:
+                response.description = str(diet_pref.description)
+            except (AttributeError, TypeError) as e:
+                logger.warning(f"Failed to convert description: {e}")
+                response.description = ""  # Or some default value
+            try:
+                response.icon_url = str(diet_pref.icon_url)
+            except (AttributeError, TypeError) as e:
+                logger.warning(f"Failed to convert icon_url: {e}")
+                response.icon_url = ""  # Or some default value
+
+            if not self._verify_wire_format(response, product_pb2.dietary_preference, f"product_id={diet_pref.diet_pref_uuid}"):
+                raise grpc.RpcError(grpc.StatusCode.INTERNAL, f"Failed to serialize Product {diet_pref.diet_pref_uuid}")
+            return response
+    
+        except Exception as e:
+            logger.error("Error Creating ",e)
+            raise
+
+    def _product_to_proto(self,Product_obj:Product|None) -> product_pb2.product:
         
         try:
             #create empty product object
-            response = Product_pb2.product()
+            response = product_pb2.product()
             try:
                 response.product_uuid = str(Product_obj.product_uuid)
             except (AttributeError, TypeError) as e:
@@ -366,10 +374,10 @@ class ProductService(Product_pb2_grpc.ProductServiceServicer):
                 response.description = ""  # Or some default value    
 
             try:
-                response.status = Product_obj.status
+                response.status =  Productstatus.Value(Product_obj.status)
             except (AttributeError, TypeError) as e:
                 logger.warning(f"Failed to convert status: {e}")
-                response.status = Productstatus.DRAFT  # Or some default value            
+                response.status = Productstatus.PRODUCT_STATE_DRAFT  # Or some default value            
 
             try:
                 response.is_available = Product_obj.is_available
@@ -394,25 +402,44 @@ class ProductService(Product_pb2_grpc.ProductServiceServicer):
                 response.GST_percentage = ""  # Or some default value        
 
             try:
-                
-                response.category_uuid = str(Product_obj.category.category_uuid)
+                response.category.CopyFrom(self._category_to_proto(Product_obj.category))
             except (AttributeError, TypeError) as e:
                 logger.warning(f"Failed to convert category: {e}")
-                response.category_uuid = ""  # Or some default value        
+                response.dietary_pref.clear()  # If you want to set it empty
 
             try:
-                response.dietary_pref = Product_obj.dietary_pref
-            except (AttributeError, TypeError) as e:
+                response.dietary_pref.extend(self._diet_pref_to_proto(diet_pref) for diet_pref in  Product_obj.dietary_prefs.all())
+            except (AttributeError, TypeError,Exception) as e:
                 logger.warning(f"Failed to convert dietary_pref: {e}")
                 response.dietary_pref = ""  # Or some default value        
+
+            try:
+                response.add_ons.extend(self._add_on_to_proto(add_on) for add_on in  Product_obj.add_on.all())
+            except (AttributeError, TypeError) as e:
+                logger.warning(f"Failed to convert add_ons: {e}")
+                response.add_ons = ""  # Or some default value      
 
             try:
                 response.image_URL = Product_obj.image_url
             except (AttributeError, TypeError) as e:
                 logger.warning(f"Failed to convert image_url: {e}")
-                response.image_URL = ""  # Or some default value        
-            
-            if not self._verify_wire_format(response, Product_pb2.product, f"product_id={Product_obj.product_uuid}"):
+                response.image_URL = ""  # Or some default value  
+
+            try:
+                response.created_at = Product_obj.created_at
+            except (AttributeError, ValueError) as e:
+                logger.warning(f"Failed to convert created_at: {e}")
+                # Leave timestamp at default (epoch)
+                
+            try:
+                response.updated_at = Product_obj.updated_at
+            except (AttributeError, ValueError) as e:
+                logger.warning(f"Failed to convert updated_at: {e}")
+                # Leave timestamp at default (epoch)
+
+
+            logger.debug("entering Wire verification")
+            if not self._verify_wire_format(response, product_pb2.product, f"product_id={Product_obj.product_uuid}"):
                 raise grpc.RpcError(grpc.StatusCode.INTERNAL, f"Failed to serialize Product {Product_obj.product_uuid}")
             return response
     
@@ -421,107 +448,94 @@ class ProductService(Product_pb2_grpc.ProductServiceServicer):
             raise
 
 
-
-
-
-        # if Product_obj is None:
-        #     response = Product_pb2.product()
-        # else:        
-        #     response = Product_pb2.product(
-        #         product_uuid=str(Product_obj.product_uuid),
-        #         store_uuid=str(Product_obj.store_uuid),
-        #         name=str(Product_obj.name),
-        #         status=Productstatus(Product_obj.status),
-        #         is_available=Product_obj.is_available,
-        #         display_price=Product_obj.display_price,
-        #         price=Product_obj.price,
-        #         GST_percentage=Product_obj.GST_percentage,
-        #         category=self._category_to_proto(Product_obj.category),
-        #         dietary_pref=str(Product_obj.dietary_pref),
-        #         image_URL= Product_obj.image_url,
-        #         add_ons=[self._add_on_to_proto(x) for x in Product_obj.add_on.all()]
-        #     )
-        # if not self._verify_wire_format(response, Product_pb2.product, f"Product_id={Product_obj.product_uuid}"):
-        #     raise grpc.RpcError(grpc.StatusCode.INTERNAL, f"Failed to serialize category {Product_obj.product_uuid}")
-        # return response
-    
     @handle_error
-    @check_access(roles=["user","store","internal"])
+    @check_access(roles=["user","store","internal"],require_URL_check=True)
     def CreateProduct(self, request, context):
 
-        size = image_handler.check_size(request.Image)
-        if size > 5:
-            raise ValidationError(f"Image size:{size}mb exceeds 5mb")
-        ext = image_handler.check_extension(request.Image)
-        if ext not in ['.jpg','.png','.jpeg']:
-            logger.debug(ext)
-            raise ValidationError(f"Unspported File Type {ext}")
+        
         category = Category.objects.get(category_uuid = request.category_uuid,store_uuid =request.store_uuid)
+        diet_pref = DietaryPreference.objects.get(diet_pref_uuid=request.diet_pref_uuid,store_uuid =request.store_uuid)
+        
         with transaction.atomic():
-            product = Product_model.objects.create(
+            product = Product.objects.create(
                 store_uuid = request.store_uuid,
-                name = request.product.name,
-                description = request.product.description,
-                status = request.product.status,
-                is_available = request.product.is_available,
-                display_price = request.product.display_price,
-                price = request.product.price,
-                GST_percentage =request.product.GST_percentage,
+                name = request.name,
+                description = request.description,
+                status = Productstatus.Name(request.status),
+                is_available = request.is_available,
+                display_price = request.display_price,
+                price = request.price,
+                GST_percentage =request.GST_percentage,
                 category = category,
-                dietary_pref = request.product.dietary_pref,
                 )
-            
+        
+            product.dietary_prefs.set([diet_pref])
+            product.save()
+
             logger.info(f"Created Product: {product.product_uuid} in category {product.category.category_uuid} at store {product.store_uuid}")
             
-            image_name = f"{product.store_uuid}/{product.category.category_uuid}/{product.product_uuid}"
+            if getattr(request,"image_bytes",None):
+                size = image_handler.check_size(request.image_bytes)
+                if size > 5:
+                    raise ValidationError(f"Image size:{size}mb exceeds 5mb")
+                ext = image_handler.check_extension(request.image_bytes)
+                if ext not in ['.jpg','.png','.jpeg']:
+                    logger.debug(ext)
+                    raise ValidationError(f"Unspported File Type {ext}")
+            
+                image_name = f"{product.store_uuid}/{product.category.category_uuid}/{product.product_uuid}"
 
-            _,url = image_handler.upload_to_s3(
-                request.Image,
-                bucket_name=BUCKET_NAME,
-                object_name=image_name,
-                aws_access_key=AWS_ACCESS_KEY_ID,
-                aws_secret_key=AWS_SECRET_ACCESS_KEY,
-                region_name=REGION_NAME
-            )
-            if _:
-                product.image_url = url
-                product.save()
-        
+                _,url = image_handler.upload_to_s3(
+                    request.image_bytes,
+                    bucket_name=BUCKET_NAME,
+                    object_name=image_name,
+                    aws_access_key=AWS_ACCESS_KEY_ID,
+                    aws_secret_key=AWS_SECRET_ACCESS_KEY,
+                    region_name=REGION_NAME
+                )
+                if _:
+                    product.image_url = url
+                    
 
-            return Product_pb2.ProductResponse(
-                product=self._product_to_proto(product),
-                success= True)
+            product.clean()
+            product.save()
+            return product_pb2.ProductResponse(
+                product=self._product_to_proto(product))
        
     @handle_error
-    @check_access(roles=["user","store","internal"])
+    @check_access(roles=["user","store","internal"],require_URL_check=False)
     def GetProduct(self, request, context):
 
-        category = Category.objects.get(category_uuid = request.category_uuid,store_uuid =request.store_uuid)
-
-
-        product = Product_model.objects.get(store_uuid = request.store_uuid,product_uuid = request.product_uuid,category=category)
-        return Product_pb2.ProductResponse(
-            product= self._product_to_proto(product),
-            success= True
+        if getattr(request,"category_uuid",None):
+            category = Category.objects.get(category_uuid = request.category_uuid,store_uuid =request.store_uuid)
+            product = Product.objects.get(store_uuid = request.store_uuid,product_uuid = request.product_uuid,category=category)
+        else:
+            product = Product.objects.get(store_uuid = request.store_uuid,product_uuid = request.product_uuid)
+        return product_pb2.ProductResponse(
+            product= self._product_to_proto(product)
         )
         
     
     @handle_error
-    @check_access(roles=["user","store","internal"])
+    @check_access(roles=["user","store","internal"],require_URL_check=False)
     def ListProducts(self, request, context):
         if request.page < 0:
             request.page = 1
         if request.limit < 0:
             request.limit = 10
 
+        if getattr(request,"category_uuid",None):
+            products,next_page,prev_page = Product.objects.get_products(store_uuid=request.store_uuid,
+                                                            category_uuid=request.category_uuid,
+                                                            limit=request.limit,
+                                                            page = request.page)
         
-        products,next_page,prev_page = Product_model.objects.get_products(store_uuid=request.store_uuid,
-                                                        category_uuid=request.category_uuid,
-                                                        limit=request.limit,
-                                                        page = request.page)
-        response = Product_pb2.ListProductsResponse(
+        else:
+            products,next_page,prev_page = Product.objects.get_products(store_uuid=request.store_uuid,
+                                                            limit=request.limit,
+                                                            page = request.page)
+        response = product_pb2.ListProductsResponse(
             products=[self._product_to_proto(x) for x in products],
-            success= True,
             next_page=next_page,
             prev_page=prev_page
 
@@ -529,88 +543,112 @@ class ProductService(Product_pb2_grpc.ProductServiceServicer):
         return response
     
     @handle_error
-    @check_access(roles=["user","store","internal"])
+    @check_access(roles=["store","internal"],require_URL_check=True)
     def UpdateProduct(self, request, context):
 
         category = Category.objects.get(category_uuid = request.category_uuid,store_uuid =request.store_uuid)
-
-
-        product = Product_model.objects.get(store_uuid = request.store_uuid,product_uuid = request.product_uuid,category=category)
+        product = Product.objects.get(store_uuid = request.store_uuid,product_uuid = request.product_uuid,category=category)
 
         with transaction.atomic():
     
-            if request.product.HasField('name'):
-                    product.description = request.product.name
+            if request.HasField('name'):
+                    product.description = request.name
 
-            if request.product.HasField('description'):
-                product.description = request.product.description
+            if request.HasField('description'):
+                product.description = request.description
 
-            if request.product.HasField('status'):
-                product.status = request.product.status
+            if request.HasField('status'):
+                product.status = Productstatus.Name(request.status)
             
-            if request.product.HasField('is_available'):
-                product.is_available = request.product.is_available
+            if request.HasField('is_available'):
+                product.is_available = request.is_available
 
-            if request.product.HasField('display_price'):
-                product.display_price = request.product.display_price
+            if request.HasField('display_price'):
+                product.display_price = request.display_price
 
-            if request.product.HasField('price'):
-                product.price = request.product.price
+            if request.HasField('price'):
+                product.price = request.price
 
-            if request.product.HasField('GST_percentage'):
-                product.GST_percentage = request.product.GST_percentage
+            if request.HasField('GST_percentage'):
+                product.GST_percentage = request.GST_percentage
 
-            if request.product.HasField('category_uuid'):
-                category = Category.objects.get(category_uuid = request.product.category_uuid)
-                product.category = category        
+            if request.HasField('new_category_uuid'):
+                category = Category.objects.get(category_uuid = request.new_category_uuid)
+                product.category = category
 
-            if request.product.HasField('dietary_pref'):
-                product.dietary_pref = request.product.dietary_pref
+            if request.HasField('diet_pref_uuid'):
+                diet_pref = DietaryPreference.objects.get(diet_pref_uuid = request.diet_pref_uuid)
+                product.dietary_pref = diet_pref
+
+            if request.HasField('dietary_pref'):
+                dietary_prefs = DietaryPreference.objects.filter(store_uuid = request.store_uuid,diet_pref_uuid__in=request.dietary_pref)
+                product.dietary_prefs.set(dietary_prefs)
+
+            if request.HasField('image_bytes'):
+                size = image_handler.check_size(request.image_bytes)
+                if size > 5:
+                    raise ValidationError(f"Image size:{size}mb exceeds 5mb")
+                ext = image_handler.check_extension(request.image_bytes)
+                if ext not in ['.jpg','.png','.jpeg']:
+                    logger.debug(ext)
+                    raise ValidationError(f"Unspported File Type {ext}")
+            
+                image_name = f"{product.store_uuid}/{product.category.category_uuid}/{product.product_uuid}"
+
+                _,url = image_handler.upload_to_s3(
+                    request.image_bytes,
+                    bucket_name=BUCKET_NAME,
+                    object_name=image_name,
+                    aws_access_key=AWS_ACCESS_KEY_ID,
+                    aws_secret_key=AWS_SECRET_ACCESS_KEY,
+                    region_name=REGION_NAME
+                )
+                if _:
+                    product.image_url = url
+                    product.save()
 
 
             product.clean()
             product.save()
 
             logger.info(f"Product Updated For product id: {product.product_uuid}")
-            return Product_pb2.ProductResponse(
-                product=self._product_to_proto(product),
-                success= True,
+            return product_pb2.ProductResponse(
+                product=self._product_to_proto(product)
             )   
 
 
     @handle_error
-    @check_access(roles=["user","store","internal"])
+    @check_access(roles=["store","internal"])
     def DeleteProduct(self, request, context):
         category = Category.objects.get(category_uuid = request.category_uuid,store_uuid =request.store_uuid)
 
         with transaction.atomic():
-            product = Product_model.objects.get(store_uuid = request.store_uuid,product_uuid = request.product_uuid,category=category)
+            product = Product.objects.get(store_uuid = request.store_uuid,product_uuid = request.product_uuid,category=category)
             product.delete()
         
             logger.info(f"Deleted product: {request.product_uuid}")
-            return Product_pb2.DeleteProductResponse(success=True)
+            return empty_pb2()
 
     @handle_error
-    @check_access(roles=["user","store","internal"])
+    @check_access(roles=["store","internal"])
     def CreateCategory(self, request, context):
         with transaction.atomic():
             cat = Category.objects.create(
                 store_uuid = request.store_uuid,
-                name = request.category.name,
-                description = request.category.description,
-                display_order = request.category.display_order,
-                is_available = request.category.is_available,
-                is_active = request.category.is_active
+                name = request.name,
+                description = request.description,
+                display_order = request.display_order,
+                is_available = request.is_available,
+                is_active = request.is_active
             )
             logger.info(f"Category Id:{cat.category_uuid} Created at store Id:{cat.store_uuid}")
 
-            return Product_pb2.CategoryResponse(
-                category= self._category_to_proto(cat),
-                success= True,
+            return product_pb2.CategoryResponse(
+                category= self._category_to_proto(cat)
             )
     
     @handle_error
-    @check_access(roles=["user","store","internal"])
+    @check_access(roles=["user","store","internal"],require_URL_check=False)
     def GetCategory(self, request, context):
         
         category_uuid = request.category_uuid
@@ -618,9 +656,8 @@ class ProductService(Product_pb2_grpc.ProductServiceServicer):
 
         category = Category.objects.get(category_uuid=category_uuid,store_uuid=store_uuid)
 
-        return Product_pb2.CategoryResponse(
-            category=self._category_to_proto(category),
-            success= True,
+        return product_pb2.CategoryResponse(
+            category=self._category_to_proto(category)
         )
 
     @handle_error
@@ -629,28 +666,27 @@ class ProductService(Product_pb2_grpc.ProductServiceServicer):
     
         category_obj = Category.objects.get(category_uuid=request.category_uuid,store_uuid=request.store_uuid)
         with transaction.atomic():
-            if request.category.HasField('name'):
-                category_obj.name = request.category.name 
+            if request.HasField('name'):
+                category_obj.name = request.name 
 
-            if request.category.HasField('description'):
-                category_obj.description = request.category.description
+            if request.HasField('description'):
+                category_obj.description = request.description
             
-            if request.category.HasField('is_available'):
-                category_obj.is_available = request.category.is_available
+            if request.HasField('is_available'):
+                category_obj.is_available = request.is_available
 
-            if request.category.HasField('display_order'):
-                category_obj.display_order = request.category.display_order
+            if request.HasField('display_order'):
+                category_obj.display_order = request.display_order
 
-            if request.category.HasField('is_active'):
-                category_obj.is_active = request.category.is_active
+            if request.HasField('is_active'):
+                category_obj.is_active = request.is_active
 
             category_obj.full_clean()
             category_obj.save()
             logger.debug(category_obj)
             logger.info(f"Category Updated For category id: {category_obj.category_uuid}")
-            return Product_pb2.CategoryResponse(
-                category=self._category_to_proto(category_obj),
-                success= True,
+            return product_pb2.CategoryResponse(
+                category=self._category_to_proto(category_obj)
             )
 
     @handle_error
@@ -660,10 +696,10 @@ class ProductService(Product_pb2_grpc.ProductServiceServicer):
             Category.objects.get(category_uuid = request.category_uuid,store_uuid=request.store_uuid).delete()
         
             logger.info(f"Deleted Category: {request.category_uuid}")
-            return Product_pb2.DeleteCategoryResponse(success=True)
+            return empty_pb2()
     
     @handle_error
-    @check_access(roles=["user","store","internal"])
+    @check_access(roles=["user","store","internal"],require_URL_check=False)
     def ListCategory(self, request, context):
         if request.page < 0:
             request.page = 1
@@ -674,9 +710,8 @@ class ProductService(Product_pb2_grpc.ProductServiceServicer):
                                                         limit=request.limit,
                                                         page = request.page)
         
-        response = Product_pb2.ListCategoryResponse(
+        response = product_pb2.ListCategoryResponse(
             categories=[self._category_to_proto(x) for x in categories],
-            success= True,
             next_page=next_page,
             prev_page=prev_page
 
@@ -687,72 +722,70 @@ class ProductService(Product_pb2_grpc.ProductServiceServicer):
     @handle_error
     @check_access(roles=["store","internal"])
     def CreateAddOn(self, request, context):
-        product:Product_model = Product_model.objects.get(store_uuid = request.store_uuid,product_uuid = request.product_uuid)
+        product:Product = Product.objects.get(store_uuid = request.store_uuid,product_uuid = request.product_uuid)
         with transaction.atomic(): 
             add_on:Add_on = Add_on.objects.create(
                 product = product,
-                name = request.add_on.name,
-                is_available = request.add_on.is_available,
-                max_selectable = request.add_on.max_selectable,
-                GST_percentage = request.add_on.GST_percentage,
-                price = request.add_on.price
+                name = request.name,
+                is_available = request.is_available,
+                max_selectable = request.max_selectable,
+                GST_percentage = request.GST_percentage,
+                price = request.price
             )
             logger.info(f"Created Add-On:{add_on.add_on_uuid} for product id:{product.product_uuid} at Store id:{product.store_uuid}")
-            return Product_pb2.AddOnResponse(
-                add_on=self._add_on_to_proto(add_on),
-                success= True
+            return product_pb2.AddOnResponse(
+                add_on=self._add_on_to_proto(add_on)
             )
 
     @handle_error
-    @check_access(roles=["user","store","internal"])
+    @check_access(roles=["user","store","internal"],require_URL_check=False)
     def GetAddOn(self,request,context):
 
-        product = Product_model.objects.get(store_uuid = request.store_uuid,product_uuid = request.product_uuid)
+        product = Product.objects.get(store_uuid = request.store_uuid,product_uuid = request.product_uuid)
         add_on_obj = Add_on.objects.get(
             product = product,
             add_on_uuid = request.add_on_uuid
         )
-        return Product_pb2.AddOnResponse(
+        logger.info(f"Fetched Add-On:{add_on_obj.add_on_uuid} for product id:{product.product_uuid} at Store id:{product.store_uuid}")  
+        return product_pb2.AddOnResponse(
             add_on= self._add_on_to_proto(add_on_obj),
-            success=True
         )
     
     @handle_error
     @check_access(roles=["store","internal"])
     def UpdateAddOn(self, request, context):
-        product = Product_model.objects.get(store_uuid = request.store_uuid,product_uuid = request.product_uuid)
+        product = Product.objects.get(store_uuid = request.store_uuid,product_uuid = request.product_uuid)
 
         add_on = Add_on.objects.get(add_on_uuid=request.add_on_uuid,product=product)
         with transaction.atomic():
-            if request.add_on.HasField('name'):
-                add_on.name = request.add_on.name 
+            if request.HasField('name'):
+                add_on.name = request.name 
 
-            if request.add_on.HasField('is_available'):
-                add_on.is_available = request.add_on.is_available
+            if request.HasField('is_available'):
+                add_on.is_available = request.is_available
             
-            if request.add_on.HasField('max_selectable'):
-                add_on.max_selectable = request.add_on.max_selectable
+            if request.HasField('max_selectable'):
+                add_on.max_selectable = request.max_selectable
 
-            if request.add_on.HasField('GST_percentage'):
-                add_on.GST_percentage = request.add_on.GST_percentage
+            if request.HasField('GST_percentage'):
+                add_on.GST_percentage = request.GST_percentage
 
-            if request.add_on.HasField('price'):
-                add_on.price = request.add_on.price
+            if request.HasField('price'):
+                add_on.price = request.price
 
             add_on.full_clean()
             add_on.save()
             logger.debug(add_on)
             logger.info(f"add_on Updated For add_on id: {add_on.add_on_uuid}")
-            return Product_pb2.AddOnResponse(
-                add_on=self._add_on_to_proto(add_on),
-                success= True,
+            return product_pb2.AddOnResponse(
+                add_on=self._add_on_to_proto(add_on)
             )
        
     @handle_error
-    @check_access(roles=["user","store","internal"])
+    @check_access(roles=["user","store","internal"],require_URL_check=False)
     def ListAddOn(self, request, context):
 
-        product = Product_model.objects.get(store_uuid = request.store_uuid,product_uuid = request.product_uuid)
+        product = Product.objects.get(store_uuid = request.store_uuid,product_uuid = request.product_uuid)
   
         if request.page < 0:
             request.page = 1
@@ -764,56 +797,148 @@ class ProductService(Product_pb2_grpc.ProductServiceServicer):
                                                         page = request.page
                                                         )
         logger.info(f"Successfully listed {len(add_ons)} Add-ons For product Id {request.product_uuid}")
-        response = Product_pb2.ListAddOnResponse(
+        response = product_pb2.ListAddOnResponse(
             add_ons=[self._add_on_to_proto(x) for x in add_ons],
-            success= True,
             next_page=next_page,
             prev_page=prev_page
         )
         return response
 
     @handle_error
-    @check_access(roles=["user","store","internal"])
+    @check_access(roles=["store","internal"])
     def DeleteAddOn(self, request, context):
-        product = Product_model.objects.get(store_uuid = request.store_uuid,product_uuid = request.product_uuid)
+        product = Product.objects.get(store_uuid = request.store_uuid,product_uuid = request.product_uuid)
         with transaction.atomic():
 
             add_on = Add_on.objects.get(add_on_uuid = request.add_on_uuid,product=product)
             add_on.delete()
         
             logger.info(f"Deleted Add_on:{request.add_on_uuid} of Product:{product.product_uuid}")
-            return Product_pb2.DeleteAddOnResponse(success=True)
+            return empty_pb2()
 
-# class HealthCheck(healthcheck_pb2_grpc.HealthServicer):
-#     def __init__(self):
-#         # Initialize any necessary state here
-#         self._status = healthcheck_pb2.HealthCheckResponse.SERVING
 
-#     def Check(self, request, context):
-#         # Implement the health check logic here
-#         # For example, you can return SERVING if the service is healthy
-#         return healthcheck_pb2.HealthCheckResponse(status=self._status)
+    @handle_error
+    @check_access(roles = ["store","internal"])
+    def CreateDietPref(self, request, context):
+        with transaction.atomic():
+            diet_pref = DietaryPreference.objects.create(
+                store_uuid = request.store_uuid,
+                name = request.name,
+                description = request.description,
+            )
 
-#     def Watch(self, request, context):
-#         # Implement the health watch logic here
-#         # This method is used for streaming health status updates
-#         # For simplicity, we'll just return the current status in a loop
-#         try:
-#             while True:
-#                 yield healthcheck_pb2.HealthCheckResponse(status=self._status)
-#                 # Sleep for a while before sending the next status update
-#                 import time
-#                 time.sleep(5)
-#         except grpc.RpcError:
-#             # Handle any RPC errors that occur during streaming
-#             context.cancel()
+            if getattr(request,"icon_image_bytes",None):
+                size = image_handler.check_size(request.image_bytes)
+                if size > 5:
+                    raise ValidationError(f"Image size:{size}mb exceeds 5mb")
+                ext = image_handler.check_extension(request.icon_image_bytes)
+                if ext not in ['.jpg','.png','.jpeg']:
+                    logger.debug(ext)
+                    raise ValidationError(f"Unspported File Type {ext}")
+            
+                image_name = f"{diet_pref.store_uuid}/{diet_pref.diet_pref_uuid}"
+
+                _,url = image_handler.upload_to_s3(
+                    request.icon_image_bytes,
+                    bucket_name=BUCKET_NAME,
+                    object_name=image_name,
+                    aws_access_key=AWS_ACCESS_KEY_ID,
+                    aws_secret_key=AWS_SECRET_ACCESS_KEY,
+                    region_name=REGION_NAME
+                )
+                if _:
+                    product.image_url = url
+                    product.save()
+
+                logger.info(f"Created Dietary Preference: {diet_pref.diet_pref_uuid} at store {diet_pref.store_uuid}")
+            
+            return product_pb2.DietPrefResponse(
+                dietary_preference=self._diet_pref_to_proto(diet_pref)
+            )
+    
+    @handle_error
+    @check_access(roles=["user","store","internal"],require_URL_check=False)
+    def GetDietPref(self, request, context):
+        diet_pref = DietaryPreference.objects.get(pref_uuid=request.diet_pref_uuid,store_uuid=request.store_uuid)
+        return product_pb2.DietPrefResponse(
+            dietary_preference=self._diet_pref_to_proto(diet_pref)
+        )
+
+    @handle_error
+    @check_access(roles=["store","internal"])
+    def UpdateDietPref(self, request, context):
+        diet_pref = DietaryPreference.objects.get(pref_uuid=request.diet_pref_uuid,store_uuid=request.store_uuid)
+        with transaction.atomic():
+            if request.HasField('name'):
+                diet_pref.name = request.name 
+
+            if request.HasField('description'):
+                diet_pref.description = request.description
+            
+            if request.HasField('icon_image_bytes'):
+                size = image_handler.check_size(request.icon_image_bytes)
+                if size > 5:
+                    raise ValidationError(f"Image size:{size}mb exceeds 5mb")
+                ext = image_handler.check_extension(request.icon_image_bytes)
+                if ext not in ['.jpg','.png','.jpeg']:
+                    logger.debug(ext)
+                    raise ValidationError(f"Unspported File Type {ext}")
+            
+                image_name = f"{diet_pref.store_uuid}/{diet_pref.diet_pref_uuid}"
+
+                _,url = image_handler.upload_to_s3(
+                    request.icon_image_bytes,
+                    bucket_name=BUCKET_NAME,
+                    object_name=image_name,
+                    aws_access_key=AWS_ACCESS_KEY_ID,
+                    aws_secret_key=AWS_SECRET_ACCESS_KEY,
+                    region_name=REGION_NAME
+                )
+                if _:
+                    product.image_url = url
+                    product.save()
+
+            diet_pref.full_clean()
+            diet_pref.save()
+            logger.info(f"Dietary Preference Updated For dietary preference id: {diet_pref.pref_uuid}")
+            return product_pb2.DietPrefResponse(
+                dietary_preference=self._diet_pref_to_proto(diet_pref)
+            )
+    @handle_error
+    @check_access(roles=["user","store","internal"],require_URL_check=False)
+    def ListDietPref(self, request, context):
+        if request.page < 0:
+            request.page = 1
+        if request.limit < 0:
+            request.limit = 10
+        diet_prefs,next_page,prev_page = DietaryPreference.objects.get_dietary_prefs(
+                                                        store_uuid=request.store_uuid,
+                                                        limit=request.limit,
+                                                        page = request.page)
+        
+        response = product_pb2.ListDietPrefResponse(
+            dietary_preferences=[self._diet_pref_to_proto(x) for x in diet_prefs],
+            next_page=next_page,
+            prev_page=prev_page
+
+        )
+        return response
+    
+    @handle_error
+    @check_access(roles=["store","internal"])
+    def DeleteDietPref(self, request, context):
+        with transaction.atomic():
+            DietaryPreference.objects.get(pref_uuid = request.diet_pref_uuid,store_uuid=request.store_uuid).delete()
+        
+            logger.info(f"Deleted Dietary Preference: {request.diet_pref_uuid}")
+            return empty_pb2()
+
 
 def serve():
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     
     # Add your services to the server
-    Product_pb2_grpc.add_ProductServiceServicer_to_server(ProductService(), server)
-    # healthcheck_pb2_grpc.add_HealthServicer_to_server(HealthCheck(),server)
+    product_pb2_grpc.add_ProductServiceServicer_to_server(ProductService(), server)
     
     # Get the port from environment variables
     grpc_port = os.getenv('GRPC_SERVER_PORT', '50052')

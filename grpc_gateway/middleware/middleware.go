@@ -196,9 +196,9 @@ func AuthMiddleware(next http.Handler) http.Handler {
 			return
         }
 
-		for key, value := range claims {
-			fmt.Printf("%s: %v\n", key, value)
-		}
+		// for key, value := range claims {
+		// 	fmt.Printf("%s: %v\n", key, value)
+		// }
 		if claims["role"] == "internal" {
             r.Header.Set("Grpc-Metadata-role",claims["role"].(string))
         }

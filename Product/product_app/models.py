@@ -9,10 +9,21 @@ from utils.logger import Logger
 
 logger = Logger()
 
+class ProductStatus(models.TextChoices):
+        PRODUCT_STATE_DRAFT = "PRODUCT_STATE_DRAFT","PRODUCT_STATE_DRAFT"
+        PRODUCT_STATE_ACTIVE = "PRODUCT_STATE_ACTIVE","PRODUCT_STATE_ACTIVE"
+        PRODUCT_STATE_INACTIVE = "PRODUCT_STATE_INACTIVE","PRODUCT_STATE_INACTIVE"
+        PRODUCT_STATE_OUT_OF_STOCK = "PRODUCT_STATE_OUT_OF_STOCK","PRODUCT_STATE_OUT_OF_STOCK"
+
+
 class product_manager(models.Manager):
 
-    def get_products(self,store_uuid:str,category_uuid:str,limit:int=10,page:int=0):
-        queryset = self.get_queryset().filter(store_uuid=store_uuid,category_uuid=category_uuid).order_by('-created_at')
+    def get_products(self,store_uuid:str,category_uuid:str|None,limit:int=10,page:int=0):
+        if category_uuid:
+            category  = Category.objects.get(store_uuid=store_uuid,category_uuid=category_uuid)
+            queryset = self.get_queryset().filter(store_uuid=store_uuid,category = category).order_by('-created_at')
+        else:
+            queryset = self.get_queryset().filter(store_uuid=store_uuid).order_by('-created_at')
         paginator = Paginator(queryset, limit)
 
         try:
@@ -51,9 +62,24 @@ class category_manager(models.Manager):
 class add_on_manager(models.Manager):
     def get_add_ons(self,product,limit:int = 10,page:int=1):
 
-
-
         queryset = self.get_queryset().filter(product=product).order_by('-created_at')
+        paginator = Paginator(queryset, limit)
+
+        try:
+            paginated_data = paginator.page(page)
+        except PageNotAnInteger:
+            paginated_data = paginator.page(1)
+        except EmptyPage:
+            paginated_data = paginator.page(paginator.num_pages)
+
+        next_page = paginated_data.next_page_number() if paginated_data.has_next() else None
+        prev_page = paginated_data.previous_page_number() if paginated_data.has_previous() else None
+
+        return paginated_data.object_list, next_page, prev_page
+class diet_pref_manager(models.Manager):
+    def get_dietary_prefs(self,store_uuid,limit:int = 10,page:int=1):
+
+        queryset = self.get_queryset().filter(store_uuid=store_uuid).order_by('-created_at')
         paginator = Paginator(queryset, limit)
 
         try:
@@ -78,6 +104,18 @@ class BaseModel(models.Model):
 
     class Meta:
         abstract = True
+class DietaryPreference(BaseModel):
+    
+    store_uuid = models.UUIDField(null=False, blank=True)
+    diet_pref_uuid = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
+    name = models.CharField(max_length=50, unique=True)
+    description = models.TextField(blank=True)
+    icon_url = models.URLField(null=True, blank=True)
+
+    objects = diet_pref_manager()
+
+    def __str__(self):
+        return self.name
 
 class Category(BaseModel):
 
@@ -113,19 +151,7 @@ class Category(BaseModel):
             models.Index(fields=['category_uuid']),
         ]
 
-class Product(BaseModel):
-
-    class Status(models.TextChoices):
-        DRAFT = "DRAFT","Draft"
-        ACTIVE = "ACTIVE","Active"
-        INACTIVE = "INACTIVE","Active"
-    
-    class DietPref(models.TextChoices):
-        VEG = "VEG"
-        NONVEG = "NONVEG"
-        VEGAN = "VEGAN"
-        JAIN = "JAIN"    
-    
+class Product(BaseModel):    
     product_uuid = models.UUIDField(
         primary_key= True,
         default=uuid.uuid4,
@@ -137,10 +163,12 @@ class Product(BaseModel):
     name =  models.CharField(max_length= 255)
     description =  models.TextField()
     status = models.CharField(
-        max_length=10,
-        choices=Status.choices,
-        default= Status.DRAFT
+        max_length=30,
+        choices = ProductStatus.choices,
+        default = ProductStatus.PRODUCT_STATE_DRAFT
     )
+
+    dietary_prefs = models.ManyToManyField(DietaryPreference, related_name="products")
 
     is_available =  models.BooleanField(default=True)
     
@@ -169,9 +197,6 @@ class Product(BaseModel):
                                  blank=False, 
                                  related_name="products", 
                                  verbose_name="Category")  
-    
-    dietary_pref = models.CharField(max_length=10,choices=DietPref.choices,default=DietPref.VEG,verbose_name="Dietary_Preference")
-
     image_url = models.URLField(null=True,blank=True)
 
     objects = product_manager()
@@ -235,13 +260,5 @@ class Add_on(BaseModel):
             models.Index(fields=['add_on_uuid']),
             models.Index(fields=['product']),
         ]
-
-# class review_model(models.Model):
-
-#     product_uuid =  models.ForeignKey(product_model,on_delete= models.CASCADE,related_name= "product",null = False)
-#     points =  models.IntegerField()
-#     reviwer = models.CharField(max_length= 255)
-#     reviwer_number = models.CharField(max_length=16)
-#     feedback =  models.TextField()
 
 

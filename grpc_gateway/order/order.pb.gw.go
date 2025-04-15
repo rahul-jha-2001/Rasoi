@@ -615,7 +615,7 @@ func RegisterOrderServiceHandlerServer(ctx context.Context, mux *runtime.ServeMu
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/Order_v1.OrderService/CreateOrder", runtime.WithHTTPPathPattern("/order/store/{store_uuid}"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/Order_v1.OrderService/CreateOrder", runtime.WithHTTPPathPattern("/store/{store_uuid}/order"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -635,7 +635,7 @@ func RegisterOrderServiceHandlerServer(ctx context.Context, mux *runtime.ServeMu
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/Order_v1.OrderService/GetOrder", runtime.WithHTTPPathPattern("/order/store/{store_uuid}/user/{user_phone_no}/{order_uuid}"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/Order_v1.OrderService/GetOrder", runtime.WithHTTPPathPattern("/store/{store_uuid}/user/{user_phone_no}/order/{order_uuid}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -655,7 +655,7 @@ func RegisterOrderServiceHandlerServer(ctx context.Context, mux *runtime.ServeMu
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/Order_v1.OrderService/CancelOrder", runtime.WithHTTPPathPattern("/order/store/{store_uuid}/user/{user_phone_no}/{order_uuid}/cancel"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/Order_v1.OrderService/CancelOrder", runtime.WithHTTPPathPattern("/store/{store_uuid}/user/{user_phone_no}/order/{order_uuid}/cancel"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -675,7 +675,7 @@ func RegisterOrderServiceHandlerServer(ctx context.Context, mux *runtime.ServeMu
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/Order_v1.OrderService/ListOrder", runtime.WithHTTPPathPattern("/order/store/{store_uuid}"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/Order_v1.OrderService/ListOrder", runtime.WithHTTPPathPattern("/store/{store_uuid}/orders"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -702,7 +702,7 @@ func RegisterOrderServiceHandlerServer(ctx context.Context, mux *runtime.ServeMu
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/Order_v1.OrderService/UpdateOrderState", runtime.WithHTTPPathPattern("/order/store/{store_uuid}/order/{order_uuid}"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/Order_v1.OrderService/UpdateOrderState", runtime.WithHTTPPathPattern("/store/{store_uuid}/order/{order_uuid}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -722,7 +722,7 @@ func RegisterOrderServiceHandlerServer(ctx context.Context, mux *runtime.ServeMu
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/Order_v1.OrderService/GetUserOrder", runtime.WithHTTPPathPattern("/order/user/{user_phone_no}/store/{store_uuid}/{order_uuid}"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/Order_v1.OrderService/GetUserOrder", runtime.WithHTTPPathPattern("/user/{user_phone_no}/store/{store_uuid}/order/{order_uuid}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -742,7 +742,7 @@ func RegisterOrderServiceHandlerServer(ctx context.Context, mux *runtime.ServeMu
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/Order_v1.OrderService/ListUserOrder", runtime.WithHTTPPathPattern("/order/user/{user_phone_no}/store/{store_uuid}"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/Order_v1.OrderService/ListUserOrder", runtime.WithHTTPPathPattern("/user/{user_phone_no}/store/{store_uuid}/orders"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -762,7 +762,7 @@ func RegisterOrderServiceHandlerServer(ctx context.Context, mux *runtime.ServeMu
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/Order_v1.OrderService/CancelUserOrder", runtime.WithHTTPPathPattern("/order/user/{user_phone_no}/store/{store_uuid}/{order_uuid}/cancel"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/Order_v1.OrderService/CancelUserOrder", runtime.WithHTTPPathPattern("/user/{user_phone_no}/store/{store_uuid}/order/{order_uuid}/cancel"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -820,7 +820,7 @@ func RegisterOrderServiceHandlerClient(ctx context.Context, mux *runtime.ServeMu
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/Order_v1.OrderService/CreateOrder", runtime.WithHTTPPathPattern("/order/store/{store_uuid}"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/Order_v1.OrderService/CreateOrder", runtime.WithHTTPPathPattern("/store/{store_uuid}/order"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -837,7 +837,7 @@ func RegisterOrderServiceHandlerClient(ctx context.Context, mux *runtime.ServeMu
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/Order_v1.OrderService/GetOrder", runtime.WithHTTPPathPattern("/order/store/{store_uuid}/user/{user_phone_no}/{order_uuid}"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/Order_v1.OrderService/GetOrder", runtime.WithHTTPPathPattern("/store/{store_uuid}/user/{user_phone_no}/order/{order_uuid}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -854,7 +854,7 @@ func RegisterOrderServiceHandlerClient(ctx context.Context, mux *runtime.ServeMu
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/Order_v1.OrderService/CancelOrder", runtime.WithHTTPPathPattern("/order/store/{store_uuid}/user/{user_phone_no}/{order_uuid}/cancel"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/Order_v1.OrderService/CancelOrder", runtime.WithHTTPPathPattern("/store/{store_uuid}/user/{user_phone_no}/order/{order_uuid}/cancel"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -871,7 +871,7 @@ func RegisterOrderServiceHandlerClient(ctx context.Context, mux *runtime.ServeMu
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/Order_v1.OrderService/ListOrder", runtime.WithHTTPPathPattern("/order/store/{store_uuid}"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/Order_v1.OrderService/ListOrder", runtime.WithHTTPPathPattern("/store/{store_uuid}/orders"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -888,7 +888,7 @@ func RegisterOrderServiceHandlerClient(ctx context.Context, mux *runtime.ServeMu
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/Order_v1.OrderService/StreamOrders", runtime.WithHTTPPathPattern("/order/store/{store_uuid}/stream"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/Order_v1.OrderService/StreamOrders", runtime.WithHTTPPathPattern("/store/{store_uuid}/order/stream"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -905,7 +905,7 @@ func RegisterOrderServiceHandlerClient(ctx context.Context, mux *runtime.ServeMu
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/Order_v1.OrderService/UpdateOrderState", runtime.WithHTTPPathPattern("/order/store/{store_uuid}/order/{order_uuid}"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/Order_v1.OrderService/UpdateOrderState", runtime.WithHTTPPathPattern("/store/{store_uuid}/order/{order_uuid}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -922,7 +922,7 @@ func RegisterOrderServiceHandlerClient(ctx context.Context, mux *runtime.ServeMu
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/Order_v1.OrderService/GetUserOrder", runtime.WithHTTPPathPattern("/order/user/{user_phone_no}/store/{store_uuid}/{order_uuid}"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/Order_v1.OrderService/GetUserOrder", runtime.WithHTTPPathPattern("/user/{user_phone_no}/store/{store_uuid}/order/{order_uuid}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -939,7 +939,7 @@ func RegisterOrderServiceHandlerClient(ctx context.Context, mux *runtime.ServeMu
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/Order_v1.OrderService/ListUserOrder", runtime.WithHTTPPathPattern("/order/user/{user_phone_no}/store/{store_uuid}"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/Order_v1.OrderService/ListUserOrder", runtime.WithHTTPPathPattern("/user/{user_phone_no}/store/{store_uuid}/orders"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -956,7 +956,7 @@ func RegisterOrderServiceHandlerClient(ctx context.Context, mux *runtime.ServeMu
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/Order_v1.OrderService/CancelUserOrder", runtime.WithHTTPPathPattern("/order/user/{user_phone_no}/store/{store_uuid}/{order_uuid}/cancel"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/Order_v1.OrderService/CancelUserOrder", runtime.WithHTTPPathPattern("/user/{user_phone_no}/store/{store_uuid}/order/{order_uuid}/cancel"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -973,15 +973,15 @@ func RegisterOrderServiceHandlerClient(ctx context.Context, mux *runtime.ServeMu
 }
 
 var (
-	pattern_OrderService_CreateOrder_0      = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2}, []string{"order", "store", "store_uuid"}, ""))
-	pattern_OrderService_GetOrder_0         = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 1, 0, 4, 1, 5, 4, 1, 0, 4, 1, 5, 5}, []string{"order", "store", "store_uuid", "user", "user_phone_no", "order_uuid"}, ""))
-	pattern_OrderService_CancelOrder_0      = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 1, 0, 4, 1, 5, 4, 1, 0, 4, 1, 5, 5, 2, 6}, []string{"order", "store", "store_uuid", "user", "user_phone_no", "order_uuid", "cancel"}, ""))
-	pattern_OrderService_ListOrder_0        = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2}, []string{"order", "store", "store_uuid"}, ""))
-	pattern_OrderService_StreamOrders_0     = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3}, []string{"order", "store", "store_uuid", "stream"}, ""))
-	pattern_OrderService_UpdateOrderState_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 0, 1, 0, 4, 1, 5, 3}, []string{"order", "store", "store_uuid", "order_uuid"}, ""))
-	pattern_OrderService_GetUserOrder_0     = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 1, 0, 4, 1, 5, 4, 1, 0, 4, 1, 5, 5}, []string{"order", "user", "user_phone_no", "store", "store_uuid", "order_uuid"}, ""))
-	pattern_OrderService_ListUserOrder_0    = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"order", "user", "user_phone_no", "store", "store_uuid"}, ""))
-	pattern_OrderService_CancelUserOrder_0  = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 1, 0, 4, 1, 5, 4, 1, 0, 4, 1, 5, 5, 2, 6}, []string{"order", "user", "user_phone_no", "store", "store_uuid", "order_uuid", "cancel"}, ""))
+	pattern_OrderService_CreateOrder_0      = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 1, 0, 4, 1, 5, 1, 2, 2}, []string{"store", "store_uuid", "order"}, ""))
+	pattern_OrderService_GetOrder_0         = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 1, 0, 4, 1, 5, 1, 2, 2, 1, 0, 4, 1, 5, 3, 2, 4, 1, 0, 4, 1, 5, 5}, []string{"store", "store_uuid", "user", "user_phone_no", "order", "order_uuid"}, ""))
+	pattern_OrderService_CancelOrder_0      = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 1, 0, 4, 1, 5, 1, 2, 2, 1, 0, 4, 1, 5, 3, 2, 4, 1, 0, 4, 1, 5, 5, 2, 6}, []string{"store", "store_uuid", "user", "user_phone_no", "order", "order_uuid", "cancel"}, ""))
+	pattern_OrderService_ListOrder_0        = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 1, 0, 4, 1, 5, 1, 2, 2}, []string{"store", "store_uuid", "orders"}, ""))
+	pattern_OrderService_StreamOrders_0     = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 1, 0, 4, 1, 5, 1, 2, 2, 2, 3}, []string{"store", "store_uuid", "order", "stream"}, ""))
+	pattern_OrderService_UpdateOrderState_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 1, 0, 4, 1, 5, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"store", "store_uuid", "order", "order_uuid"}, ""))
+	pattern_OrderService_GetUserOrder_0     = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 1, 0, 4, 1, 5, 1, 2, 2, 1, 0, 4, 1, 5, 3, 2, 4, 1, 0, 4, 1, 5, 5}, []string{"user", "user_phone_no", "store", "store_uuid", "order", "order_uuid"}, ""))
+	pattern_OrderService_ListUserOrder_0    = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 1, 0, 4, 1, 5, 1, 2, 2, 1, 0, 4, 1, 5, 3, 2, 4}, []string{"user", "user_phone_no", "store", "store_uuid", "orders"}, ""))
+	pattern_OrderService_CancelUserOrder_0  = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 1, 0, 4, 1, 5, 1, 2, 2, 1, 0, 4, 1, 5, 3, 2, 4, 1, 0, 4, 1, 5, 5, 2, 6}, []string{"user", "user_phone_no", "store", "store_uuid", "order", "order_uuid", "cancel"}, ""))
 )
 
 var (

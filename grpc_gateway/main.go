@@ -41,7 +41,7 @@ func main() {
 	}
 
 	// Create a client connection to the existing Product gRPC server
-	conn, err := grpc.NewClient(
+	productConn, err := grpc.NewClient(
 		productServiceAddr,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
@@ -50,7 +50,7 @@ func main() {
 	}
 
 	// Create a client connection to the existing Cart gRPC server
-	conn, err = grpc.NewClient(
+	cartConn, err := grpc.NewClient(
 		cartServiceAddr,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
@@ -58,7 +58,7 @@ func main() {
 		log.Fatalf("Failed to dial Cart gRPC server at %s: %v", cartServiceAddr, err)
 	}
 	// Create a client connection to the existing Order gRPC server
-	conn, err = grpc.NewClient(
+	orderConn, err := grpc.NewClient(
 		orderServiceAddr,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
@@ -66,7 +66,9 @@ func main() {
 		log.Fatalf("Failed to dial Order gRPC server at %s: %v", orderServiceAddr, err)
 	}
 
-	defer conn.Close()
+	defer productConn.Close()
+	defer cartConn.Close()
+	defer orderConn.Close()
 	log.Printf("Product_service server present at %s", productServiceAddr)
 	log.Printf("Cart_service server present at %s", cartServiceAddr)
 
@@ -79,14 +81,14 @@ func main() {
     )
 
 	// Register the Product service with the gRPC Gateway
-	if err := Productgw.RegisterProductServiceHandler(context.Background(), gwmux, conn); err != nil {
+	if err := Productgw.RegisterProductServiceHandler(context.Background(), gwmux, productConn); err != nil {
 		log.Fatalf("Failed to register Product gateway: %v", err)
 	}
 
-	if err := Cartgw.RegisterCartServiceHandler(context.Background(), gwmux, conn); err != nil {
+	if err := Cartgw.RegisterCartServiceHandler(context.Background(), gwmux, cartConn); err != nil {
 		log.Fatalf("Failed to register Cart gateway: %v", err)
 	}	
-	if err := Ordergw.RegisterOrderServiceHandler(context.Background(), gwmux, conn); err != nil {
+	if err := Ordergw.RegisterOrderServiceHandler(context.Background(), gwmux, orderConn); err != nil {
 		log.Fatalf("Failed to register Order gateway: %v", err)
 	}
 

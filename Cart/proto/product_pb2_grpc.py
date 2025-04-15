@@ -3,7 +3,6 @@
 import grpc
 import warnings
 
-from google.protobuf import empty_pb2 as google_dot_protobuf_dot_empty__pb2
 import product_pb2 as product__pb2
 
 GRPC_GENERATED_VERSION = '1.70.0'
@@ -58,7 +57,7 @@ class ProductServiceStub(object):
         self.DeleteCategory = channel.unary_unary(
                 '/product_v1.ProductService/DeleteCategory',
                 request_serializer=product__pb2.DeleteCategoryRequest.SerializeToString,
-                response_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
+                response_deserializer=product__pb2.DeleteCategoryResponse.FromString,
                 _registered_method=True)
         self.CreateProduct = channel.unary_unary(
                 '/product_v1.ProductService/CreateProduct',
@@ -78,7 +77,7 @@ class ProductServiceStub(object):
         self.DeleteProduct = channel.unary_unary(
                 '/product_v1.ProductService/DeleteProduct',
                 request_serializer=product__pb2.DeleteProductRequest.SerializeToString,
-                response_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
+                response_deserializer=product__pb2.DeleteProductResponse.FromString,
                 _registered_method=True)
         self.ListProducts = channel.unary_unary(
                 '/product_v1.ProductService/ListProducts',
@@ -103,32 +102,12 @@ class ProductServiceStub(object):
         self.DeleteAddOn = channel.unary_unary(
                 '/product_v1.ProductService/DeleteAddOn',
                 request_serializer=product__pb2.DeleteAddOnRequest.SerializeToString,
-                response_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
+                response_deserializer=product__pb2.DeleteAddOnResponse.FromString,
                 _registered_method=True)
         self.ListAddOn = channel.unary_unary(
                 '/product_v1.ProductService/ListAddOn',
                 request_serializer=product__pb2.ListAddOnRequest.SerializeToString,
                 response_deserializer=product__pb2.ListAddOnResponse.FromString,
-                _registered_method=True)
-        self.CreateDietPref = channel.unary_unary(
-                '/product_v1.ProductService/CreateDietPref',
-                request_serializer=product__pb2.CreateDietaryPreference.SerializeToString,
-                response_deserializer=product__pb2.DietPrefResponse.FromString,
-                _registered_method=True)
-        self.UpdateDietPref = channel.unary_unary(
-                '/product_v1.ProductService/UpdateDietPref',
-                request_serializer=product__pb2.UpdateDietaryPreference.SerializeToString,
-                response_deserializer=product__pb2.DietPrefResponse.FromString,
-                _registered_method=True)
-        self.DeleteDietPref = channel.unary_unary(
-                '/product_v1.ProductService/DeleteDietPref',
-                request_serializer=product__pb2.DeleteDietaryPreference.SerializeToString,
-                response_deserializer=product__pb2.DietPrefResponse.FromString,
-                _registered_method=True)
-        self.ListDietPref = channel.unary_unary(
-                '/product_v1.ProductService/ListDietPref',
-                request_serializer=product__pb2.ListDietaryPreference.SerializeToString,
-                response_deserializer=product__pb2.ListDietPrefResponse.FromString,
                 _registered_method=True)
 
 
@@ -197,7 +176,8 @@ class ProductServiceServicer(object):
         raise NotImplementedError('Method not implemented!')
 
     def CreateAddOn(self, request, context):
-        """Missing associated documentation comment in .proto file."""
+        """Add-ons
+        """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
@@ -221,30 +201,6 @@ class ProductServiceServicer(object):
         raise NotImplementedError('Method not implemented!')
 
     def ListAddOn(self, request, context):
-        """Missing associated documentation comment in .proto file."""
-        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
-
-    def CreateDietPref(self, request, context):
-        """Missing associated documentation comment in .proto file."""
-        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
-
-    def UpdateDietPref(self, request, context):
-        """Missing associated documentation comment in .proto file."""
-        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
-
-    def DeleteDietPref(self, request, context):
-        """Missing associated documentation comment in .proto file."""
-        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
-
-    def ListDietPref(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -276,7 +232,7 @@ def add_ProductServiceServicer_to_server(servicer, server):
             'DeleteCategory': grpc.unary_unary_rpc_method_handler(
                     servicer.DeleteCategory,
                     request_deserializer=product__pb2.DeleteCategoryRequest.FromString,
-                    response_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
+                    response_serializer=product__pb2.DeleteCategoryResponse.SerializeToString,
             ),
             'CreateProduct': grpc.unary_unary_rpc_method_handler(
                     servicer.CreateProduct,
@@ -296,7 +252,7 @@ def add_ProductServiceServicer_to_server(servicer, server):
             'DeleteProduct': grpc.unary_unary_rpc_method_handler(
                     servicer.DeleteProduct,
                     request_deserializer=product__pb2.DeleteProductRequest.FromString,
-                    response_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
+                    response_serializer=product__pb2.DeleteProductResponse.SerializeToString,
             ),
             'ListProducts': grpc.unary_unary_rpc_method_handler(
                     servicer.ListProducts,
@@ -321,32 +277,12 @@ def add_ProductServiceServicer_to_server(servicer, server):
             'DeleteAddOn': grpc.unary_unary_rpc_method_handler(
                     servicer.DeleteAddOn,
                     request_deserializer=product__pb2.DeleteAddOnRequest.FromString,
-                    response_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
+                    response_serializer=product__pb2.DeleteAddOnResponse.SerializeToString,
             ),
             'ListAddOn': grpc.unary_unary_rpc_method_handler(
                     servicer.ListAddOn,
                     request_deserializer=product__pb2.ListAddOnRequest.FromString,
                     response_serializer=product__pb2.ListAddOnResponse.SerializeToString,
-            ),
-            'CreateDietPref': grpc.unary_unary_rpc_method_handler(
-                    servicer.CreateDietPref,
-                    request_deserializer=product__pb2.CreateDietaryPreference.FromString,
-                    response_serializer=product__pb2.DietPrefResponse.SerializeToString,
-            ),
-            'UpdateDietPref': grpc.unary_unary_rpc_method_handler(
-                    servicer.UpdateDietPref,
-                    request_deserializer=product__pb2.UpdateDietaryPreference.FromString,
-                    response_serializer=product__pb2.DietPrefResponse.SerializeToString,
-            ),
-            'DeleteDietPref': grpc.unary_unary_rpc_method_handler(
-                    servicer.DeleteDietPref,
-                    request_deserializer=product__pb2.DeleteDietaryPreference.FromString,
-                    response_serializer=product__pb2.DietPrefResponse.SerializeToString,
-            ),
-            'ListDietPref': grpc.unary_unary_rpc_method_handler(
-                    servicer.ListDietPref,
-                    request_deserializer=product__pb2.ListDietaryPreference.FromString,
-                    response_serializer=product__pb2.ListDietPrefResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -483,7 +419,7 @@ class ProductService(object):
             target,
             '/product_v1.ProductService/DeleteCategory',
             product__pb2.DeleteCategoryRequest.SerializeToString,
-            google_dot_protobuf_dot_empty__pb2.Empty.FromString,
+            product__pb2.DeleteCategoryResponse.FromString,
             options,
             channel_credentials,
             insecure,
@@ -591,7 +527,7 @@ class ProductService(object):
             target,
             '/product_v1.ProductService/DeleteProduct',
             product__pb2.DeleteProductRequest.SerializeToString,
-            google_dot_protobuf_dot_empty__pb2.Empty.FromString,
+            product__pb2.DeleteProductResponse.FromString,
             options,
             channel_credentials,
             insecure,
@@ -726,7 +662,7 @@ class ProductService(object):
             target,
             '/product_v1.ProductService/DeleteAddOn',
             product__pb2.DeleteAddOnRequest.SerializeToString,
-            google_dot_protobuf_dot_empty__pb2.Empty.FromString,
+            product__pb2.DeleteAddOnResponse.FromString,
             options,
             channel_credentials,
             insecure,
@@ -754,114 +690,6 @@ class ProductService(object):
             '/product_v1.ProductService/ListAddOn',
             product__pb2.ListAddOnRequest.SerializeToString,
             product__pb2.ListAddOnResponse.FromString,
-            options,
-            channel_credentials,
-            insecure,
-            call_credentials,
-            compression,
-            wait_for_ready,
-            timeout,
-            metadata,
-            _registered_method=True)
-
-    @staticmethod
-    def CreateDietPref(request,
-            target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
-        return grpc.experimental.unary_unary(
-            request,
-            target,
-            '/product_v1.ProductService/CreateDietPref',
-            product__pb2.CreateDietaryPreference.SerializeToString,
-            product__pb2.DietPrefResponse.FromString,
-            options,
-            channel_credentials,
-            insecure,
-            call_credentials,
-            compression,
-            wait_for_ready,
-            timeout,
-            metadata,
-            _registered_method=True)
-
-    @staticmethod
-    def UpdateDietPref(request,
-            target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
-        return grpc.experimental.unary_unary(
-            request,
-            target,
-            '/product_v1.ProductService/UpdateDietPref',
-            product__pb2.UpdateDietaryPreference.SerializeToString,
-            product__pb2.DietPrefResponse.FromString,
-            options,
-            channel_credentials,
-            insecure,
-            call_credentials,
-            compression,
-            wait_for_ready,
-            timeout,
-            metadata,
-            _registered_method=True)
-
-    @staticmethod
-    def DeleteDietPref(request,
-            target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
-        return grpc.experimental.unary_unary(
-            request,
-            target,
-            '/product_v1.ProductService/DeleteDietPref',
-            product__pb2.DeleteDietaryPreference.SerializeToString,
-            product__pb2.DietPrefResponse.FromString,
-            options,
-            channel_credentials,
-            insecure,
-            call_credentials,
-            compression,
-            wait_for_ready,
-            timeout,
-            metadata,
-            _registered_method=True)
-
-    @staticmethod
-    def ListDietPref(request,
-            target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
-        return grpc.experimental.unary_unary(
-            request,
-            target,
-            '/product_v1.ProductService/ListDietPref',
-            product__pb2.ListDietaryPreference.SerializeToString,
-            product__pb2.ListDietPrefResponse.FromString,
             options,
             channel_credentials,
             insecure,

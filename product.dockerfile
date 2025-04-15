@@ -1,7 +1,3 @@
-
-
-
-
 FROM python:3.12.3-slim
 
 # Combine RUN commands to reduce layers and optimize cache
@@ -23,7 +19,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application files after installing dependencies
 COPY ./Product .
-COPY ./Proto /app/proto
+COPY ./Proto ./Proto
 COPY ./Product/entrypoint.sh /usr/local/bin/entrypoint.sh
 COPY ./Product/grpc_supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 # ENV PYTHONUNBUFFERED=1 \

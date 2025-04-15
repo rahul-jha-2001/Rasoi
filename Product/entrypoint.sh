@@ -59,7 +59,7 @@ else
 fi
 
 echo "Entering proto folder..."
-cd proto || { echo "Error: proto directory not found!"; exit 1; }
+cd Proto || { echo "Error: proto directory not found!"; exit 1; }
 echo "Compiling Proto Files..."
 
 if ! python -m grpc_tools.protoc  -I=.  --python_out=. --grpc_python_out=. --pyi_out=. *.proto; then

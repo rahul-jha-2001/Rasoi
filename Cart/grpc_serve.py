@@ -32,15 +32,16 @@ from Proto.cart_pb2 import (
     DISCOUNTTYPE,
     CARTSTATE,
 )
-
+from Proto import product_pb2_grpc,product_pb2
 from google.protobuf import empty_pb2
 
 from utils.logger import Logger
+from utils.gprc_pool import GrpcChannelPool
 
 load_dotenv()
 
 logger = Logger("GRPC_service")
-
+PRODUCT_SERVICE_ADDR = os.getenv("PRODUCT_SERVICE_ADDR","localhost:50051")
 
 class CartVaildator:
 
@@ -118,9 +119,17 @@ def handle_error(func):
             context.abort(grpc.StatusCode.DEADLINE_EXCEEDED, "Request timed out")
             
         except grpc.RpcError as e:
-            logger.error(f"RPC Error: {str(e)}")
-            # Don't re-abort as this is likely a propagated error
-            raise
+            raise  # Don't re-abort, just propagate the error
+
+        except FailedPrecondition as e:
+            context.abort(e.status_code,e.details)
+
+        except Unauthenticated as e:
+            context.abort(grpc.StatusCode.PERMISSION_DENIED,f"User Not Allowed To make this Call")
+        
+        except GrpcException as e:
+            context.abort(e.status_code,e.details)
+            raise Exception("Forced RollBack due to GrpcException")
             
         except AttributeError as e:
             logger.error(f"Attribute Error: {str(e)}")
@@ -159,23 +168,23 @@ def check_access(roles:list[str]):
                     store_uuid_in_token = metadata["store_uuid"]
                     if not getattr(request, "store_uuid", None):
                         logger.warning("Store UUID missing in request")
-                        raise Unauthenticated("Store UUID is missing in the request")
+                        raise Unauthenticated
                     if store_uuid_in_token != getattr(request, "store_uuid", None):
                         logger.warning("Store UUID mismatch")
-                        raise Unauthenticated("Store UUID does not match token")
+                        raise Unauthenticated
 
                 elif role == "user":
                     phone_in_token = metadata["user_phone_no"]
                     if not getattr(request, "user_phone_no", None):
                         logger.warning("User phone number missing in request")
-                        raise Unauthenticated("User phone number is missing in the request")
+                        raise Unauthenticated
                     if phone_in_token != getattr(request, "user_phone_no", None):
                         logger.warning("User phone mismatch")
-                        raise Unauthenticated("User phone does not match token")
+                        raise Unauthenticated
 
             except KeyError as e:
                 logger.warning(f"Missing required metadata for role '{role}': {e}")
-                raise Unauthenticated(f"Missing metadata: {e}")
+                raise Unauthenticated
 
             return func(self, request, context)
         return wrapper
@@ -444,6 +453,17 @@ class CartService(Cart_pb2_grpc.CartServiceServicer):
             logger.error(f"Unexpected error in _Cart_to_response: {e}",e)
             raise
 
+    def __init__(self):
+        
+        self.channel_pool = GrpcChannelPool()
+        self.channel = self.channel_pool.get_channel(PRODUCT_SERVICE_ADDR)
+        self.Cart_stub = product_pb2_grpc.ProductServiceStub(self.channel)
+        logger.info(f"Initialized gRPC channel to Product Service at {PRODUCT_SERVICE_ADDR}")
+        self.meta_data =[ 
+            ("role","internal"),
+            ("service","product")
+        ]
+        super().__init__()
 
     @handle_error
     @check_access(roles=["user","store","internal"])
@@ -493,7 +513,6 @@ class CartService(Cart_pb2_grpc.CartServiceServicer):
     @handle_error    
     @check_access(roles=["user","store","internal"])
     def UpdateCart(self, request, context):
-        cart
 
         if getattr(request,"cart_uuid",None):
             cart = Cart.objects.get_active_cart(cart_uuid = request.cart_uuid,user_phone_no = request.user_phone_no,store_uuid = request.store_uuid)
@@ -516,8 +535,8 @@ class CartService(Cart_pb2_grpc.CartServiceServicer):
                 cart.vehicle_no = request.cart.vehicle_no    
             if request.cart.vehicle_description:
                 cart.vehicle_description = request.cart.vehicle_description
-            if request.cart.speacial_instructions:
-                cart.speacial_instructions = request.cart.speacial_instructions
+            if request.cart.special_instructions:
+                cart.special_instructions = request.cart.special_instructions
             
             logger.debug(f"After Update:{cart}")
             cart.full_clean()
@@ -548,6 +567,28 @@ class CartService(Cart_pb2_grpc.CartServiceServicer):
     @check_access(roles=["user","store","internal"])
     def AddCartItem(self, request, context):
         cart = Cart.objects.get_active_cart(cart_uuid = request.cart_uuid,user_phone_no = request.user_phone_no,store_uuid = request.store_uuid)
+
+
+        cart_request = product_pb2.GetCartRequest(cart_uuid=cart_uuid,store_uuid = store_uuid)
+        
+        try:
+            response = self.Cart_stub.GetCart(cart_request,metadata = self.meta_data)
+        except RpcError as e:
+
+            error_message = e.details()
+            if e.code() == StatusCode.NOT_FOUND:
+                logger.error(f"Active Cart: {cart_uuid} not found")
+                raise GrpcException(error_message,status_code=e.code())
+            elif e.code() == StatusCode.INVALID_ARGUMENT:
+                logger.error(error_message)
+                raise GrpcException(error_message,status_code=e.code())
+            elif e.code() == StatusCode.INTERNAL:
+                logger.error(error_message)
+                raise GrpcException(error_message,status_code=e.code())
+            elif e.code() == StatusCode.UNAVAILABLE:
+                logger.error(f"Cart Service does not exist at:{CART_SERVICE_ADDR}")
+                raise GrpcException("Internal Server Error",status_code=StatusCode.UNAVAILABLE)
+
 
         with transaction.atomic():
             cart_item = CartItem.objects.create(

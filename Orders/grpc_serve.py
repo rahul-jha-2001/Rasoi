@@ -52,62 +52,53 @@ def handle_error(func):
         except Order.DoesNotExist:
             logger.warning(f"Order Not Found: Cart_uuid:{getattr(request, 'cart_uuid', '')} Store_uuid:{getattr(request, 'store_uuid', '')} user_phone_no:{getattr(request, 'user_phone_no', '')}")
             context.abort(grpc.StatusCode.NOT_FOUND, f"Cart Not Found: Cart_uuid:{getattr(request, 'cart_uuid', '')} Store_uuid:{getattr(request, 'store_uuid', '')} user_phone_no:{getattr(request, 'user_phone_no', '')}")
-            raise Exception("Forced rollback due to Order.DoesNotExist")
 
         except OrderItem.DoesNotExist:
             logger.warning(f"CartItem Not Found: cart_item_uuid:{getattr(request, 'cart_item_uuid', '')}")
             context.abort(grpc.StatusCode.NOT_FOUND, f"CartItem Not Found: cart_item_uuid:{getattr(request, 'cart_item_uuid', '')}")
-            raise Exception("Forced rollback due to OrderItem.DoesNotExist")
 
         except OrderItemAddOn.DoesNotExist:
             logger.warning(f"Coupon Not Found: coupon_uuid: {getattr(request, 'coupon_uuid', '')} coupon_code: {getattr(request, 'coupon_code', '')}")
             context.abort(grpc.StatusCode.NOT_FOUND, f"Coupon Not Found: coupon_uuid: {getattr(request, 'coupon_uuid', '')} coupon_code: {getattr(request, 'coupon_code', '')}")
-            raise Exception("Forced rollback due to OrderItemAddOn.DoesNotExist")
 
         except ObjectDoesNotExist:
             logger.warning("Requested object does not exist")
             context.abort(grpc.StatusCode.NOT_FOUND, "Requested Object Not Found")
-            raise Exception("Forced rollback due to ObjectDoesNotExist")
 
         except MultipleObjectsReturned:
             logger.warning("Multiple objects found for request")
             context.abort(grpc.StatusCode.FAILED_PRECONDITION, "Multiple matching objects found")
-            raise Exception("Forced rollback due to MultipleObjectsReturned")
 
         except ValidationError as e:
             logger.warning(f"Validation Error: {str(e)}")
             context.abort(grpc.StatusCode.INVALID_ARGUMENT, f"Validation Error: {str(e)}")
-            raise Exception("Forced rollback due to ValidationError")
 
         except IntegrityError as e:
             logger.warning(f"Integrity Error: {str(e)}")
             context.abort(grpc.StatusCode.ALREADY_EXISTS, "Integrity constraint violated")
-            raise Exception("Forced rollback due to IntegrityError")
 
         except DatabaseError as e:
             logger.error(f"Database Error: {str(e)}")
             context.abort(grpc.StatusCode.INTERNAL, "Database Error")
-            raise Exception("Forced rollback due to DatabaseError")
+
 
         except PermissionDenied as e:
             logger.warning(f"Permission Denied: {str(e)}")
             context.abort(grpc.StatusCode.PERMISSION_DENIED, "Permission Denied")
-            raise Exception("Forced rollback due to PermissionDenied")
+
 
         except ValueError as e:
             logger.error(f"Invalid Value: {str(e)}")
             context.abort(grpc.StatusCode.INVALID_ARGUMENT, f"Invalid Value: {str(e)}")
-            raise Exception("Forced rollback due to ValueError")
+
 
         except TypeError as e:
             logger.error(f"Type Error: {str(e)}")
             context.abort(grpc.StatusCode.INVALID_ARGUMENT, f"Type Error: {str(e)}")
-            raise Exception("Forced rollback due to TypeError")
 
         except TimeoutError as e:
             logger.error(f"Timeout Error: {str(e)}")
             context.abort(grpc.StatusCode.DEADLINE_EXCEEDED, "Request timed out")
-            raise Exception("Forced rollback due to TimeoutError")
 
         except grpc.RpcError as e:
             raise  # Don't re-abort, just propagate the error
@@ -116,27 +107,23 @@ def handle_error(func):
             context.abort(e.status_code,e.details)
 
         except Unauthenticated as e:
-            context.abort(grpc.StatusCode.PERMISSION_DENIED,f"User Not Allowed To make this Call")
-            raise Exception("Forced rollback due to Unauthentication")    
+            context.abort(grpc.StatusCode.PERMISSION_DENIED,e.details)
+            
 
         except GrpcException as e:
             context.abort(e.status_code,e.details)
-            raise Exception("Forced RollBack due to GrpcException")
 
         except AttributeError as e:
             logger.error(f"Attribute Error: {str(e)}",e)
             context.abort(grpc.StatusCode.INVALID_ARGUMENT, f"Attribute Error: {str(e)}")
-            raise Exception("Forced rollback due to AttributeError")
 
         except transaction.TransactionManagementError as e:
             logger.error(f"Transaction Error: {str(e)}")
             context.abort(grpc.StatusCode.ABORTED, f"Transaction Error: {str(e)}")
-            raise Exception("Forced rollback due to TransactionManagementError")
 
         except Exception as e:
             logger.error(f"Unexpected Error: {str(e)}",e)
             context.abort(grpc.StatusCode.INTERNAL, f"Internal Server Error")
-            raise Exception("Forced rollback due to unexpected error")
     
     return wrapper
 

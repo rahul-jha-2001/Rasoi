@@ -40,7 +40,6 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ProductServiceClient interface {
-	// Categories
 	CreateCategory(ctx context.Context, in *CreateCategoryRequest, opts ...grpc.CallOption) (*CategoryResponse, error)
 	UpdateCategory(ctx context.Context, in *UpdateCategoryRequest, opts ...grpc.CallOption) (*CategoryResponse, error)
 	GetCategory(ctx context.Context, in *GetCategoryRequest, opts ...grpc.CallOption) (*CategoryResponse, error)
@@ -222,7 +221,6 @@ func (c *productServiceClient) ListAddOn(ctx context.Context, in *ListAddOnReque
 // All implementations must embed UnimplementedProductServiceServer
 // for forward compatibility.
 type ProductServiceServer interface {
-	// Categories
 	CreateCategory(context.Context, *CreateCategoryRequest) (*CategoryResponse, error)
 	UpdateCategory(context.Context, *UpdateCategoryRequest) (*CategoryResponse, error)
 	GetCategory(context.Context, *GetCategoryRequest) (*CategoryResponse, error)

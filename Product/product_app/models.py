@@ -108,7 +108,7 @@ class DietaryPreference(BaseModel):
     
     store_uuid = models.UUIDField(null=False, blank=True)
     diet_pref_uuid = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
-    name = models.CharField(max_length=50, unique=True)
+    name = models.CharField(max_length=50, unique=True,blank=False)
     description = models.TextField(blank=True)
     icon_url = models.URLField(null=True, blank=True)
 
@@ -116,6 +116,28 @@ class DietaryPreference(BaseModel):
 
     def __str__(self):
         return self.name
+
+    def  clean(self):
+        if self.store_uuid is None:
+            raise ValidationError("Store UUID cannot be null.")
+        if self.name is None or self.name == "":
+            raise ValidationError("Name cannot be null.")
+        if self.description is None or self.description == "":
+            raise ValidationError("Description cannot be null.")
+        return super().clean()
+    def save(self, *args, **kwargs):
+        # Run full validation before saving
+        self.full_clean()  # <-- this calls `clean()` and field validators
+        super().save(*args, **kwargs)  # Call the real save() method
+    class Meta:
+        verbose_name = 'Dietary Preference'
+        verbose_name_plural = 'Dietary Preferences'
+        ordering = ['name']
+        indexes = [
+            models.Index(fields=['diet_pref_uuid']),
+            models.Index(fields=['store_uuid']),
+            models.Index(fields=['name']),
+        ]
 
 class Category(BaseModel):
 
@@ -142,6 +164,20 @@ class Category(BaseModel):
 
     objects = category_manager()
 
+    def clean(self):
+        if self.store_uuid is None:
+            raise ValidationError("Store UUID cannot be null.")
+        if self.name is None or self.name == "":
+            raise ValidationError("Name cannot be null.")
+        if self.description is None or self.description == "":
+            raise ValidationError("Description cannot be null.")
+        if self.display_order is None or self.display_order < 0:
+            raise ValidationError("Display order Invalid.")
+        return super().clean()
+    def save(self, *args, **kwargs):
+        # Run full validation before saving
+        self.full_clean()  # <-- this calls `clean()` and field validators
+        super().save(*args, **kwargs)  # Call the real save() method
     class Meta:
         verbose_name = 'Category'
         verbose_name_plural = 'Categories'
@@ -172,15 +208,14 @@ class Product(BaseModel):
 
     is_available =  models.BooleanField(default=True)
     
-    #Price To display as Discounted
     display_price = models.DecimalField(
         max_digits=6,
-        decimal_places=2,
+        decimal_places=3,
         validators=[MinValueValidator(0)])
     
     price = models.DecimalField(
         max_digits=6,
-        decimal_places=2,
+        decimal_places=3,
         validators=[MinValueValidator(0)])
 
     GST_percentage = models.DecimalField(
@@ -190,6 +225,11 @@ class Product(BaseModel):
             MinValueValidator(0),
             MaxValueValidator(100)
                      ])
+    
+    packaging_cost = models.DecimalField(default=0.00,
+        max_digits=6,
+        decimal_places=2,
+        validators=[MinValueValidator(0)])
     
     category = models.ForeignKey(Category, 
                                  on_delete=models.PROTECT,
@@ -204,6 +244,23 @@ class Product(BaseModel):
     def __str__(self):
         return "-".join([self.name,str(self.product_uuid)]) 
 
+    def clean(self):
+        if self.store_uuid is None:
+            raise ValidationError("Store UUID cannot be null.")
+        if self.name is None or self.name == "":
+            raise ValidationError("Name cannot be null.")
+        if self.description is None or self.description == "":
+            raise ValidationError("Description cannot be null.")
+        if self.price is None or self.price < 0:
+            raise ValidationError("Price Invalid.")
+        if self.GST_percentage is None or self.GST_percentage < 0 or self.GST_percentage > 100:
+            raise ValidationError("GST percentage Invalid.")
+        return super().clean()
+
+    def save(self, *args, **kwargs):
+        # Run full validation before saving
+        self.full_clean()  # <-- this calls `clean()` and field validators
+        super().save(*args, **kwargs)  # Call the real save() method
     class Meta:
         verbose_name = "Product",
         verbose_name_plural = "Products"
@@ -240,16 +297,41 @@ class Add_on(BaseModel):
                                         verbose_name="Max Selectable")  # e.g., max 2 toppings of this type
     
     GST_percentage = models.DecimalField(max_digits=5,
-                                        decimal_places=2)
+                                        decimal_places=3,
+                                        default=0.00,
+                                        validators=[MinValueValidator(0)])
     price = models.DecimalField(max_digits=6,
-                                decimal_places=2,
+                                decimal_places=3,
                                 default=0.00,
                                 validators=[MinValueValidator(0)],
                                 verbose_name="Additional Price")  # Extra cost
-    
+    is_free = models.BooleanField(default=False,
+                                verbose_name="Is Free")  # If True, price is ignored
 
     def __str__(self):
         return f"{self.name} (Product: {self.product.name})"
+
+    def clean(self):
+        if self.product is None:
+            raise ValidationError("Product cannot be null.")
+        if self.name is None or self.name == "":
+            raise ValidationError("Name cannot be null.")
+        if self.is_available is None:
+            raise ValidationError("Availability cannot be null.")
+        if self.max_selectable is None or self.max_selectable < 0:
+            raise ValidationError("Max selectable Invalid.")
+        if self.price is None or self.price < 0:
+            raise ValidationError("Price Invalid.")
+        if self.GST_percentage is None or self.GST_percentage < 0 or self.GST_percentage > 100:
+            raise ValidationError("GST percentage Invalid.")
+        if self.is_free and self.price > 0:
+            raise ValidationError("Price cannot be greater than 0 if is_free is True.")
+        return super().clean()
+    
+    def save(self, *args, **kwargs):
+        # Run full validation before saving
+        self.full_clean()  # <-- this calls `clean()` and field validators
+        super().save(*args, **kwargs)  # Call the real save() method
 
     objects = add_on_manager()
     class Meta:

@@ -80,11 +80,6 @@ class CartServiceStub(object):
                 request_serializer=cart__pb2.CreateAddOnRequest.SerializeToString,
                 response_deserializer=cart__pb2.CartResponse.FromString,
                 _registered_method=True)
-        self.UpdateAddOn = channel.unary_unary(
-                '/Cart_v1.CartService/UpdateAddOn',
-                request_serializer=cart__pb2.UpdateAddOnRequest.SerializeToString,
-                response_deserializer=cart__pb2.CartResponse.FromString,
-                _registered_method=True)
         self.RemoveAddOn = channel.unary_unary(
                 '/Cart_v1.CartService/RemoveAddOn',
                 request_serializer=cart__pb2.RemoveAddOnRequest.SerializeToString,
@@ -181,14 +176,15 @@ class CartServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
-    def UpdateAddOn(self, request, context):
-        """Missing associated documentation comment in .proto file."""
-        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
-
     def RemoveAddOn(self, request, context):
-        """Missing associated documentation comment in .proto file."""
+        """rpc UpdateAddOn(UpdateAddOnRequest) returns (CartResponse){
+        option (google.api.http) = {
+        patch : "/v1/store/{store_uuid}/user/{user_phone_no}/cart/{cart_uuid}/cartitem/{cart_item_uuid}/addon/{add_on_uuid}"
+        body : "*"
+        };
+        };
+
+        """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
@@ -275,11 +271,6 @@ def add_CartServiceServicer_to_server(servicer, server):
             'CreateAddOn': grpc.unary_unary_rpc_method_handler(
                     servicer.CreateAddOn,
                     request_deserializer=cart__pb2.CreateAddOnRequest.FromString,
-                    response_serializer=cart__pb2.CartResponse.SerializeToString,
-            ),
-            'UpdateAddOn': grpc.unary_unary_rpc_method_handler(
-                    servicer.UpdateAddOn,
-                    request_deserializer=cart__pb2.UpdateAddOnRequest.FromString,
                     response_serializer=cart__pb2.CartResponse.SerializeToString,
             ),
             'RemoveAddOn': grpc.unary_unary_rpc_method_handler(
@@ -560,33 +551,6 @@ class CartService(object):
             target,
             '/Cart_v1.CartService/CreateAddOn',
             cart__pb2.CreateAddOnRequest.SerializeToString,
-            cart__pb2.CartResponse.FromString,
-            options,
-            channel_credentials,
-            insecure,
-            call_credentials,
-            compression,
-            wait_for_ready,
-            timeout,
-            metadata,
-            _registered_method=True)
-
-    @staticmethod
-    def UpdateAddOn(request,
-            target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
-        return grpc.experimental.unary_unary(
-            request,
-            target,
-            '/Cart_v1.CartService/UpdateAddOn',
-            cart__pb2.UpdateAddOnRequest.SerializeToString,
             cart__pb2.CartResponse.FromString,
             options,
             channel_credentials,

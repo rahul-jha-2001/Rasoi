@@ -73,15 +73,15 @@ cd ..
 echo "Returned to original directory"
 # Add error handling for migrations
 echo "Starting migrations..."
-if ! python -m manage makemigrations; then
+if ! python -m migration_script ; then
     echo "Failed to make migrations"
     exit 1
 fi
 
-if ! python -m manage migrate; then
-    echo "Failed to apply migrations"
-    exit 1
-fi
+# if ! python -m manage migrate; then
+#     echo "Failed to apply migrations"
+#     exit 1
+# fi
 echo "Migrations applied successfully"
 
 echo "Starting GRPC..."

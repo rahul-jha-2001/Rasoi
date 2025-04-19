@@ -91,7 +91,7 @@ class Cart(models.Model):
     user_phone_no = models.CharField(max_length = 12,null=False,blank= False,verbose_name=_("Phone Number"))
     order_type = models.CharField(max_length=30,choices=order_types.choices,default=order_types.ORDER_TYPE_DINE_IN,verbose_name=_("Order type"))
     table_no = models.CharField(max_length=4,null=True,blank=True,verbose_name=_("Table No"))
-    vehicle_no = models.CharField(max_length=10,null=True,blank=True,verbose_name=_("Vehicle No"))
+    vehicle_no = models.CharField(max_length=13,null=True,blank=True,verbose_name=_("Vehicle No"))
     vehicle_description = models.CharField(max_length=50,null=True,blank=True,verbose_name=_("Vehicle Description"))
     coupon_code = models.CharField(max_length=20,null=True,blank= True,verbose_name=_("coupone"))
     special_instructions = models.TextField(verbose_name="special instructions",null=True,blank=True)
@@ -194,6 +194,16 @@ class Cart(models.Model):
             raise ValueError("Vehicle number is required for DriveThru orders.")
         if self.sub_total < Decimal("0.00"):
             raise ValueError("Total subtotal cannot be negative.")
+        if self.final_amount < Decimal("0.00"):
+            raise ValueError("Final amount cannot be negative.")
+    def save(self, *args, **kwargs):
+        """Prevent updates if the cart is locked."""
+        if self.cart_uuid:
+            existing_cart = Cart.objects.filter(cart_uuid=self.cart_uuid).first()
+            if existing_cart and existing_cart.state == self.cart_state.CART_STATE_LOCKED:
+                raise ValidationError("Cannot modify a locked cart.")
+        self.clean()  # Call the clean method to validate the data
+        super().save(*args, **kwargs)
 
 class CartItem(models.Model):
     
@@ -225,6 +235,23 @@ class CartItem(models.Model):
             models.Index(fields=["cart"]),
             models.Index(fields=["product_uuid", "cart_item_uuid"]),
         ]
+
+    def clean(self):
+        """Validate the cart item data."""
+        if self.unit_price < Decimal("0.00"):
+            raise ValueError("Unit price cannot be negative.")
+        if self.quantity <= 0:
+            raise ValueError("Quantity must be greater than zero.")
+        if self.tax_percentage < Decimal("0.00") or self.tax_percentage > Decimal("100.00"):
+            raise ValueError("Tax percentage must be between 0 and 100.")
+        if self.discount < Decimal("0.00") or self.discount > Decimal("100.00"):
+            raise ValueError("Discount percentage must be between 0 and 100.")
+        if self.packaging_cost < Decimal("0.00"):
+            raise ValueError("Packaging cost cannot be negative.")
+        if self.cart.state == Cart.cart_state.CART_STATE_LOCKED:
+            raise ValidationError("Cannot modify items in a locked cart.")
+
+        return super().clean()
 
     def save(self, *args, **kwargs):
         """Prevent modifications if the cart is locked."""
@@ -318,7 +345,7 @@ class AddOn(models.Model):
     quantity =  models.PositiveIntegerField(verbose_name="AddOn Quantity",default=0)
     unit_price = models.DecimalField(decimal_places=2,max_digits=6,verbose_name="AddOn Price",default=0)
     is_free = models.BooleanField(_("Is Free"),default=False)
-
+    max_selectable = models.PositiveIntegerField(default=1,verbose_name="Max Selection")
     
     class Meta:
         verbose_name = 'Add On'
@@ -328,10 +355,25 @@ class AddOn(models.Model):
             models.Index(fields=['add_on_uuid']),
         ]
     
-    def save(self, *args, **kwargs):
-        """Prevent modifications if the cart is locked."""
+    def clean(self):
+        """Validate the add-on data."""
+        if self.unit_price < Decimal("0.00"):
+            raise ValueError("Unit price cannot be negative.")
+        if self.quantity < 0:
+            raise ValueError("Quantity cannot be negative.")
+        if self.is_free:
+            if self.unit_price > Decimal("0.00"):
+                raise ValueError("Free add-ons cannot have a price greater than zero.")
+            if self.quantity > 0:
+                raise ValueError("Free add-ons cannot have a quantity greater than zero.")
         if self.cart_item.cart.state == Cart.cart_state.CART_STATE_LOCKED:
-            raise ValidationError("Cannot modify addons in a locked cart.")
+            raise ValidationError("Cannot modify add-ons in a locked cart.")
+
+        return super().clean()
+
+    def save(self, *args, **kwargs):
+        
+        self.clean()  # Call the clean method to validate the data
         super().save(*args, **kwargs)
 
     def delete(self, *args, **kwargs):
@@ -350,12 +392,16 @@ class AddOn(models.Model):
     def add_quantity(self, increment=1):
         if increment < 1:
             raise ValueError("Increment must be positive")
+        if self.quantity + increment > self.max_selectable:
+            raise ValueError(f"Cannot exceed max selectable quantity of {self.max_selectable}")
         self.quantity += increment
         self.save()
     
     def remove_quantity(self,decrement = 1):
         if decrement < 1:
             raise ValueError("Decrement must be positive")
+        if self.quantity - decrement < 0:
+            raise ValueError("Quantity cannot be negative")
         self.quantity -= decrement
         self.save()
 
@@ -373,14 +419,14 @@ class AddOn(models.Model):
             
 class Coupon(models.Model):
     class DiscountType(models.TextChoices):
-        UNSPCIFIED_DISCOUNT = "UNSPCIFIED_DISCOUNT",_("UNSPCIFIED_DISCOUNT")
-        FIXED_DISCOUNT = "FIXED_DISCOUNT",_("FIXED_DISCOUNT")
-        PERCENTAGE_DISCOUNT = "PERCENTAGE_DISCOUNT",_("PERCENTAGE_DISCOUNT")
+        DISCOUNT_TYPE_UNSPCIFIED = "DISCOUNT_TYPE_UNSPCIFIED",_("DISCOUNT_TYPE_UNSPCIFIED")
+        DISCOUNT_TYPE_PERCENTAGE = "DISCOUNT_TYPE_PERCENTAGE",_("DISCOUNT_TYPE_PERCENTAGE")
+        DISCOUNT_TYPE_FIXED = "DISCOUNT_TYPE_FIXED",_("DISCOUNT_TYPE_FIXED")
     
     coupon_uuid = models.UUIDField(primary_key= True,default=uuid.uuid4,verbose_name = _("Coupon Uuid"))
     store_uuid = models.UUIDField()
     coupon_code = models.CharField(max_length= 10)
-    discount_type = models.CharField(max_length=30,choices=DiscountType.choices,default=DiscountType.PERCENTAGE_DISCOUNT)
+    discount_type = models.CharField(max_length=30,choices=DiscountType.choices,default=DiscountType.DISCOUNT_TYPE_PERCENTAGE)
     valid_from = models.DateField()
     valid_to = models.DateField()
     usage_limit_per_user = models.PositiveIntegerField(default=1,verbose_name="Usage Limit Per User")
@@ -410,7 +456,9 @@ class Coupon(models.Model):
             raise ValueError("Minimum spend cannot be negative.")
         if self.max_cart_value and self.max_cart_value < self.min_spend:
             raise ValueError("Maximum cart value must be greater than or equal to minimum spend.")
-
+    def save(self, *args, **kwargs):
+        self.clean()
+        super().save(*args, **kwargs)
 
 class CouponUsage(models.Model):
 

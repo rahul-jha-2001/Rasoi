@@ -2,6 +2,8 @@ django
 djangorestframework
 grpcio
 grpcio-tools
+pytest
+pytest-django
 djangorestframework-simplejwt
 python-dotenv
 boto3

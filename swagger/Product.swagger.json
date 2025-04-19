@@ -341,6 +341,18 @@
             "in": "path",
             "required": true,
             "type": "string"
+          },
+          {
+            "name": "isActive",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
+          },
+          {
+            "name": "isAvailable",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
           }
         ],
         "tags": [
@@ -641,6 +653,56 @@
         ]
       }
     },
+    "/v1/store/{storeUuid}/product/list": {
+      "get": {
+        "operationId": "ProductService_ListProducts2",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/product_v1ListProductsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "storeUuid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "categoryUuid",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "ProductService"
+        ]
+      }
+    },
     "/v1/store/{storeUuid}/product/{productUuid}": {
       "get": {
         "operationId": "ProductService_GetProduct2",
@@ -676,6 +738,18 @@
             "in": "query",
             "required": false,
             "type": "string"
+          },
+          {
+            "name": "isActive",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
+          },
+          {
+            "name": "isAvailable",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
           }
         ],
         "tags": [
@@ -930,6 +1004,9 @@
         "price": {
           "type": "number",
           "format": "float"
+        },
+        "isFree": {
+          "type": "boolean"
         }
       }
     },
@@ -1002,6 +1079,10 @@
         "imageBytes": {
           "type": "string",
           "format": "byte"
+        },
+        "packagingCost": {
+          "type": "number",
+          "format": "float"
         }
       }
     },
@@ -1025,6 +1106,9 @@
         "price": {
           "type": "number",
           "format": "float"
+        },
+        "isFree": {
+          "type": "boolean"
         }
       }
     },
@@ -1085,6 +1169,10 @@
         "imageBytes": {
           "type": "string",
           "format": "byte"
+        },
+        "packagingCost": {
+          "type": "number",
+          "format": "float"
         }
       }
     },
@@ -1244,6 +1332,9 @@
         "updatedAt": {
           "type": "string",
           "format": "date-time"
+        },
+        "isFree": {
+          "type": "boolean"
         }
       }
     },
@@ -1362,6 +1453,10 @@
         "updatedAt": {
           "type": "string",
           "format": "date-time"
+        },
+        "packagingCost": {
+          "type": "number",
+          "format": "float"
         }
       }
     },

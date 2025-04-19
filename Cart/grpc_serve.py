@@ -33,25 +33,26 @@ from Proto.cart_pb2 import (
     CARTSTATE,
 )
 from Proto import product_pb2_grpc,product_pb2
+from Proto.product_pb2 import GetProductRequest,AddOnResponse
 from google.protobuf import empty_pb2
 
 from utils.logger import Logger
 from utils.gprc_pool import GrpcChannelPool
-
+from utils.check_access import check_access
 load_dotenv()
 
 logger = Logger("GRPC_service")
-PRODUCT_SERVICE_ADDR = os.getenv("PRODUCT_SERVICE_ADDR","localhost:50051")
+PRODUCT_SERVICE_ADDR = os.getenv("PRODUCT_SERVICE_ADDR","localhost:50052")
 
 class CartVaildator:
 
     # def __init__(self):
     #     # Connect to the product and store gRPC services
     #     self.product_channel = grpc.insecure_channel('product-service:50051')
-    #     self.store_channel = grpc.insecure_channel('store-service:50052')
+    #     # self.store_channel = grpc.insecure_channel('store-service:50052')
 
     #     self.product_stub = product_pb2_grpc.ProductServiceStub(self.product_channel)
-    #     self.store_stub = store_pb2_grpc.StoreServiceStub(self.store_channel)
+    #     # self.store_stub = store_pb2_grpc.StoreServiceStub(self.store_channel)
     @staticmethod
     def validate_cart(cart:Cart, coupon:Coupon|None):
 
@@ -111,7 +112,7 @@ def handle_error(func):
             context.abort(grpc.StatusCode.INVALID_ARGUMENT, f"Invalid Value: {str(e)}")
 
         except TypeError as e:
-            logger.error(f"Type Error: {str(e)}")
+            logger.error(f"Type Error: {str(e)}",e)
             context.abort(grpc.StatusCode.INVALID_ARGUMENT, f"Type Error: {str(e)}")
 
         except TimeoutError as e:
@@ -143,53 +144,6 @@ def handle_error(func):
             logger.error(f"Unexpected Error: {str(e)}",e)
             context.abort(grpc.StatusCode.INTERNAL, "Internal Server Error")
     return wrapper
-
-def check_access(roles:list[str]):
-    def decorator(func):
-        def wrapper(self, request, context):
-            metadata = dict(context.invocation_metadata() or [])
-            role = metadata.get("role")
-
-            if not role:
-                logger.warning("Missing role in metadata")
-                raise Unauthenticated("Role missing from metadata")
-
-            if role == "internal":
-                # TODO: Add internal service verification here
-                return func(self, request, context)
-
-            if role not in roles:
-                logger.warning(f"Unauthorized role: {role}")
-                raise Unauthenticated(f"Unauthorized role: {role}")
-
-            # Role-specific access checks
-            try:
-                if role == "store":
-                    store_uuid_in_token = metadata["store_uuid"]
-                    if not getattr(request, "store_uuid", None):
-                        logger.warning("Store UUID missing in request")
-                        raise Unauthenticated
-                    if store_uuid_in_token != getattr(request, "store_uuid", None):
-                        logger.warning("Store UUID mismatch")
-                        raise Unauthenticated
-
-                elif role == "user":
-                    phone_in_token = metadata["user_phone_no"]
-                    if not getattr(request, "user_phone_no", None):
-                        logger.warning("User phone number missing in request")
-                        raise Unauthenticated
-                    if phone_in_token != getattr(request, "user_phone_no", None):
-                        logger.warning("User phone mismatch")
-                        raise Unauthenticated
-
-            except KeyError as e:
-                logger.warning(f"Missing required metadata for role '{role}': {e}")
-                raise Unauthenticated
-
-            return func(self, request, context)
-        return wrapper
-    return decorator
-
 
 class CartService(Cart_pb2_grpc.CartServiceServicer):
 
@@ -375,7 +329,7 @@ class CartService(Cart_pb2_grpc.CartServiceServicer):
                 raise
 
             try:
-                response.order_type = int(ORDERTYPE.Value(cart.order_type))
+                response.order_type = ORDERTYPE.Value(cart.order_type)
             except (AttributeError, TypeError, ValueError) as e:
                 logger.warning(f"Failed to convert order_type: {e}")
                 raise
@@ -454,16 +408,23 @@ class CartService(Cart_pb2_grpc.CartServiceServicer):
             raise
 
     def __init__(self):
-        
-        self.channel_pool = GrpcChannelPool()
-        self.channel = self.channel_pool.get_channel(PRODUCT_SERVICE_ADDR)
-        self.Cart_stub = product_pb2_grpc.ProductServiceStub(self.channel)
-        logger.info(f"Initialized gRPC channel to Product Service at {PRODUCT_SERVICE_ADDR}")
-        self.meta_data =[ 
-            ("role","internal"),
-            ("service","product")
-        ]
-        super().__init__()
+        try:
+            self.channel_pool = GrpcChannelPool()
+            self.channel = self.channel_pool.get_channel(PRODUCT_SERVICE_ADDR)
+            if not self.channel:
+                logger.error(f"Failed to create channel to Product Service at {PRODUCT_SERVICE_ADDR}")
+                raise ConnectionError(f"Failed to connect to Product Service at {PRODUCT_SERVICE_ADDR}")
+            
+            self.Product_stub = product_pb2_grpc.ProductServiceStub(self.channel)
+            logger.info(f"Initialized gRPC channel to Product Service at {PRODUCT_SERVICE_ADDR}")
+            self.meta_data = [
+                ("role", "internal"),
+                ("service", "product")
+            ]
+            super().__init__()
+        except Exception as e:
+            logger.error(f"Failed to initialize CartService: {str(e)}")
+            raise
 
     @handle_error
     @check_access(roles=["user","store","internal"])
@@ -511,40 +472,59 @@ class CartService(Cart_pb2_grpc.CartServiceServicer):
 
         
     @handle_error    
-    @check_access(roles=["user","store","internal"])
     def UpdateCart(self, request, context):
+        logger.debug(f"UpdateCart request received: {request}")
 
-        if getattr(request,"cart_uuid",None):
-            cart = Cart.objects.get_active_cart(cart_uuid = request.cart_uuid,user_phone_no = request.user_phone_no,store_uuid = request.store_uuid)
-        
-        # Fall back to store_uuid + user_phone_no combination
-        elif getattr(request,"store_uuid",None) and getattr(request,"user_phone_no",None):
-            cart = Cart.objects.get_active_cart(
-                store_uuid=request.store_uuid,
-                user_phone_no=request.user_phone_no
-            )
-        else:
-            raise ValueError("Must provide either cart_uuid or both store_uuid and user_phone_no")
-        with transaction.atomic():
-            logger.debug(f"Before Update:{cart}")
-            if request.cart.order_type:
-                cart.order_type = ORDERTYPE.Name(request.cart.order_type)
-            if request.cart.table_no:
-                cart.cart.table_no = request.cart.table_no
-            if request.cart.vehicle_no:
-                cart.vehicle_no = request.cart.vehicle_no    
-            if request.cart.vehicle_description:
-                cart.vehicle_description = request.cart.vehicle_description
-            if request.cart.special_instructions:
-                cart.special_instructions = request.cart.special_instructions
+        try:
+            if getattr(request,"cart_uuid",None):
+                logger.debug(f"Looking up cart by cart_uuid={request.cart_uuid}")
+                cart = Cart.objects.get_active_cart(cart_uuid = request.cart_uuid,user_phone_no = request.user_phone_no,store_uuid = request.store_uuid)
             
-            logger.debug(f"After Update:{cart}")
-            cart.full_clean()
-            cart.save() 
-            
+            # Fall back to store_uuid + user_phone_no combination
+            elif getattr(request,"store_uuid",None) and getattr(request,"user_phone_no",None):
+                logger.debug(f"Looking up cart by store_uuid={request.store_uuid} and user_phone_no={request.user_phone_no}")
+                cart = Cart.objects.get_active_cart(
+                    store_uuid=request.store_uuid,
+                    user_phone_no=request.user_phone_no
+                )
+            else:
+                logger.error("Missing required parameters for cart lookup")
+                raise ValueError("Must provide either cart_uuid or both store_uuid and user_phone_no")
 
-            logger.info(f"Cart:{cart.cart_uuid} Updated for {cart.store_uuid} and {cart.user_phone_no}")
-            return self._Cart_to_response(cart)
+            with transaction.atomic():
+                logger.debug(f"Before Update - Cart state: {cart}")
+                
+                if request.HasField("order_type"):
+                    logger.debug(f"Updating order_type from {cart.order_type} to {ORDERTYPE.Name(request.order_type)}")
+                    cart.order_type = ORDERTYPE.Name(request.order_type)
+                
+                if request.HasField("table_no"):
+                    logger.debug(f"Updating table_no from {cart.table_no} to {request.table_no}")
+                    cart.table_no = request.table_no
+                
+                if request.HasField("vehicle_no"):
+                    logger.debug(f"Updating vehicle_no from {cart.vehicle_no} to {request.vehicle_no}")
+                    cart.vehicle_no = request.vehicle_no    
+                
+                if request.HasField("vehicle_description"):
+                    logger.debug(f"Updating vehicle_description from {cart.vehicle_description} to {request.vehicle_description}")
+                    cart.vehicle_description = request.vehicle_description
+                
+                if request.HasField("special_instructions"):
+                    logger.debug(f"Updating special_instructions from {cart.special_instructions} to {request.special_instructions}")
+                    cart.special_instructions = request.special_instructions
+                
+                logger.debug(f"After Update - Cart state: {cart}")
+                
+                cart.full_clean()
+                cart.save() 
+
+                logger.info(f"Successfully updated Cart:{cart.cart_uuid} for store:{cart.store_uuid} and user:{cart.user_phone_no}")
+                return self._Cart_to_response(cart)
+                
+        except Exception as e:
+            logger.error(f"Error in UpdateCart: {str(e)}",e)
+            raise
 
     @handle_error
     @check_access(roles=["user","store","internal"])
@@ -554,54 +534,76 @@ class CartService(Cart_pb2_grpc.CartServiceServicer):
             cart = Cart.objects.get_active_cart(cart_uuid = request.cart_uuid,user_phone_no = request.user_phone_no,store_uuid = request.store_uuid)
             cart.delete()
             logger.info(f"Cart:{cart.cart_uuid} for Phone_no:{cart.user_phone_no} at store:{cart.store_uuid} ")
-            return empty_pb2()
+            return empty_pb2.Empty()
         
 
         if getattr(request,"store_uuid",None) and getattr(request,"user_phone_no",None):
             cart = Cart.objects.get_active_cart(store_uuid = request.store_uuid,user_phone_no = request.user_phone_no)
             cart.delete()
             logger.info(f"Cart:{cart.cart_uuid} for Phone_no:{cart.user_phone_no} at store:{cart.store_uuid} ")
-            return empty_pb2()
+            return empty_pb2.Empty()
         
     @handle_error    
     @check_access(roles=["user","store","internal"])
     def AddCartItem(self, request, context):
+        logger.debug(f"AddCartItem request - Cart UUID: {request.cart_uuid}, Product UUID: {request.product_uuid}")
+
         cart = Cart.objects.get_active_cart(cart_uuid = request.cart_uuid,user_phone_no = request.user_phone_no,store_uuid = request.store_uuid)
-
-
-        cart_request = product_pb2.GetCartRequest(cart_uuid=cart_uuid,store_uuid = store_uuid)
+        logger.debug(f"Found active cart: {cart.cart_uuid} for user: {cart.user_phone_no}")
+        product_uuid = str(request.product_uuid)
+        store_uuid = str(cart.store_uuid)
+        
+        product_request = GetProductRequest(
+                product_uuid=product_uuid,
+                store_uuid=store_uuid
+                    )
+        logger.debug(f"Making GetProduct request to Product service for product: {request.product_uuid}")
         
         try:
-            response = self.Cart_stub.GetCart(cart_request,metadata = self.meta_data)
+            logger.debug(f"Calling Product service with metadata: {self.meta_data}")
+            response = self.Product_stub.GetProduct(product_request,metadata = self.meta_data)
+            logger.debug(f"Received product response: {response}")
         except RpcError as e:
-
             error_message = e.details()
             if e.code() == StatusCode.NOT_FOUND:
-                logger.error(f"Active Cart: {cart_uuid} not found")
+                logger.error(f"Active Product: {request.product_uuid} not found")
                 raise GrpcException(error_message,status_code=e.code())
             elif e.code() == StatusCode.INVALID_ARGUMENT:
-                logger.error(error_message)
+                logger.error(f"Invalid argument error: {error_message}")
                 raise GrpcException(error_message,status_code=e.code())
             elif e.code() == StatusCode.INTERNAL:
-                logger.error(error_message)
+                logger.error(f"Internal server error: {error_message}")
                 raise GrpcException(error_message,status_code=e.code())
             elif e.code() == StatusCode.UNAVAILABLE:
-                logger.error(f"Cart Service does not exist at:{CART_SERVICE_ADDR}")
+                logger.error(f"Product Service unavailable at: {PRODUCT_SERVICE_ADDR}")
                 raise GrpcException("Internal Server Error",status_code=StatusCode.UNAVAILABLE)
+            else:
+                logger.error(f"Unexpected error: {error_message}")
+                raise GrpcException("Internal Server Error",status_code=StatusCode.INTERNAL)
 
+        if response.product is None:
+            logger.error(f"Product response empty for product_uuid: {request.product_uuid}")
+            raise GrpcException("Product Not Found",status_code=StatusCode.NOT_FOUND)
+        if response.product.is_available == False:
+            logger.error(f"Product {request.product_uuid} marked as unavailable")
+            raise GrpcException("Product Not Available",status_code=StatusCode.NOT_FOUND)
+
+        logger.debug(f"Product validation successful, creating cart item")
 
         with transaction.atomic():
             cart_item = CartItem.objects.create(
-                cart = cart,
-                product_name = request.cart_item.product_name,
-                product_uuid = request.cart_item.product_uuid,
-                tax_percentage = request.cart_item.tax_percentage,
-                packaging_cost = request.cart_item.packaging_cost,
-                unit_price = request.cart_item.unit_price,
-                quantity = request.cart_item.quantity
+            cart = cart,
+            product_name = response.product.name,
+            product_uuid = response.product.product_uuid,
+            tax_percentage = response.product.GST_percentage,
+            packaging_cost = response.product.packaging_cost,
+            unit_price = response.product.price,
+            quantity = 1
             )
 
-            logger.info(f"Cart-Item:{cart_item.cart_item_uuid} added to cart:{cart_item.cart.cart_uuid}")
+            logger.info(f"Created cart item {cart_item.cart_item_uuid} with product {response.product.name}")
+            logger.debug(f"Cart item details - Price: {cart_item.unit_price}, Quantity: {cart_item.quantity}, Tax: {cart_item.tax_percentage}%")
+            
             return self._Cart_to_response(cart)
 
     @handle_error
@@ -619,39 +621,76 @@ class CartService(Cart_pb2_grpc.CartServiceServicer):
     @handle_error
     @check_access(roles=["user","store","internal"])
     def CreateAddOn(self, request, context):
+        logger.debug(f"CreateAddOn request - Cart UUID: {request.cart_uuid}, Cart Item UUID: {request.cart_item_uuid}")
+        
         cart = Cart.objects.get_active_cart(cart_uuid = request.cart_uuid,user_phone_no = request.user_phone_no,store_uuid = request.store_uuid)
+        logger.debug(f"Found active cart: {cart.cart_uuid} for user: {cart.user_phone_no}")
+        
         cart_item = CartItem.objects.get(cart = cart,cart_item_uuid = request.cart_item_uuid)
+        logger.debug(f"Found cart item: {cart_item.cart_item_uuid} in cart: {cart.cart_uuid}")
+        
+        add_on_request = product_pb2.GetAddOnRequest(product_uuid=str(cart_item.product_uuid),store_uuid = str(cart.store_uuid),add_on_uuid = str(request.add_on_uuid))  
+        logger.debug(f"Making GetAddOn request to Product service for addon: {request.add_on_uuid}")
+        
+        try:
+            logger.debug(f"Calling Product service with metadata: {self.meta_data}")
+            response:AddOnResponse = self.Product_stub.GetAddOn(add_on_request,metadata = self.meta_data)
+            logger.debug(f"Received addon response: {response}")
+        except RpcError as e:
+            error_message = e.details()
+            if e.code() == StatusCode.NOT_FOUND:
+                logger.error(f"Active Product: {request.product_uuid} not found")
+                raise GrpcException(error_message,status_code=e.code())
+            elif e.code() == StatusCode.INVALID_ARGUMENT:
+                logger.error(f"Invalid argument error: {error_message}")
+                raise GrpcException(error_message,status_code=e.code())
+            elif e.code() == StatusCode.INTERNAL:
+                logger.error(f"Internal server error: {error_message}")
+                raise GrpcException(error_message,status_code=e.code())
+            elif e.code() == StatusCode.UNAVAILABLE:
+                logger.error(f"Product Service unavailable at: {PRODUCT_SERVICE_ADDR}")
+                raise GrpcException("Internal Server Error",status_code=StatusCode.UNAVAILABLE)
+            
+        if response.add_on.is_available == False:
+            logger.error(f"Add-on: {request.add_on.add_on_uuid} is not available")
+            raise GrpcException("Add-on Not Available",status_code=StatusCode.NOT_FOUND)
+
+        logger.debug(f"Addon validation successful, creating addon")
+        
         with transaction.atomic():
             add_on = AddOn.objects.create(
-                cart_item = cart_item,
-                add_on_name = request.add_on.add_on_name,
-                add_on_uuid = request.add_on.add_on_uuid,
-                quantity = request.add_on.quantity,
-                unit_price = request.add_on.unit_price,
-                is_free = request.add_on.is_free
+            cart_item = cart_item,
+            add_on_name = response.add_on.name,
+            add_on_uuid = response.add_on.add_on_uuid,
+            quantity = 1,
+            unit_price = response.add_on.price,
+            is_free = response.add_on.is_free,
+            max_selectable = response.add_on.max_selectable,
             )
-            logger.info(f"Add-on:{add_on.add_on_uuid} to Cart_item:{cart_item.cart_item_uuid} in Cart:{cart.cart_uuid}")
+            logger.info(f"Created addon {add_on.add_on_uuid} with name {response.add_on.name}")
+            logger.debug(f"Addon details - Price: {add_on.unit_price}, Quantity: {add_on.quantity}, Is Free: {add_on.is_free}")
+            
             return self._Cart_to_response(cart)
 
-    @handle_error
-    @check_access(roles=["user","store","internal"])
-    def UpdateAddOn(self, request, context):
-        cart = Cart.objects.get_active_cart(cart_uuid = request.cart_uuid,user_phone_no = request.user_phone_no,store_uuid = request.store_uuid)
-        cart_item = CartItem.objects.get(cart = cart,cart_item_uuid = request.cart_item_uuid)
-        add_on = AddOn.objects.get(cart_item = cart_item,add_on_uuid = request.add_on_uuid)
-        with transaction.atomic():
-            if request.add_on.add_on_name:
-                add_on.add_on_name = request.add_on.add_on_name
-            if request.add_on.quantity:
-                add_on.quantity = request.add_on.quantity
-            if request.add_on.unit_price:
-                add_on.unit_price = request.add_on.unit_price
-            if request.add_on.is_free:
-                add_on.is_free = request.add_on.is_free
+    # @handle_error
+    # @check_access(roles=["user","store","internal"])
+    # def UpdateAddOn(self, request, context):
+    #     cart = Cart.objects.get_active_cart(cart_uuid = request.cart_uuid,user_phone_no = request.user_phone_no,store_uuid = request.store_uuid)
+    #     cart_item = CartItem.objects.get(cart = cart,cart_item_uuid = request.cart_item_uuid)
+    #     add_on = AddOn.objects.get(cart_item = cart_item,add_on_uuid = request.add_on_uuid)
+    #     with transaction.atomic():
+    #         if request.add_on.add_on_name:
+    #             add_on.add_on_name = request.add_on.add_on_name
+    #         if request.add_on.quantity:
+    #             add_on.quantity = request.add_on.quantity
+    #         if request.add_on.unit_price:
+    #             add_on.unit_price = request.add_on.unit_price
+    #         if request.add_on.is_free:
+    #             add_on.is_free = request.add_on.is_free
 
-            add_on.save()
-            logger.info(f"Updated Add-on:{add_on.add_on_uuid} in Cart_item:{cart_item.cart_item_uuid} in Cart:{cart.cart_uuid}")
-            return self._Cart_to_response(cart)
+    #         add_on.save()
+    #         logger.info(f"Updated Add-on:{add_on.add_on_uuid} in Cart_item:{cart_item.cart_item_uuid} in Cart:{cart.cart_uuid}")
+    #         return self._Cart_to_response(cart)
 
     @handle_error
     @check_access(roles=["user","store","internal"])
@@ -759,7 +798,7 @@ class CartService(Cart_pb2_grpc.CartServiceServicer):
             return self._Cart_to_response(cart)
 
     @handle_error
-    @check_access(roles=["user","store","internal"])
+    @check_access(roles=["internal"])
     def ValidateCart(self,request,context):
         # Get the cart based on cart_uuid
             cart = Cart.objects.get_active_cart(cart_uuid = request.cart_uuid,user_phone_no = request.user_phone_no,store_uuid = request.store_uuid)

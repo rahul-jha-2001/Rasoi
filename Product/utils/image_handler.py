@@ -1,6 +1,5 @@
 import io
 from PIL import Image
-import imghdr
 import boto3
 from botocore.exceptions import NoCredentialsError
 
@@ -54,17 +53,11 @@ class image_handler:
         """
         if not bytes_data:
             raise ValueError("Empty bytes data provided")
-        
-        # Method 1: Using imghdr
-        image_type = imghdr.what(None, h=bytes_data)
-        if image_type:
-            return f".{image_type}"
-        
-        # Method 2: Try with PIL as fallback
+
         try:
             image = Image.open(io.BytesIO(bytes_data))
-            return f".{image.format.lower()}"
-        except:
+            return f".{image.format.lower()}"  # e.g., '.jpeg', '.png'
+        except Exception:
             return None
     
     @staticmethod

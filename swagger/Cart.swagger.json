@@ -131,6 +131,12 @@
             "in": "path",
             "required": true,
             "type": "string"
+          },
+          {
+            "name": "couponCode",
+            "in": "query",
+            "required": false,
+            "type": "string"
           }
         ],
         "tags": [
@@ -515,7 +521,7 @@
           "CartService"
         ]
       },
-      "put": {
+      "patch": {
         "operationId": "CartService_UpdateCart",
         "responses": {
           "200": {
@@ -885,66 +891,6 @@
         "tags": [
           "CartService"
         ]
-      },
-      "patch": {
-        "operationId": "CartService_UpdateAddOn",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/Cart_v1CartResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "storeUuid",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "userPhoneNo",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "cartUuid",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "cartItemUuid",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "addOnUuid",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/CartServiceUpdateAddOnBody"
-            }
-          }
-        ],
-        "tags": [
-          "CartService"
-        ]
       }
     },
     "/v1/store/{storeUuid}/user/{userPhoneNo}/cart/{cartUuid}/cartitem/{cartItemUuid}/addon/{addOnUuid}/add_quantity": {
@@ -1056,7 +1002,7 @@
       }
     },
     "/v1/store/{storeUuid}/user/{userPhoneNo}/cart/{cartUuid}/coupon/{couponCode}": {
-      "put": {
+      "patch": {
         "operationId": "CartService_AddCoupon",
         "responses": {
           "200": {
@@ -1240,8 +1186,8 @@
     "CartServiceAddCartItemBody": {
       "type": "object",
       "properties": {
-        "cartItem": {
-          "$ref": "#/definitions/Cart_v1CartItem"
+        "productUuid": {
+          "type": "string"
         }
       }
     },
@@ -1256,11 +1202,8 @@
     "CartServiceCreateAddOnBody": {
       "type": "object",
       "properties": {
-        "productUuid": {
+        "addOnUuid": {
           "type": "string"
-        },
-        "addOn": {
-          "$ref": "#/definitions/Cart_v1AddOn"
         }
       }
     },
@@ -1281,22 +1224,29 @@
         }
       }
     },
-    "CartServiceUpdateAddOnBody": {
-      "type": "object",
-      "properties": {
-        "addOn": {
-          "$ref": "#/definitions/Cart_v1AddOn"
-        }
-      }
-    },
     "CartServiceUpdateCartBody": {
       "type": "object",
       "properties": {
         "cartUuid": {
           "type": "string"
         },
-        "cart": {
-          "$ref": "#/definitions/Cart_v1Cart"
+        "orderType": {
+          "$ref": "#/definitions/Cart_v1ORDERTYPE"
+        },
+        "tableNo": {
+          "type": "string"
+        },
+        "vehicleNo": {
+          "type": "string"
+        },
+        "vehicleDescription": {
+          "type": "string"
+        },
+        "couponCode": {
+          "type": "string"
+        },
+        "specialInstructions": {
+          "type": "string"
         }
       }
     },
@@ -1658,8 +1608,52 @@
     "CouponServiceUpdateCouponBody": {
       "type": "object",
       "properties": {
-        "coupon": {
-          "$ref": "#/definitions/Cart_v1Coupon"
+        "couponCode": {
+          "type": "string"
+        },
+        "discountType": {
+          "$ref": "#/definitions/Cart_v1DISCOUNTTYPE"
+        },
+        "validFrom": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "validTo": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "usageLimitPerUser": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "totalUsageLimit": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "discount": {
+          "type": "number",
+          "format": "float"
+        },
+        "minSpend": {
+          "type": "number",
+          "format": "float"
+        },
+        "isForNewUsers": {
+          "type": "boolean"
+        },
+        "description": {
+          "type": "string"
+        },
+        "maxCartValue": {
+          "type": "number",
+          "format": "float"
+        },
+        "isActive": {
+          "type": "boolean"
+        },
+        "maxDiscount": {
+          "type": "number",
+          "format": "float"
         }
       }
     },

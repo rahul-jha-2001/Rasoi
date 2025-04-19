@@ -255,7 +255,7 @@ class ProductService(product_pb2_grpc.ProductServiceServicer):
                 response.add_on_uuid = ""  # Or some default value
             
             try:
-                response.product_uuid = str(add_on.product_uuid)
+                response.product_uuid = str(add_on.product.product_uuid)
             except (AttributeError, TypeError) as e:
                 logger.warning(f"Failed to convert product_uuid: {e}")
                 response.product_uuid = ""  # Or some default value
@@ -300,7 +300,14 @@ class ProductService(product_pb2_grpc.ProductServiceServicer):
                 response.updated_at = add_on.updated_at
             except (AttributeError, TypeError) as e:
                 logger.warning(f"Failed to convert updated_at: {e}")
-                response.updated_at = ""  # Or some default value 
+                response.updated_at = ""  # Or some default value
+
+            try: 
+                response.is_free = add_on.is_free
+            except (AttributeError, TypeError) as e:
+                logger.warning(f"Failed to convert is_free: {e}")
+                response.is_free = False
+             
             return response               
         except Exception as e:
             logger.error("Error Creating ",e)
@@ -437,6 +444,12 @@ class ProductService(product_pb2_grpc.ProductServiceServicer):
                 logger.warning(f"Failed to convert updated_at: {e}")
                 # Leave timestamp at default (epoch)
 
+            try:
+                response.packaging_cost = Product_obj.packaging_cost
+            except (AttributeError, TypeError) as e:
+                logger.warning(f"Failed to convert packaging_cost: {e}")
+                response.packaging_cost = 0.0  # Or some default value    
+
 
             logger.debug("entering Wire verification")
             if not self._verify_wire_format(response, product_pb2.product, f"product_id={Product_obj.product_uuid}"):
@@ -467,12 +480,14 @@ class ProductService(product_pb2_grpc.ProductServiceServicer):
                 price = request.price,
                 GST_percentage =request.GST_percentage,
                 category = category,
+                packaging_cost = request.packaging_cost
+
                 )
         
             product.dietary_prefs.set([diet_pref])
             product.save()
 
-            logger.info(f"Created Product: {product.product_uuid} in category {product.category.category_uuid} at store {product.store_uuid}")
+            
             
             if getattr(request,"image_bytes",None):
                 size = image_handler.check_size(request.image_bytes)
@@ -499,6 +514,7 @@ class ProductService(product_pb2_grpc.ProductServiceServicer):
 
             product.clean()
             product.save()
+            logger.info(f"Created Product: {product.product_uuid} in category {product.category.category_uuid} at store {product.store_uuid}")
             return product_pb2.ProductResponse(
                 product=self._product_to_proto(product))
        
@@ -552,7 +568,7 @@ class ProductService(product_pb2_grpc.ProductServiceServicer):
         with transaction.atomic():
     
             if request.HasField('name'):
-                    product.description = request.name
+                    product.name = request.name
 
             if request.HasField('description'):
                 product.description = request.description
@@ -571,6 +587,9 @@ class ProductService(product_pb2_grpc.ProductServiceServicer):
 
             if request.HasField('GST_percentage'):
                 product.GST_percentage = request.GST_percentage
+            
+            if request.HasField('packaging_cost'):
+                product.packaging_cost = request.packaging_cost
 
             if request.HasField('new_category_uuid'):
                 category = Category.objects.get(category_uuid = request.new_category_uuid)
@@ -578,11 +597,7 @@ class ProductService(product_pb2_grpc.ProductServiceServicer):
 
             if request.HasField('diet_pref_uuid'):
                 diet_pref = DietaryPreference.objects.get(diet_pref_uuid = request.diet_pref_uuid)
-                product.dietary_pref = diet_pref
-
-            if request.HasField('dietary_pref'):
-                dietary_prefs = DietaryPreference.objects.filter(store_uuid = request.store_uuid,diet_pref_uuid__in=request.dietary_pref)
-                product.dietary_prefs.set(dietary_prefs)
+                product.dietary_prefs.set([diet_pref])
 
             if request.HasField('image_bytes'):
                 size = image_handler.check_size(request.image_bytes)
@@ -627,7 +642,7 @@ class ProductService(product_pb2_grpc.ProductServiceServicer):
             product.delete()
         
             logger.info(f"Deleted product: {request.product_uuid}")
-            return empty_pb2()
+            return empty_pb2.Empty()
 
     @handle_error
     @check_access(roles=["store","internal"])
@@ -696,7 +711,7 @@ class ProductService(product_pb2_grpc.ProductServiceServicer):
             Category.objects.get(category_uuid = request.category_uuid,store_uuid=request.store_uuid).delete()
         
             logger.info(f"Deleted Category: {request.category_uuid}")
-            return empty_pb2()
+            return empty_pb2.Empty()
     
     @handle_error
     @check_access(roles=["user","store","internal"],require_URL_check=False)
@@ -730,7 +745,8 @@ class ProductService(product_pb2_grpc.ProductServiceServicer):
                 is_available = request.is_available,
                 max_selectable = request.max_selectable,
                 GST_percentage = request.GST_percentage,
-                price = request.price
+                price = request.price,
+                is_free = request.is_free
             )
             logger.info(f"Created Add-On:{add_on.add_on_uuid} for product id:{product.product_uuid} at Store id:{product.store_uuid}")
             return product_pb2.AddOnResponse(
@@ -772,8 +788,10 @@ class ProductService(product_pb2_grpc.ProductServiceServicer):
 
             if request.HasField('price'):
                 add_on.price = request.price
+            
+            if request.HasField('is_free'):
+                add_on.is_free = request.is_free
 
-            add_on.full_clean()
             add_on.save()
             logger.debug(add_on)
             logger.info(f"add_on Updated For add_on id: {add_on.add_on_uuid}")
@@ -814,7 +832,7 @@ class ProductService(product_pb2_grpc.ProductServiceServicer):
             add_on.delete()
         
             logger.info(f"Deleted Add_on:{request.add_on_uuid} of Product:{product.product_uuid}")
-            return empty_pb2()
+            return empty_pb2.Empty()
 
 
     @handle_error
@@ -828,7 +846,7 @@ class ProductService(product_pb2_grpc.ProductServiceServicer):
             )
 
             if getattr(request,"icon_image_bytes",None):
-                size = image_handler.check_size(request.image_bytes)
+                size = image_handler.check_size(request.icon_image_bytes)
                 if size > 5:
                     raise ValidationError(f"Image size:{size}mb exceeds 5mb")
                 ext = image_handler.check_extension(request.icon_image_bytes)
@@ -847,8 +865,9 @@ class ProductService(product_pb2_grpc.ProductServiceServicer):
                     region_name=REGION_NAME
                 )
                 if _:
-                    product.image_url = url
-                    product.save()
+                    diet_pref.icon_url = url
+                    diet_pref.full_clean()
+                    diet_pref.save()
 
                 logger.info(f"Created Dietary Preference: {diet_pref.diet_pref_uuid} at store {diet_pref.store_uuid}")
             
@@ -859,7 +878,7 @@ class ProductService(product_pb2_grpc.ProductServiceServicer):
     @handle_error
     @check_access(roles=["user","store","internal"],require_URL_check=False)
     def GetDietPref(self, request, context):
-        diet_pref = DietaryPreference.objects.get(pref_uuid=request.diet_pref_uuid,store_uuid=request.store_uuid)
+        diet_pref = DietaryPreference.objects.get(diet_pref_uuid=request.diet_pref_uuid,store_uuid=request.store_uuid)
         return product_pb2.DietPrefResponse(
             dietary_preference=self._diet_pref_to_proto(diet_pref)
         )
@@ -867,7 +886,7 @@ class ProductService(product_pb2_grpc.ProductServiceServicer):
     @handle_error
     @check_access(roles=["store","internal"])
     def UpdateDietPref(self, request, context):
-        diet_pref = DietaryPreference.objects.get(pref_uuid=request.diet_pref_uuid,store_uuid=request.store_uuid)
+        diet_pref = DietaryPreference.objects.get(diet_pref_uuid=request.diet_pref_uuid,store_uuid=request.store_uuid)
         with transaction.atomic():
             if request.HasField('name'):
                 diet_pref.name = request.name 
@@ -895,12 +914,12 @@ class ProductService(product_pb2_grpc.ProductServiceServicer):
                     region_name=REGION_NAME
                 )
                 if _:
-                    product.image_url = url
-                    product.save()
+                    diet_pref.icon_url = url
+                    diet_pref.save()
 
             diet_pref.full_clean()
             diet_pref.save()
-            logger.info(f"Dietary Preference Updated For dietary preference id: {diet_pref.pref_uuid}")
+            logger.info(f"Dietary Preference Updated For dietary preference id: {diet_pref.diet_pref_uuid}")
             return product_pb2.DietPrefResponse(
                 dietary_preference=self._diet_pref_to_proto(diet_pref)
             )
@@ -928,10 +947,10 @@ class ProductService(product_pb2_grpc.ProductServiceServicer):
     @check_access(roles=["store","internal"])
     def DeleteDietPref(self, request, context):
         with transaction.atomic():
-            DietaryPreference.objects.get(pref_uuid = request.diet_pref_uuid,store_uuid=request.store_uuid).delete()
+            DietaryPreference.objects.get(diet_pref_uuid = request.diet_pref_uuid,store_uuid=request.store_uuid).delete()
         
             logger.info(f"Deleted Dietary Preference: {request.diet_pref_uuid}")
-            return empty_pb2()
+            return empty_pb2.Empty()
 
 
 def serve():

@@ -25,9 +25,9 @@ class CARTSTATE(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
 
 class DISCOUNTTYPE(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     __slots__ = ()
-    UNSPCIFIED_DISCOUNT: _ClassVar[DISCOUNTTYPE]
-    PERCENTAGE_DISCOUNT: _ClassVar[DISCOUNTTYPE]
-    FIXED_DISCOUNT: _ClassVar[DISCOUNTTYPE]
+    DISCOUNT_TYPE_UNSPCIFIED: _ClassVar[DISCOUNTTYPE]
+    DISCOUNT_TYPE_PERCENTAGE: _ClassVar[DISCOUNTTYPE]
+    DISCOUNT_TYPE_FIXED: _ClassVar[DISCOUNTTYPE]
 ORDER_TYPE_UNSPECIFIED: ORDERTYPE
 ORDER_TYPE_DINE_IN: ORDERTYPE
 ORDER_TYPE_TAKE_AWAY: ORDERTYPE
@@ -36,9 +36,9 @@ CART_STATE_UNSPECIFIED_STATE: CARTSTATE
 CART_STATE_ACTIVE: CARTSTATE
 CART_STATE_LOCKED: CARTSTATE
 CART_STATE_ABANDONED: CARTSTATE
-UNSPCIFIED_DISCOUNT: DISCOUNTTYPE
-PERCENTAGE_DISCOUNT: DISCOUNTTYPE
-FIXED_DISCOUNT: DISCOUNTTYPE
+DISCOUNT_TYPE_UNSPCIFIED: DISCOUNTTYPE
+DISCOUNT_TYPE_PERCENTAGE: DISCOUNTTYPE
+DISCOUNT_TYPE_FIXED: DISCOUNTTYPE
 
 class Cart(_message.Message):
     __slots__ = ("store_uuid", "cart_uuid", "user_phone_no", "order_type", "table_no", "vehicle_no", "vehicle_description", "coupon_code", "special_instructions", "items", "sub_total", "total_discount", "total_price_before_tax", "total_tax", "packaging_cost", "final_amount", "cart_state", "created_at", "updated_at")

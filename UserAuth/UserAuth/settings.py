@@ -9,98 +9,129 @@ https://docs.djangoproject.com/en/5.1/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.1/ref/settings/
 """
-
 from pathlib import Path
-from dotenv import load_dotenv
 import os
 import logging
-logging.basicConfig(level=logging.INFO)
+import dotenv
+import sys
 
-flag = load_dotenv()
-logging.info(f"envioment loaded {flag} ")
+
+SKIP_DIRS = {
+    '__pycache__',
+    'venv',
+    'env',
+    '.git',
+    '.idea',
+    '.vscode',
+    'logs',
+    'media',
+    'static',
+    'migrations',
+}
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# Create logs directory if it doesn't exist
+LOGS_DIR = BASE_DIR / 'logs'
+LOGS_DIR.mkdir(exist_ok=True)
+
+# Get all directories in BASE_DIR
+for item in BASE_DIR.iterdir():
+    if item.is_dir() and item.name not in SKIP_DIRS:
+        sys.path.append(str(item))
+
+dotenv.load_dotenv()
+# Quick-start development settings - unsuitable for production
+# See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
+
+
+
+POSTGRES_HOST = os.getenv("POSTGRES_HOST")
+POSTGRES_PORT = os.getenv("POSTGRES_PORT")
+POSTGRES_USER = os.getenv("POSTGRES_USER")
+POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD")
+POSTGRES_DB = os.getenv("POSTGRES_DB")
+LOG_LEVEL = os.getenv("LOG_LEVEL") or "DEBUG"
+
+
+
+LOGGING =  {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'detailed': {
+            'format': '{asctime} {levelname} [{name}] {message}',
+            'style': '{',
+            'datefmt': '%Y-%m-%d %H:%M:%S'
+        },
+        'simple': {
+            'format': '{levelname} {message}',
+            'style': '{'
+        },
+    },
+    'handlers': {
+        'file': {
+            'level': LOG_LEVEL,
+            'class': 'logging.FileHandler',
+            'filename': BASE_DIR / 'logs/notifications.log',
+            'formatter': 'detailed',
+        },
+        'console': {
+            'level': LOG_LEVEL,
+            'class': 'logging.StreamHandler',
+            'formatter': 'detailed'
+        },
+        'GRPC_file':{
+            'level': LOG_LEVEL,
+            'class': 'logging.FileHandler',
+            'filename': BASE_DIR / 'logs/GRPC_service.log',
+            'formatter': 'detailed',
+        }
+
+    },
+    'loggers': {
+        '': {
+            'handlers': ['file', 'console'],
+            'level': LOG_LEVEL,
+            'propagate': True,
+        },
+        'GRPC_service':{
+            'handlers':['GRPC_file'],
+            'level':LOG_LEVEL,
+            'propogate':True
+        }
+        
+    }
+}
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
+DATABASES =  {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': POSTGRES_DB or "Cart",
+        'USER': POSTGRES_USER or "postgres",
+        'PASSWORD': POSTGRES_PASSWORD or "rahul" ,
+        'HOST': POSTGRES_HOST or "localhost",
+        'PORT': POSTGRES_PORT or "5432",
+    }
+}
+
 SECRET_KEY = 'django-insecure-*_nl&8!0(l3hq2_qn@hw0-1df=wv519_01rny0p0l*c=%+mcb!'
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
 
-ALLOWED_HOSTS = []
-
-
-# Application definition
 
 INSTALLED_APPS = [
-    'django.contrib.admin',
-    'django.contrib.auth',
-    'django.contrib.contenttypes',
-    'django.contrib.sessions',
-    'django.contrib.messages',
-    'django.contrib.staticfiles',
     'User'
 ]
 
-MIDDLEWARE = [
-    'django.middleware.security.SecurityMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
-]
 
-ROOT_URLCONF = 'UserAuth.urls'
 
-TEMPLATES = [
-    {
-        'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
-        'APP_DIRS': True,
-        'OPTIONS': {
-            'context_processors': [
-                'django.template.context_processors.debug',
-                'django.template.context_processors.request',
-                'django.contrib.auth.context_processors.auth',
-                'django.contrib.messages.context_processors.messages',
-            ],
-        },
-    },
-]
-
-WSGI_APPLICATION = 'UserAuth.wsgi.application'
 
 
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
-logging.info(f"USER_DB_NAME {os.getenv("USER_DB_NAME")}  USER_DB_USER {os.getenv("USER_DB_USER")}  'USER_DB_ADDRESS':{os.getenv("USER_DB_ADDRESS")}")
-
-DATABASES = {
-    # 'default': {
-    #     'ENGINE': 'django.db.backends.postgresql',
-    #     'NAME' : "User",#f"{os.getenv("USER_DB_NAME","User")}",
-    #     'USER' : "postgres",#f"{os.getenv("USER_DB_USER","postgres")}",
-    #     'PASSWORD':"postgres", #f"{os.getenv("USER_DB_PASSWORD","postgres")}",
-    #     'HOST':"localhost",#f"{os.getenv("USER_DB_ADDRESS","localhost")}",
-    #     'PORT' :"5436" #f"{os.getenv("USER_DB_PORT","5436")}"
-    # }
-    # ,
-    'default' :
-    {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME' : f"{os.getenv("USER_DB_NAME","User")}",
-        'USER' : f"{os.getenv("USER_DB_USER","postgres")}",
-        'PASSWORD': f"{os.getenv("USER_DB_PASSWORD","postgres")}",
-        'HOST': f"{os.getenv("USER_DB_ADDRESS","localhost")}",
-        'PORT' : f"{os.getenv("USER_DB_PORT","5436")}"
-    }
-}
-
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
@@ -131,16 +162,3 @@ TIME_ZONE = 'UTC'
 USE_I18N = True
 
 USE_TZ = True
-
-
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/5.1/howto/static-files/
-
-STATIC_URL = 'static/'
-
-# Default primary key field type
-# https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
-
-DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-
-AUTH_USER_MODEL = 'User.Store'

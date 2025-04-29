@@ -1,0 +1,8 @@
+{
+    "iss": "auth-service",
+  "name" :"RAhul", 
+  "customer_uuid": "uuid-of-customer",
+  "user_phone_no": "+1234567890",
+  "user_type": "customer",
+  "exp": 1619712345 
+}

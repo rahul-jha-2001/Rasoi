@@ -1,4 +1,4 @@
-FROM python:3.12.3-slim
+FROM python:3.13.3-slim
 
 # Combine RUN commands to reduce layers and optimize cache
 RUN apt-get update && \

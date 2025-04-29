@@ -1,0 +1,9 @@
+django
+grpcio
+grpcio-tools
+pytest
+pytest-django
+python-dotenv
+psycopg
+firebase-admin
+grpc_interceptor

@@ -2,19 +2,49 @@ package middleware
 
 import (
 	// "context"
+	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net"
 	"net/http"
-	"os"
 	"strings"
-	"encoding/json"
+
 	// "google.golang.org/grpc/metadata"
+	"sync"
 
 	jwt "github.com/golang-jwt/jwt/v5"
+
+	// "google.golang.org/grpc/metadata"
+	"os"
+
+	firebase "firebase.google.com/go/v4"
+	"google.golang.org/api/option"
 )
 
-var JWT_SECRET = os.Getenv("JWT_SECRET")
+var (
+	app  *firebase.App
+	once sync.Once
+)
+
+// InitializeFirebaseApp initializes the Firebase App only once
+func InitializeFirebaseApp() *firebase.App {
+	once.Do(func() {
+		ctx := context.Background()
+		credentialsPath := os.Getenv("FIREBASE_CREDENTIALS_PATH")
+		if credentialsPath == "" {
+			credentialsPath = "./rasoi-auth-firebase-adminsdk-fbsvc-2131b3731f.json" // fallback
+		}
+		opt := option.WithCredentialsFile(credentialsPath)
+		var err error
+		app, err = firebase.NewApp(ctx, nil, opt)
+		if err != nil {
+			log.Printf("error initializing Firebase app: %v\n", err)
+			return
+		}
+	})
+	return app
+}
 
 // responseWriter wraps http.ResponseWriter to capture the status code
 type responseWriter struct {
@@ -100,7 +130,7 @@ func LogRequestMiddleware(next http.Handler) http.Handler {
 
 		// Add status code to log after request is processed
 		str += fmt.Sprintf("Status:[%d]", wrappedWriter.statusCode)
-		log.Println("INFO:",str)
+		log.Println("INFO:", str)
 	})
 }
 
@@ -132,103 +162,80 @@ func VerifyJWTAndGetClaims(tokenString string, secretKey []byte) (jwt.MapClaims,
 	return claims, nil
 }
 
-// func AuthMiddleware(next http.Handler) http.Handler {
-// 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-// 		authToken := r.Header.Get("Authorization")
-// 		if authToken == "" {
-// 			http.Error(w, "Authorization header required", http.StatusUnauthorized)
-// 			return
-// 		}
-
-// 		parts := strings.Split(authToken, " ")
-// 		if len(parts) != 2 || parts[0] != "Bearer" {
-// 			http.Error(w, "Invalid authorization header format", http.StatusUnauthorized)
-// 			return
-// 		}
-
-// 		claims, err := VerifyJWTAndGetClaims(parts[1], []byte(JWT_SECRET))
-// 		if err != nil {
-// 			http.Error(w, "Invalid token", http.StatusUnauthorized)
-// 			return
-// 		}
-// 		fmt.Println(claims)
-// 		ctx := context.WithValue(r.Context(),"role",claims["role"])
-// 		// You might want to add claims to the request context here
-// 		r = r.WithContext(ctx)
-// 		next.ServeHTTP(w, r)
-// 	})
-// }
-
-
 func AuthMiddleware(next http.Handler) http.Handler {
-    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-        // 1. Extract and validate Authorization header
-        authHeader := r.Header.Get("Authorization")
-        if authHeader == "" {
-            respondWithError(w, "Authorization header required", http.StatusUnauthorized)
-            return
-        }
-
-        // 2. Validate Bearer token format
-        parts := strings.Split(authHeader, " ")
-        if len(parts) != 2 || parts[0] != "Bearer" {
-            respondWithError(w, "Authorization header format must be 'Bearer {token}'", http.StatusUnauthorized)
-            return
-        }
-
-        tokenString := parts[1]
-		if JWT_SECRET == ""{
-			JWT_SECRET = "Rahul"
-		}
-        // 3. Verify JWT and get claims
-        claims, err := VerifyJWTAndGetClaims(tokenString, []byte(JWT_SECRET))
-        if err != nil {
-			//Debug
-            respondWithError(w, "Invalid token: "+err.Error(), http.StatusUnauthorized)
-			log.Println("ERROR:","Invalid token: "+err.Error())
-            return
-        }
-
-        // 4. Validate required claims
-        if claims["role"] == nil {
-            respondWithError(w, "Token missing required claims", http.StatusForbidden)
-			log.Println("ERROR:","Token missing required claims")
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Skip auth for certain paths (optional)
+		if strings.Contains(r.URL.Path, "auth") {
+			log.Println("Skipping JWT Auth")
+			next.ServeHTTP(w, r)
 			return
-        }
+		}
 
-		// for key, value := range claims {
-		// 	fmt.Printf("%s: %v\n", key, value)
-		// }
-		if claims["role"] == "internal" {
-            r.Header.Set("Grpc-Metadata-role",claims["role"].(string))
-        }
-		if claims["role"] == "user" {
-            r.Header.Set("Grpc-Metadata-role",claims["role"].(string))
-			r.Header.Set("Grpc-Metadata-user_phone_no", claims["user_phone_no"].(string))
-        }
-		if claims["role"] == "store" {
-			r.Header.Set("Grpc-Metadata-role",claims["role"].(string))
-			r.Header.Set("Grpc-Metadata-store_uuid", claims["store_uuid"].(string))
-        }
-        next.ServeHTTP(w, r)
-    })
+		authHeader := r.Header.Get("Authorization")
+		if authHeader == "" {
+			http.Error(w, "Authorization header required", http.StatusUnauthorized)
+			return
+		}
+
+		parts := strings.Split(authHeader, " ")
+		if len(parts) != 2 || parts[0] != "Bearer" {
+			http.Error(w, "Authorization header format must be 'Bearer {token}'", http.StatusUnauthorized)
+			return
+		}
+		tokenString := parts[1]
+
+		// Initialize Firebase App
+		app := InitializeFirebaseApp()
+		client, err := app.Auth(context.Background())
+		if err != nil {
+			log.Println("Firebase Auth client initialization failed:", err)
+			http.Error(w, "Internal server error", http.StatusInternalServerError)
+			return
+		}
+
+		// Verify the ID Token
+		token, err := client.VerifyIDToken(context.Background(), tokenString)
+		if err != nil {
+			log.Println("Token verification failed:", err)
+			http.Error(w, "Unauthorized: invalid token", http.StatusUnauthorized)
+			return
+		}
+
+		// Set common user data into headers
+		r.Header.Set("Grpc-Metadata-uid", token.UID)
+
+		// Set custom claims if available
+		for key, value := range token.Claims {
+			var strVal string
+
+			switch v := value.(type) {
+			case []interface{}: // if it's a list
+				marshaled, _ := json.Marshal(v)
+				strVal = string(marshaled)
+			default:
+				strVal = fmt.Sprintf("%v", v)
+			}
+			r.Header.Set("Grpc-Metadata-"+key, strVal)
+		}
+		
+		log.Println(r.Header)
+		// Continue to next handler
+		next.ServeHTTP(w, r)
+	})
 }
 
 // Helper function for consistent error responses
 func respondWithError(w http.ResponseWriter, message string, statusCode int) {
-    w.Header().Set("Content-Type", "application/json")
-    w.WriteHeader(statusCode)
-    json.NewEncoder(w).Encode(map[string]string{"error": message})
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(statusCode)
+	json.NewEncoder(w).Encode(map[string]string{"error": message})
 }
-
-
 
 func ChainMiddleware(h http.Handler) http.Handler {
 
 	var middlewares = []func(http.Handler) http.Handler{
 		LogRequestMiddleware,
 		AuthMiddleware,
-		
 	}
 
 	for i := len(middlewares) - 1; i >= 0; i-- {

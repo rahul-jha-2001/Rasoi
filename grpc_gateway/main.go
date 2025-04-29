@@ -17,8 +17,8 @@ import (
 	Middleware "Gateway/middleware"
 	Ordergw "Gateway/order"
 	Productgw "Gateway/product"
+	UserAuthgw "Gateway/user_auth"
 )
-
 
 func main() {
 	// Read configuration from environment variables
@@ -33,6 +33,10 @@ func main() {
 	orderServiceAddr := os.Getenv("ORDER_SERVICE_ADDR")
 	if orderServiceAddr == "" {
 		orderServiceAddr = "localhost:50053" // Default address
+	}
+	userAuthServiceAddr := os.Getenv("USERAUTH_SERVICE_ADDR")
+	if userAuthServiceAddr == "" {
+		userAuthServiceAddr = "localhost:50054" // Default address
 	}
 
 	gatewayAddr := os.Getenv("GATEWAY_ADDR")
@@ -57,9 +61,15 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to dial Cart gRPC server at %s: %v", cartServiceAddr, err)
 	}
-	// Create a client connection to the existing Order gRPC server
 	orderConn, err := grpc.NewClient(
 		orderServiceAddr,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	if err != nil {
+		log.Fatalf("Failed to dial Order gRPC server at %s: %v", orderServiceAddr, err)
+	}
+	userAuthConn, err := grpc.NewClient(
+		userAuthServiceAddr,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
 	if err != nil {
@@ -69,6 +79,7 @@ func main() {
 	defer productConn.Close()
 	defer cartConn.Close()
 	defer orderConn.Close()
+	defer userAuthConn.Close()
 	log.Printf("Product_service server present at %s", productServiceAddr)
 	log.Printf("Cart_service server present at %s", cartServiceAddr)
 
@@ -84,12 +95,14 @@ func main() {
 	if err := Productgw.RegisterProductServiceHandler(context.Background(), gwmux, productConn); err != nil {
 		log.Fatalf("Failed to register Product gateway: %v", err)
 	}
-
 	if err := Cartgw.RegisterCartServiceHandler(context.Background(), gwmux, cartConn); err != nil {
 		log.Fatalf("Failed to register Cart gateway: %v", err)
 	}	
 	if err := Ordergw.RegisterOrderServiceHandler(context.Background(), gwmux, orderConn); err != nil {
 		log.Fatalf("Failed to register Order gateway: %v", err)
+	}
+	if err := UserAuthgw.RegisterAuthServiceHandler(context.Background(), gwmux, userAuthConn); err != nil {
+		log.Fatalf("Failed to register UserAuth gateway: %v", err)
 	}
 
 	// Create an HTTP server for the gRPC Gateway
@@ -100,9 +113,9 @@ func main() {
 
 	// Start the gRPC Gateway server in a goroutine so we can gracefully shut it down
 	go func() {
-		log.Printf("Serving gRPC-Gateway for Product on http://%s", gatewayAddr)
+		log.Printf("Serving gRPC-Gateway on http://%s", gatewayAddr)
 		if err := gwServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("Failed to serve Product gRPC-Gateway: %v", err)
+			log.Fatalf("Failed to serve  gRPC-Gateway: %v", err)
 		}
 	}()
 

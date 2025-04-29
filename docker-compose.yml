@@ -1,5 +1,5 @@
 
-
+version: '3.8'
 services:
     product_grpc:
         build:
@@ -46,17 +46,20 @@ services:
         container_name: user_grpc
         ports:
             - "50054:50051"
-        depends_on:
-            - redis
+        # depends_on:
+        #     - redis
         healthcheck:
-            test: ["CMD", "grpc_health_probe", "-addr=:50051"]
-            interval: 10s
-            timeout: 5s
-            retries: 5
+            test: ["CMD-SHELL", "supervisorctl status | grep -q 'RUNNING' || exit 1"]
+            interval: 30s
+            timeout: 10s
+            retries: 3
+            start_period: 40s
         restart: unless-stopped
         networks:
             backend:
-                ipv4_address : 10.10.10.14            
+                ipv4_address : 10.10.10.14
+        env_file:
+            - UserAuth\.env            
 
     order_kafka:
         build:

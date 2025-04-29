@@ -1,12 +1,19 @@
+
+JWT Payload:
+
 {
-    "sub": "user_123",                        // subject (user or service identifier)
-    "role": "user",                           // or "store", "admin", "service"
-    "phone": "+919876543210",                // phone number if applicable
-    "store_uuid": "f47ac10b-58cc-4372-a567-0e02b2c3d479",  // for store users
-    "aud": "store-service",                   // audience: which service it's for
-    "iss": "auth-service",                    // who issued it
-    "iat": 1712640000,                        // issued at (Unix time)
-    "exp": 1712647200,                        // expiry (Unix time)
-    "type": "access",                         // access | refresh | internal
-    "internal": false                         // true if internal microservice
+  "user_uuid": "uuid-of-store-owner",
+  "email": "owner@example.com",
+  "user_type": "store_owner",
+  "owned_stores": ["store-uuid-1", "store-uuid-2"],  // List of owned store UUIDs
+  "permissions": ["create_product", "update_store", "delete_product", ...],
+  "exp": 1619712345  // Expiration timestamp
+}
+
+JWT Payload:
+{
+  "customer_uuid": "uuid-of-customer",
+  "phone_number": "+1234567890",
+  "user_type": "customer",
+  "exp": 1619712345  // Expiration timestamp
 }

@@ -26,7 +26,7 @@ from Proto import user_auth_pb2
 from Proto import user_auth_pb2_grpc 
 from Proto.user_auth_pb2_grpc import AuthServiceServicer, add_AuthServiceServicer_to_server
 
-from User.models import User, Store
+from User.models import User, Store, address
 
 from utils.logger import Logger
 from utils.check_access import check_access
@@ -110,53 +110,89 @@ def handle_error(func):
 
 class UserAuthService(AuthServiceServicer):
     def __init__(self):
-        self.firebase_auth_manager = firebase_main.FireBaseAuthManager
+        self.firebase_auth_manager = firebase_main.FireBaseAuthManager()
 
     @handle_error
     def CreateUser(self, request, context):
+        logger.info(f"Creating new user with firebase_uid: {request.firebase_uid}")
         firebase_uid = request.firebase_uid
-        token = request.token.token
+        token = request.token
 
-        firebase_uid_from_token = self.firebase_auth_manager.verify_user_token(token)
-
+        logger.debug(f"Verifying token for firebase_uid: {firebase_uid}")
+        firebase_uid_from_token = self.firebase_auth_manager.verify_user_token(id_token=token)
+        user = self.firebase_auth_manager.get_user_by_UID(firebase_uid_from_token)
         if firebase_uid != firebase_uid_from_token:
             logger.error(f"Firebase UID mismatch: {firebase_uid} != {firebase_uid_from_token}")
             raise grpc.RpcError(grpc.StatusCode.PERMISSION_DENIED, "Firebase UID mismatch")
-        with transaction.atomic():
-            user = User.objects.create(
-                firebase_uid=firebase_uid,
-                email=request.email,
-                phone=request.phone
-            )
 
-            self.firebase_auth_manager.set_custom_user_claims(firebase_uid, {"user_uuid": str(user.user_uuid)})
-            
-            return empty_pb2.Empty()
+        logger.debug("Starting database transaction for user creation")
+        with transaction.atomic():
+            try:
+                user = User.objects.create(
+                    firebase_uid=firebase_uid,
+                    email=user.email,
+                    phone=user.phone_number if user.phone_number else None,
+                )
+                logger.info(f"User created successfully with UUID: {user.user_uuid}")
+
+                logger.debug(f"Setting custom claims for firebase_uid: {firebase_uid}")
+                self.firebase_auth_manager.set_custom_claims(firebase_uid, {"user_uuid": str(user.user_uuid),"role":"owner"})
+                logger.info("Custom claims set successfully")
+                return empty_pb2.Empty()
+
+            except IntegrityError as e:
+                user = User.objects.get(firebase_uid=firebase_uid)
+                logger.warning(f"User already exists with firebase_uid: {firebase_uid}")
+                self.firebase_auth_manager.set_custom_claims(firebase_uid, {"user_uuid": str(user.user_uuid)})
+                logger.info("Custom claims set successfully for existing user")
+
+                return empty_pb2.Empty()
 
     @handle_error 
-    def VerifyToken(self,request,context):
-        token =  request.token
+    def VerifyToken(self, request, context):
+        logger.info("Processing token verification request")
+        token = request.token
 
+        logger.debug("Verifying user token with Firebase")
         firebase_id = self.firebase_auth_manager.verify_user_token(token)
-        user =  self.firebase_auth_manager.get_user_by_UID(firebase_id)
+        logger.debug(f"Token verified for firebase_id: {firebase_id}")
 
-        if user != None:
+        logger.debug(f"Fetching user details for firebase_id: {firebase_id}")
+        user = self.firebase_auth_manager.get_user_by_UID(firebase_id)
+
+        if user is not None:
+            logger.info(f"Token verification successful for firebase_id: {firebase_id}")
             return empty_pb2.Empty()
         else:
-            logger.error("Invalid token User not Found")
+            logger.error(f"Invalid token: User not found for firebase_id: {firebase_id}")
             raise Unauthenticated("User token Could not be verified")
-        
+
+    @handle_error
+    def CreateStore(self, request, context):
+        user_uuid = request.user_uuid
+        store_name = request.store_name
+        user =  User.objects.get(user_uuid = user_uuid)
+
+        with transaction.atomic():
+
+            store = Store.objects.create(
+                user = user,
+                store_name = store_name,
+                gst_number =  request.gst_number
+            )
+            
+
 
 def serve():
+    logger.info("Initializing gRPC server")
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     
-    # Add your services to the server
+    logger.debug("Adding services to server")
     add_AuthServiceServicer_to_server(UserAuthService(), server)
     
-    # Get the port from environment variables
-    grpc_port = os.getenv('GRPC_SERVER_PORT', '50052')
+    grpc_port = os.getenv('GRPC_SERVER_PORT', '50051')
+    logger.debug(f"Using port: {grpc_port}")
     
-    # Bind the server to the specified port
     server.add_insecure_port(f'[::]:{grpc_port}')
     server.start()
     

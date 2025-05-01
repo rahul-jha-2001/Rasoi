@@ -27,26 +27,46 @@ from google.protobuf import empty_pb2 as google_dot_protobuf_dot_empty__pb2
 from google.protobuf import timestamp_pb2 as google_dot_protobuf_dot_timestamp__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0fuser_auth.proto\x12\x0bUserAuth_v1\x1a\x11\x61nnotations.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\x16\n\x05Token\x12\r\n\x05token\x18\x01 \x01(\t\"L\n\x11\x43reateUserRequest\x12\x14\n\x0c\x66irebase_uid\x18\x01 \x01(\t\x12!\n\x05Token\x18\x02 \x01(\x0b\x32\x12.UserAuth_v1.Token\"L\n\x12\x43reateUserResponse\x12\x14\n\x0c\x66irebase_uid\x18\x01 \x01(\t\x12\r\n\x05\x65mail\x18\x02 \x01(\t\x12\x11\n\tuser_uuid\x18\x03 \x01(\t\"L\n\x13VerifyTokenResponse\x12\x14\n\x0c\x66irebase_uid\x18\x01 \x01(\t\x12\r\n\x05\x65mail\x18\x02 \x01(\t\x12\x10\n\x08is_valid\x18\x03 \x01(\x08\x32\xf8\x01\n\x0b\x41uthService\x12x\n\nCreateUser\x12\x1e.UserAuth_v1.CreateUserRequest\x1a\x1f.UserAuth_v1.CreateUserResponse\")\x82\xd3\xe4\x93\x02#\"\x1e/v1/auth/storeuser/create_user:\x01*\x12o\n\x0bVerifyToken\x12\x12.UserAuth_v1.Token\x1a .UserAuth_v1.VerifyTokenResponse\"*\x82\xd3\xe4\x93\x02$\"\x1f/v1/auth/storeuser/verify_token:\x01*B\x14Z\x12/UserAuth;UserAuthb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0fuser_auth.proto\x12\x0bUserAuth_v1\x1a\x11\x61nnotations.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"z\n\x04User\x12\x11\n\tuser_uuid\x18\x01 \x01(\t\x12\x14\n\x0c\x66irebase_uid\x18\x02 \x01(\t\x12\r\n\x05\x65mail\x18\x03 \x01(\t\x12\x16\n\x0e\x65mail_verified\x18\x04 \x01(\t\x12\"\n\x06stores\x18\x05 \x03(\x0b\x32\x12.UserAuth_v1.store\"j\n\x05store\x12\x12\n\nstore_uuid\x18\x01 \x01(\t\x12\x12\n\nStore_name\x18\x02 \x01(\t\x12\x12\n\ngst_number\x18\x03 \x01(\t\x12%\n\x07\x61\x64\x64ress\x18\x04 \x01(\x0b\x32\x14.UserAuth_v1.address\"\xa0\x01\n\x07\x61\x64\x64ress\x12\x14\n\x0c\x61\x64\x64ress_uuid\x18\x01 \x01(\t\x12\x16\n\x0e\x61\x64\x64ress_line_1\x18\x02 \x01(\t\x12\x16\n\x0e\x61\x64\x64ress_line_2\x18\x03 \x01(\t\x12\x10\n\x08landmark\x18\x04 \x01(\t\x12\x0c\n\x04\x63ity\x18\x05 \x01(\t\x12\r\n\x05state\x18\x06 \x01(\t\x12\x0f\n\x07\x63ountry\x18\x07 \x01(\t\x12\x0f\n\x07pincode\x18\x08 \x01(\t\"9\n\x12VerifyTokenRequest\x12\r\n\x05token\x18\x01 \x01(\t\x12\x14\n\x0c\x66irebase_uid\x18\x02 \x01(\t\"8\n\x11\x43reateUserRequest\x12\x14\n\x0c\x66irebase_uid\x18\x01 \x01(\t\x12\r\n\x05token\x18\x02 \x01(\t\"O\n\x12\x43reateStoreRequest\x12\x11\n\tuser_uuid\x18\x01 \x01(\t\x12\x12\n\nstore_name\x18\x02 \x01(\t\x12\x12\n\ngst_number\x18\x03 \x01(\t\"E\n\rStoreResponse\x12\x11\n\tuser_uuid\x18\x01 \x01(\t\x12!\n\x05store\x18\x02 \x01(\x0b\x32\x12.UserAuth_v1.store\"\x8b\x01\n\x12UpdateStoreRequest\x12\x11\n\tuser_uuid\x18\x01 \x01(\t\x12\x12\n\nstore_uuid\x18\x02 \x01(\t\x12\x17\n\nstore_name\x18\x03 \x01(\tH\x00\x88\x01\x01\x12\x17\n\ngst_number\x18\x05 \x01(\tH\x01\x88\x01\x01\x42\r\n\x0b_store_nameB\r\n\x0b_gst_number\"\xb1\x01\n\x11\x41\x64\x64\x41\x64\x64ressRequest\x12\x11\n\tuser_uuid\x18\x01 \x01(\t\x12\x12\n\nstore_uuid\x18\x02 \x01(\t\x12\x11\n\taddress_1\x18\x03 \x01(\t\x12\x11\n\taddress_2\x18\x04 \x01(\t\x12\x10\n\x08landmark\x18\x05 \x01(\t\x12\x0c\n\x04\x63ity\x18\x06 \x01(\t\x12\r\n\x05state\x18\x07 \x01(\t\x12\x0f\n\x07pincode\x18\x08 \x01(\t\x12\x0f\n\x07\x63ountry\x18\t \x01(\t\"\xc1\x02\n\x14UpdateAddressRequest\x12\x11\n\tuser_uuid\x18\x01 \x01(\t\x12\x12\n\nstore_uuid\x18\x02 \x01(\t\x12\x14\n\x0c\x61\x64\x64ress_uuid\x18\x03 \x01(\t\x12\x16\n\taddress_1\x18\x04 \x01(\tH\x00\x88\x01\x01\x12\x16\n\taddress_2\x18\x05 \x01(\tH\x01\x88\x01\x01\x12\x15\n\x08landmark\x18\x06 \x01(\tH\x02\x88\x01\x01\x12\x11\n\x04\x63ity\x18\x07 \x01(\tH\x03\x88\x01\x01\x12\x12\n\x05state\x18\x08 \x01(\tH\x04\x88\x01\x01\x12\x14\n\x07pincode\x18\t \x01(\tH\x05\x88\x01\x01\x12\x14\n\x07\x63ountry\x18\n \x01(\tH\x06\x88\x01\x01\x42\x0c\n\n_address_1B\x0c\n\n_address_2B\x0b\n\t_landmarkB\x07\n\x05_cityB\x08\n\x06_stateB\n\n\x08_pincodeB\n\n\x08_country2\xd5\x05\n\x0b\x41uthService\x12o\n\nCreateUser\x12\x1e.UserAuth_v1.CreateUserRequest\x1a\x16.google.protobuf.Empty\")\x82\xd3\xe4\x93\x02#\"\x1e/v1/auth/storeuser/create_user:\x01*\x12r\n\x0bVerifyToken\x12\x1f.UserAuth_v1.VerifyTokenRequest\x1a\x16.google.protobuf.Empty\"*\x82\xd3\xe4\x93\x02$\"\x1f/v1/auth/storeuser/verify_token:\x01*\x12v\n\x0b\x43reateStore\x12\x1f.UserAuth_v1.CreateStoreRequest\x1a\x1a.UserAuth_v1.StoreResponse\"*\x82\xd3\xe4\x93\x02$\"\x1f/v1/storeuser/{user_uuid}/store:\x01*\x12v\n\x0bUpdateStore\x12\x1f.UserAuth_v1.UpdateStoreRequest\x1a\x1a.UserAuth_v1.StoreResponse\"*\x82\xd3\xe4\x93\x02$2\x1f/v1/storeuser/{user_uuid}/store:\x01*\x12v\n\rCreateAddress\x12\x1e.UserAuth_v1.AddAddressRequest\x1a\x1a.UserAuth_v1.StoreResponse\")\x82\xd3\xe4\x93\x02#\"\x1e/v1/store/{store_uuid}/address:\x01*\x12y\n\rUpdateAddress\x12!.UserAuth_v1.UpdateAddressRequest\x1a\x1a.UserAuth_v1.StoreResponse\")\x82\xd3\xe4\x93\x02#2\x1e/v1/store/{store_uuid}/address:\x01*B\x16Z\x14/user_auth;user_authb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'user_auth_pb2', _globals)
 if not _descriptor._USE_C_DESCRIPTORS:
   _globals['DESCRIPTOR']._loaded_options = None
-  _globals['DESCRIPTOR']._serialized_options = b'Z\022/UserAuth;UserAuth'
+  _globals['DESCRIPTOR']._serialized_options = b'Z\024/user_auth;user_auth'
   _globals['_AUTHSERVICE'].methods_by_name['CreateUser']._loaded_options = None
   _globals['_AUTHSERVICE'].methods_by_name['CreateUser']._serialized_options = b'\202\323\344\223\002#\"\036/v1/auth/storeuser/create_user:\001*'
   _globals['_AUTHSERVICE'].methods_by_name['VerifyToken']._loaded_options = None
   _globals['_AUTHSERVICE'].methods_by_name['VerifyToken']._serialized_options = b'\202\323\344\223\002$\"\037/v1/auth/storeuser/verify_token:\001*'
-  _globals['_TOKEN']._serialized_start=113
-  _globals['_TOKEN']._serialized_end=135
-  _globals['_CREATEUSERREQUEST']._serialized_start=137
-  _globals['_CREATEUSERREQUEST']._serialized_end=213
-  _globals['_CREATEUSERRESPONSE']._serialized_start=215
-  _globals['_CREATEUSERRESPONSE']._serialized_end=291
-  _globals['_VERIFYTOKENRESPONSE']._serialized_start=293
-  _globals['_VERIFYTOKENRESPONSE']._serialized_end=369
-  _globals['_AUTHSERVICE']._serialized_start=372
-  _globals['_AUTHSERVICE']._serialized_end=620
+  _globals['_AUTHSERVICE'].methods_by_name['CreateStore']._loaded_options = None
+  _globals['_AUTHSERVICE'].methods_by_name['CreateStore']._serialized_options = b'\202\323\344\223\002$\"\037/v1/storeuser/{user_uuid}/store:\001*'
+  _globals['_AUTHSERVICE'].methods_by_name['UpdateStore']._loaded_options = None
+  _globals['_AUTHSERVICE'].methods_by_name['UpdateStore']._serialized_options = b'\202\323\344\223\002$2\037/v1/storeuser/{user_uuid}/store:\001*'
+  _globals['_AUTHSERVICE'].methods_by_name['CreateAddress']._loaded_options = None
+  _globals['_AUTHSERVICE'].methods_by_name['CreateAddress']._serialized_options = b'\202\323\344\223\002#\"\036/v1/store/{store_uuid}/address:\001*'
+  _globals['_AUTHSERVICE'].methods_by_name['UpdateAddress']._loaded_options = None
+  _globals['_AUTHSERVICE'].methods_by_name['UpdateAddress']._serialized_options = b'\202\323\344\223\002#2\036/v1/store/{store_uuid}/address:\001*'
+  _globals['_USER']._serialized_start=113
+  _globals['_USER']._serialized_end=235
+  _globals['_STORE']._serialized_start=237
+  _globals['_STORE']._serialized_end=343
+  _globals['_ADDRESS']._serialized_start=346
+  _globals['_ADDRESS']._serialized_end=506
+  _globals['_VERIFYTOKENREQUEST']._serialized_start=508
+  _globals['_VERIFYTOKENREQUEST']._serialized_end=565
+  _globals['_CREATEUSERREQUEST']._serialized_start=567
+  _globals['_CREATEUSERREQUEST']._serialized_end=623
+  _globals['_CREATESTOREREQUEST']._serialized_start=625
+  _globals['_CREATESTOREREQUEST']._serialized_end=704
+  _globals['_STORERESPONSE']._serialized_start=706
+  _globals['_STORERESPONSE']._serialized_end=775
+  _globals['_UPDATESTOREREQUEST']._serialized_start=778
+  _globals['_UPDATESTOREREQUEST']._serialized_end=917
+  _globals['_ADDADDRESSREQUEST']._serialized_start=920
+  _globals['_ADDADDRESSREQUEST']._serialized_end=1097
+  _globals['_UPDATEADDRESSREQUEST']._serialized_start=1100
+  _globals['_UPDATEADDRESSREQUEST']._serialized_end=1421
+  _globals['_AUTHSERVICE']._serialized_start=1424
+  _globals['_AUTHSERVICE']._serialized_end=2149
 # @@protoc_insertion_point(module_scope)

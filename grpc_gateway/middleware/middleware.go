@@ -18,6 +18,8 @@ import (
 	// "google.golang.org/grpc/metadata"
 	"os"
 
+	"github.com/rs/cors"
+
 	firebase "firebase.google.com/go/v4"
 	"google.golang.org/api/option"
 )
@@ -224,6 +226,28 @@ func AuthMiddleware(next http.Handler) http.Handler {
 	})
 }
 
+func CORSMIddleware(next http.Handler) http.Handler {
+    c := cors.New(cors.Options{
+        AllowedOrigins: []string{"*"},  // Allow all origins
+        AllowedMethods: []string{
+            http.MethodGet,
+            http.MethodPost,
+            http.MethodPut,
+            http.MethodDelete,
+            http.MethodOptions,
+        },
+        AllowedHeaders: []string{
+            "Accept",
+            "Authorization",
+            "Content-Type",
+            "X-CSRF-Token",
+        },
+        AllowCredentials: true,
+    })
+
+    return c.Handler(next)
+}
+
 // Helper function for consistent error responses
 func respondWithError(w http.ResponseWriter, message string, statusCode int) {
 	w.Header().Set("Content-Type", "application/json")
@@ -236,6 +260,7 @@ func ChainMiddleware(h http.Handler) http.Handler {
 	var middlewares = []func(http.Handler) http.Handler{
 		LogRequestMiddleware,
 		AuthMiddleware,
+		CORSMIddleware,
 	}
 
 	for i := len(middlewares) - 1; i >= 0; i-- {

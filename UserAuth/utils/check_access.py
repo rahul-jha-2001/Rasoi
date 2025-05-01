@@ -23,10 +23,10 @@ def check_access(roles:list[str],require_URL_check = True):
 
             # Role-specific access checks
             try:
-                if role == "store":
+                if role == "owner":
                     if not require_URL_check:
                         return func(self, request, context)
-                    store_uuid_in_token = metadata["store_uuid"]
+                    store_uuids_in_token = metadata["store_uuid"]
                     if not getattr(request, "store_uuid", None):
                         logger.warning("Store UUID missing in request")
                         raise Unauthenticated("Store UUID is missing in the request")

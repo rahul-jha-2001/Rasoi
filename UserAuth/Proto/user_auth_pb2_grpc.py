@@ -3,7 +3,6 @@
 import grpc
 import warnings
 
-from google.protobuf import empty_pb2 as google_dot_protobuf_dot_empty__pb2
 import user_auth_pb2 as user__auth__pb2
 
 GRPC_GENERATED_VERSION = '1.70.0'
@@ -38,32 +37,12 @@ class AuthServiceStub(object):
         self.CreateUser = channel.unary_unary(
                 '/UserAuth_v1.AuthService/CreateUser',
                 request_serializer=user__auth__pb2.CreateUserRequest.SerializeToString,
-                response_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
+                response_deserializer=user__auth__pb2.CreateUserResponse.FromString,
                 _registered_method=True)
         self.VerifyToken = channel.unary_unary(
                 '/UserAuth_v1.AuthService/VerifyToken',
-                request_serializer=user__auth__pb2.VerifyTokenRequest.SerializeToString,
-                response_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
-                _registered_method=True)
-        self.CreateStore = channel.unary_unary(
-                '/UserAuth_v1.AuthService/CreateStore',
-                request_serializer=user__auth__pb2.CreateStoreRequest.SerializeToString,
-                response_deserializer=user__auth__pb2.StoreResponse.FromString,
-                _registered_method=True)
-        self.UpdateStore = channel.unary_unary(
-                '/UserAuth_v1.AuthService/UpdateStore',
-                request_serializer=user__auth__pb2.UpdateStoreRequest.SerializeToString,
-                response_deserializer=user__auth__pb2.StoreResponse.FromString,
-                _registered_method=True)
-        self.CreateAddress = channel.unary_unary(
-                '/UserAuth_v1.AuthService/CreateAddress',
-                request_serializer=user__auth__pb2.AddAddressRequest.SerializeToString,
-                response_deserializer=user__auth__pb2.StoreResponse.FromString,
-                _registered_method=True)
-        self.UpdateAddress = channel.unary_unary(
-                '/UserAuth_v1.AuthService/UpdateAddress',
-                request_serializer=user__auth__pb2.UpdateAddressRequest.SerializeToString,
-                response_deserializer=user__auth__pb2.StoreResponse.FromString,
+                request_serializer=user__auth__pb2.Token.SerializeToString,
+                response_deserializer=user__auth__pb2.VerifyTokenResponse.FromString,
                 _registered_method=True)
 
 
@@ -83,62 +62,18 @@ class AuthServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
-    def CreateStore(self, request, context):
-        """Missing associated documentation comment in .proto file."""
-        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
-
-    def UpdateStore(self, request, context):
-        """Missing associated documentation comment in .proto file."""
-        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
-
-    def CreateAddress(self, request, context):
-        """Missing associated documentation comment in .proto file."""
-        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
-
-    def UpdateAddress(self, request, context):
-        """Missing associated documentation comment in .proto file."""
-        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
-
 
 def add_AuthServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
             'CreateUser': grpc.unary_unary_rpc_method_handler(
                     servicer.CreateUser,
                     request_deserializer=user__auth__pb2.CreateUserRequest.FromString,
-                    response_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
+                    response_serializer=user__auth__pb2.CreateUserResponse.SerializeToString,
             ),
             'VerifyToken': grpc.unary_unary_rpc_method_handler(
                     servicer.VerifyToken,
-                    request_deserializer=user__auth__pb2.VerifyTokenRequest.FromString,
-                    response_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
-            ),
-            'CreateStore': grpc.unary_unary_rpc_method_handler(
-                    servicer.CreateStore,
-                    request_deserializer=user__auth__pb2.CreateStoreRequest.FromString,
-                    response_serializer=user__auth__pb2.StoreResponse.SerializeToString,
-            ),
-            'UpdateStore': grpc.unary_unary_rpc_method_handler(
-                    servicer.UpdateStore,
-                    request_deserializer=user__auth__pb2.UpdateStoreRequest.FromString,
-                    response_serializer=user__auth__pb2.StoreResponse.SerializeToString,
-            ),
-            'CreateAddress': grpc.unary_unary_rpc_method_handler(
-                    servicer.CreateAddress,
-                    request_deserializer=user__auth__pb2.AddAddressRequest.FromString,
-                    response_serializer=user__auth__pb2.StoreResponse.SerializeToString,
-            ),
-            'UpdateAddress': grpc.unary_unary_rpc_method_handler(
-                    servicer.UpdateAddress,
-                    request_deserializer=user__auth__pb2.UpdateAddressRequest.FromString,
-                    response_serializer=user__auth__pb2.StoreResponse.SerializeToString,
+                    request_deserializer=user__auth__pb2.Token.FromString,
+                    response_serializer=user__auth__pb2.VerifyTokenResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -167,7 +102,7 @@ class AuthService(object):
             target,
             '/UserAuth_v1.AuthService/CreateUser',
             user__auth__pb2.CreateUserRequest.SerializeToString,
-            google_dot_protobuf_dot_empty__pb2.Empty.FromString,
+            user__auth__pb2.CreateUserResponse.FromString,
             options,
             channel_credentials,
             insecure,
@@ -193,116 +128,8 @@ class AuthService(object):
             request,
             target,
             '/UserAuth_v1.AuthService/VerifyToken',
-            user__auth__pb2.VerifyTokenRequest.SerializeToString,
-            google_dot_protobuf_dot_empty__pb2.Empty.FromString,
-            options,
-            channel_credentials,
-            insecure,
-            call_credentials,
-            compression,
-            wait_for_ready,
-            timeout,
-            metadata,
-            _registered_method=True)
-
-    @staticmethod
-    def CreateStore(request,
-            target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
-        return grpc.experimental.unary_unary(
-            request,
-            target,
-            '/UserAuth_v1.AuthService/CreateStore',
-            user__auth__pb2.CreateStoreRequest.SerializeToString,
-            user__auth__pb2.StoreResponse.FromString,
-            options,
-            channel_credentials,
-            insecure,
-            call_credentials,
-            compression,
-            wait_for_ready,
-            timeout,
-            metadata,
-            _registered_method=True)
-
-    @staticmethod
-    def UpdateStore(request,
-            target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
-        return grpc.experimental.unary_unary(
-            request,
-            target,
-            '/UserAuth_v1.AuthService/UpdateStore',
-            user__auth__pb2.UpdateStoreRequest.SerializeToString,
-            user__auth__pb2.StoreResponse.FromString,
-            options,
-            channel_credentials,
-            insecure,
-            call_credentials,
-            compression,
-            wait_for_ready,
-            timeout,
-            metadata,
-            _registered_method=True)
-
-    @staticmethod
-    def CreateAddress(request,
-            target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
-        return grpc.experimental.unary_unary(
-            request,
-            target,
-            '/UserAuth_v1.AuthService/CreateAddress',
-            user__auth__pb2.AddAddressRequest.SerializeToString,
-            user__auth__pb2.StoreResponse.FromString,
-            options,
-            channel_credentials,
-            insecure,
-            call_credentials,
-            compression,
-            wait_for_ready,
-            timeout,
-            metadata,
-            _registered_method=True)
-
-    @staticmethod
-    def UpdateAddress(request,
-            target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
-        return grpc.experimental.unary_unary(
-            request,
-            target,
-            '/UserAuth_v1.AuthService/UpdateAddress',
-            user__auth__pb2.UpdateAddressRequest.SerializeToString,
-            user__auth__pb2.StoreResponse.FromString,
+            user__auth__pb2.Token.SerializeToString,
+            user__auth__pb2.VerifyTokenResponse.FromString,
             options,
             channel_credentials,
             insecure,

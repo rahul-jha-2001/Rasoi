@@ -32,21 +32,5 @@ class Store(models.Model):
     store_uuid = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=255, null=True, blank=True)
     gst_number = models.CharField(max_length=15, validators=[gst_validator], unique=True, null=True, blank=True)
-    address = models.ForeignKey(address,on_delete =models.SET_NULL,related_name="address")
+    address = models.TextField(null=True, blank=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='stores')
-
-class address(models.Model):
-
-    address_uuid = models.UUIDField(primary_key=True,default=uuid.uuid4,editable=True)
-    address_line_1 = models.CharField(max_length= 510,null=False,blank= True)
-    address_line_2 = models.CharField(max_length= 510,null=False,blank= True)
-    landmark  = models.CharField(max_length=255,null=True,blank=True)
-    city = models.CharField(max_length=255,null=True)
-    state = models.CharField(max_length=255,null=True)
-    pincode = models.CharField(max_length=6)
-    country = models.CharField(max_length= 255,blank=True,null=True)
-
-
-
-    
-

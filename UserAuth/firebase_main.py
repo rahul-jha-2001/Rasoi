@@ -4,29 +4,35 @@ from firebase_admin import credentials, auth
 from firebase_admin.auth import UserRecord, UserNotFoundError, InvalidIdTokenError
 from firebase_admin.auth import ExpiredIdTokenError, RevokedIdTokenError
 from firebase_admin.auth import CertificateFetchError
-from firebase_admin.auth import UserRecord
-from firebase_admin.auth import UserNotFoundError
+
 from dotenv import load_dotenv
 load_dotenv()
 from utils.logger import Logger
 logger = Logger(__name__)
 
 class FireBaseAuthManager:
-    def __init__(self):
+    def __init__(self,cert_file:str = None):
         # Initialize Firebase Admin SDK
         self.cred = credentials.Certificate("rasoi-auth-firebase-adminsdk-fbsvc-2131b3731f.json")
         firebase_admin.initialize_app(self.cred)
         self.auth = auth
 
-    def set_custom_claims(self, uid, claims):
-        # Set custom claims for a user
+
+    def vetify_token_and_set_claims(self,id_token,claims):
+        # Verify a user and set custom claims
         try:
-            self.auth.set_custom_user_claims(uid, claims)
-            logger.info(f"Successfully set custom claims for user: {uid}")
+            uid = self._verify_user_token(id_token)
+            user = self.auth.get_user(uid)
+            if user:
+                self.auth.set_custom_user_claims(uid, claims)
+                logger.info(f"Successfully verified user and set claims: {uid}")
+                return user.id
+            else:
+                logger.info(f"User not found: {uid}")
+                return None
         except Exception as e:
-            logger.error(f"Error setting custom claims: {e}",e)
+            logger.error(f"Error verifying user and setting claims: {e}",e)
             raise e
-    
 
     def verify_user_token(self,id_token):
         try:
@@ -45,14 +51,14 @@ class FireBaseAuthManager:
             logger.error(f"Error verifying token: {e}",e)
             raise e
     
-    def get_user_by_UID(self,firebase_uid):
+    def get_user_by_UID(self,uid):
         # Get a user by UID
         try:
-            user:UserRecord = self.auth.get_user(firebase_uid)
+            user = self.auth.get_user(uid)
             logger.info(f"Successfully fetched user data: {user.uid}")
             return user
         except UserNotFoundError:
-            logger.info(f"User not found: {firebase_uid}")
+            logger.info(f"User not found: {uid}")
             return None
         except Exception as e:
             logger.info(f"Error fetching user data: {e}")

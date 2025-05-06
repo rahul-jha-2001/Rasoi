@@ -2,6 +2,9 @@
 from django.db import models
 import uuid
 from django.core.validators import RegexValidator
+from django.core.exceptions import ValidationError
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+
 
 # Validators remain the same
 phone_validator = RegexValidator(
@@ -20,17 +23,84 @@ password_validator = RegexValidator(
 )
 
 
+class UserManager(models.Manager):
+    pass
+
+class StoreManager(models.Manager):
+
+    def get_stores(self,user_uuid,limit:int=10,page:int=0):
+        if limit <= 0:
+            limit = 10
+        if page < 0:
+            page = 0
+
+        user = User.objects.get(user_uuid=user_uuid)
+        queryset = queryset.filter(user=user).order_by('-created_at')
+        
+        paginator = Paginator(queryset, limit)
+
+        try:
+            paginated_data = paginator.page(page)
+        except PageNotAnInteger:
+            paginated_data = paginator.page(1)
+        except EmptyPage:
+            paginated_data = paginator.page(paginator.num_pages)
+
+        next_page = paginated_data.next_page_number() if paginated_data.has_next() else None
+        prev_page = paginated_data.previous_page_number() if paginated_data.has_previous() else None
+
+        return paginated_data.object_list, next_page, prev_page
+
+
+
+
 class User(models.Model):
 
     user_uuid = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     firebase_uid = models.CharField(max_length=255, unique=True, null=True, blank=True)
     email = models.EmailField(unique=True, null=True, blank=True)
     phone = models.CharField(max_length=15, validators=[phone_validator], unique=True, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
+    class Meta:
+        ordering = ['-created_at']
 
 class Store(models.Model):
     store_uuid = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=255, null=True, blank=True)
     gst_number = models.CharField(max_length=15, validators=[gst_validator], unique=True, null=True, blank=True)
-    address = models.TextField(null=True, blank=True)
+    address = models.ForeignKey('Address', on_delete=models.CASCADE, null=True, blank=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='stores')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    objects = StoreManager()
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['name']),
+            models.Index(fields=['user']),
+        ]
+
+
+class Address(models.Model):
+    address_uuid = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    address_line_1 = models.CharField(max_length=255, null=True, blank=True)
+    address_line_2 = models.CharField(max_length=255, null=True, blank=True)
+    city = models.CharField(max_length=100, null=True, blank=True)
+    state = models.CharField(max_length=100, null=True, blank=True)
+    country = models.CharField(max_length=100, null=True, blank=True)
+    pincode = models.CharField(max_length=20, null=True, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['city']),
+            models.Index(fields=['state']),
+            models.Index(fields=['country']),
+        ]

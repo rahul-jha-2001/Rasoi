@@ -32,8 +32,6 @@ fi
 # done
 
 
-
-
 # Checking for the main.go file
 echo "Starting build process..."
 

@@ -1,8 +1,0 @@
-{
-  "user_uuid": "uuid-of-store-owner",
-  "email": "owner@example.com",
-  "user_type": "store_owner",
-  "owned_stores": ["store-uuid-1", "store-uuid-2"], 
-  "permissions": ["create_product", "update_store", "delete_product"],
-  "exp": 1619712345  
-}

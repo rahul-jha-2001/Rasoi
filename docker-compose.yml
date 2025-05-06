@@ -19,7 +19,7 @@ services:
             backend:
                 ipv4_address : 10.10.10.2
         env_file:
-            - Product\.env       
+            - Product/.env       
     cart_grpc:
         build:
             context: ./
@@ -38,7 +38,7 @@ services:
             backend:
                 ipv4_address : 10.10.10.6
         env_file:
-            - Cart\.env
+            - Cart/.env
     user_grpc:
         build:
             context: ./
@@ -59,7 +59,7 @@ services:
             backend:
                 ipv4_address : 10.10.10.14
         env_file:
-            - UserAuth\.env            
+            - UserAuth/.env            
 
     order_kafka:
         build:
@@ -82,7 +82,7 @@ services:
             backend:
                 ipv4_address: 10.10.10.8
         env_file:
-            - Orders\.env
+            - Orders/.env
     order_grpc:
         build:
             context: ./
@@ -104,7 +104,7 @@ services:
             backend:
                 ipv4_address: 10.10.10.12
         env_file:
-            - Orders\.env    
+            - Orders/.env    
 
     notifications_kafka:
         build:
@@ -125,7 +125,7 @@ services:
             backend:
                 ipv4_address: 10.10.10.13
         env_file:
-            - Notifications\.env
+            - Notifications/.env
     notifications_grpc:
         build:
             context: ./
@@ -147,7 +147,7 @@ services:
             backend:
                 ipv4_address: 10.10.10.14
         env_file:
-            - Notifications\.env    
+            - Notifications/.env    
    
    
     # product-database:
@@ -326,7 +326,7 @@ services:
             backend:
                 ipv4_address : 10.10.10.20
         env_file:
-            - grpc_gateway\.env
+            - grpc_gateway/.env
 
 networks:
     backend:

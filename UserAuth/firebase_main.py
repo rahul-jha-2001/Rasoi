@@ -48,7 +48,7 @@ class FireBaseAuthManager:
         except auth.CertificateFetchError:
             raise ValueError("Certificate error")
         except Exception as e:
-            logger.error(f"Error verifying token: {e}",e)
+            logger.error(f"Error verifying token",e)
             raise e
     
     def get_user_by_UID(self,uid):
@@ -61,7 +61,7 @@ class FireBaseAuthManager:
             logger.info(f"User not found: {uid}")
             return None
         except Exception as e:
-            logger.info(f"Error fetching user data: {e}")
+            logger.info(f"Error fetching user data",e)
             return None
         
     
@@ -85,5 +85,5 @@ class FireBaseAuthManager:
             logger.info(f"Successfully updated store claims for user: {uid}")
         
         except Exception as e:
-            logger.error(f"Error updating store claims: {e}",e)    
+            logger.error(f"Error updating store claims: {str(e)}",e)    
             raise e

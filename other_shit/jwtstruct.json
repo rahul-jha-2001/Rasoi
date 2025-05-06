@@ -1,19 +1,20 @@
-
-JWT Payload:
-
 {
-  "user_uuid": "uuid-of-store-owner",
-  "email": "owner@example.com",
-  "user_type": "store_owner",
-  "owned_stores": ["store-uuid-1", "store-uuid-2"],  // List of owned store UUIDs
-  "permissions": ["create_product", "update_store", "delete_product", ...],
-  "exp": 1619712345  // Expiration timestamp
+  "iss": "https://secure-gateway.example.com",   // who issued the token
+  "aud": "https://api-grpc.example.com",         // who it’s intended for
+  "iat": 1618886400,                             // issued-at
+  "exp": 1618890000,                             // expiry
+
+  "sub": "<firebase-uid>",                       // the unique Firebase user ID
+  "type": "store",                               // one of: "store", "customer", "internal"
+  "role": "admin",                               // for store: ["owner","admin","staff"], for customer: "customer"
+  "stores": ["uuid-1","uuid-2"]                  // only for type="store", lists their store memberships
 }
 
-JWT Payload:
 {
-  "customer_uuid": "uuid-of-customer",
-  "phone_number": "+1234567890",
-  "user_type": "customer",
-  "exp": 1619712345  // Expiration timestamp
+  "iss":"…", "aud":"…", "iat":…, "exp":…,
+  "sub":"<firebase-uid>",
+  "type":"customer",
+  "role":"customer",
+  "phone":"+15551234567",
+  "name":"Jane Doe"
 }

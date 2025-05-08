@@ -32,192 +32,119 @@ from User.models import User, Store ,Address
 from utils.logger import Logger
 from utils.check_access import check_access
 
+from firebase_admin.auth import UserRecord, UserNotFoundError, InvalidIdTokenError
+from firebase_admin.auth import ExpiredIdTokenError, RevokedIdTokenError
+from firebase_admin.auth import CertificateFetchError
+
+
+
 logger = Logger("GRPC_Service")
-
-# def handle_error(func):
-#     def wrapper(self, request, context):
-#         try:
-#             return func(self, request, context)
-#         except User.DoesNotExist:
-#             logger.warning(f"Product Not Found: {getattr(request, 'product_uuid', '')}")
-#             context.abort(grpc.StatusCode.NOT_FOUND, "Product Not Found")
-
-#         except Store.DoesNotExist:
-#             logger.error(f"Category Not Found: {getattr(request, 'category_uuid', '')}")
-#             context.abort(grpc.StatusCode.NOT_FOUND, "Category Not Found")
-
-#         except ObjectDoesNotExist:
-#             logger.error("Requested object does not exist")
-#             context.abort(grpc.StatusCode.NOT_FOUND, "Requested Object Not Found")
-
-#         except MultipleObjectsReturned:
-#             logger.error(f"Multiple objects found for request")
-#             context.abort(grpc.StatusCode.FAILED_PRECONDITION, "Multiple matching objects found")
-
-#         except ValidationError as e:
-#             logger.error(f"Validation Error: {str(e)}")
-#             context.abort(grpc.StatusCode.INVALID_ARGUMENT, f"Validation Error: {str(e)}")
-
-#         except IntegrityError as e:
-#             logger.error(f"Integrity Error: {str(e)}")
-#             context.abort(grpc.StatusCode.ALREADY_EXISTS, f"Object Already Exists")
-
-#         except DatabaseError as e:
-#             logger.error(f"Database Error: {str(e)}",e)
-#             context.abort(grpc.StatusCode.INTERNAL, "Database Error")
-
-#         except PermissionDenied as e:
-#             logger.warning(f"Permission Denied: {str(e)}",e)
-#             context.abort(grpc.StatusCode.PERMISSION_DENIED, "Permission Denied")
-
-#         except ValueError as e:
-#             logger.error(f"Invalid Value: {str(e)}")
-#             context.abort(grpc.StatusCode.INVALID_ARGUMENT, f"Invalid Value: {str(e)}")
-
-#         except TypeError as e:
-#             logger.error(f"Type Error: {str(e)}",e)
-#             context.abort(grpc.StatusCode.INVALID_ARGUMENT, f"Type Error: {str(e)}")
-
-#         except TimeoutError as e:
-#             logger.error(f"Timeout Error: {str(e)}")
-#             context.abort(grpc.StatusCode.DEADLINE_EXCEEDED, "Request timed out")
-            
-#         except grpc.RpcError as e:
-#             logger.error(f"RPC Error: {str(e)}")
-#             # Don't re-abort as this is likely a propagated error
-#             raise
-
-#         except FailedPrecondition as e:
-#             context.abort(e.status_code,e.details)
-
-#         except Unauthenticated as e:
-#             context.abort(grpc.StatusCode.PERMISSION_DENIED,f"Unauthenticated: {e.details}")
-        
-#         except GrpcException as e:
-#             context.abort(e.status_code,e.details)    
-        
-#         except AttributeError as e:
-#             logger.error(f"Attribute Error: {str(e)}",e)
-#             context.abort(grpc.StatusCode.INVALID_ARGUMENT, f"Attribute Error: {str(e)}")
-            
-#         except transaction.TransactionManagementError as e:
-#             logger.error(f"Transaction Error: {str(e)}")
-#             context.abort(grpc.StatusCode.ABORTED, f"Transaction Error: {str(e)}")
-
-#         except Exception as e:
-#             logger.error(f"Unexpected Error: {str(e)}",e)
-#             context.abort(grpc.StatusCode.INTERNAL, "Internal Server Error")
-#     return wrapper
 
 
 def handle_error(func):
-    @functools.wraps(func)
     def wrapper(self, request, context):
-        logger.info(f"→ Entering {func.__name__} with request={request!r}")
         try:
-            result = func(self, request, context)
-            logger.info(f"← {func.__name__} succeeded")
-            return result
+            return func(self, request, context)
+        
+        except User.DoesNotExist:
+            logger.warning(f"User with UUID {request.user_uuid} does not exist")
+            context.abort(grpc.StatusCode.NOT_FOUND, "User Not Found")
 
-        # 404 errors
-        except User.DoesNotExist as e:
-            logger.warning(
-                "User not found",
-                exc_info=True,
-                extra={"firebase_uid": getattr(request, "firebase_uid", None)}
-            )
-            context.abort(grpc.StatusCode.NOT_FOUND, "User not found")
+        except Store.DoesNotExist:
+            logger.warning(f"Store with UUID {request.store_uuid} does not exist")
+            context.abort(grpc.StatusCode.NOT_FOUND, "Store Not Found")
 
-        except Store.DoesNotExist as e:
-            logger.warning(
-                "Store not found",
-                exc_info=True,
-                extra={"store_uuid": getattr(request, "store_uuid", None)}
-            )
-            context.abort(grpc.StatusCode.NOT_FOUND, "Store not found")
+        except Address.DoesNotExist:
+            logger.warning(f"Address with UUID {request.address_uuid} does not exist")
+            context.abort(grpc.StatusCode.NOT_FOUND, "Address Not Found")
 
-        except ObjectDoesNotExist as e:
-            logger.error("Requested object does not exist", exc_info=True)
-            context.abort(grpc.StatusCode.NOT_FOUND, "Requested object not found")
+        except ObjectDoesNotExist:
+            logger.warning("Requested object does not exist")
+            context.abort(grpc.StatusCode.NOT_FOUND, "Requested Object Not Found")
 
-        # multiple matches
-        except MultipleObjectsReturned as e:
-            logger.error("Multiple objects found for request", exc_info=True)
-            context.abort(
-                grpc.StatusCode.FAILED_PRECONDITION,
-                "Multiple matching objects found"
-            )
+        except MultipleObjectsReturned:
+            logger.warning(f"Multiple objects found for request")
+            context.abort(grpc.StatusCode.FAILED_PRECONDITION, "Multiple matching objects found")
 
-        # validation problems
         except ValidationError as e:
-            logger.error(f"Validation error: {e}", exc_info=True)
-            context.abort(
-                grpc.StatusCode.INVALID_ARGUMENT,
-                f"Validation error: {e}"
-            )
+            logger.warning(f"Validation Error: {str(e)}")
+            context.abort(grpc.StatusCode.INVALID_ARGUMENT, f"Validation Error: {str(e)}")
 
-        # unique-constraint / already exists
         except IntegrityError as e:
-            logger.error("Integrity error (object already exists)", exc_info=True)
-            context.abort(
-                grpc.StatusCode.ALREADY_EXISTS,
-                "Object already exists"
-            )
+            logger.warning(f"Integrity Error: {str(e)}")
+            context.abort(grpc.StatusCode.ALREADY_EXISTS, f"Object Already Exists")
 
-        # other DB issues
         except DatabaseError as e:
-            logger.exception("Database error")
-            context.abort(grpc.StatusCode.INTERNAL, "Database error")
+            logger.error(f"Database Error: {str(e)}",e)
+            context.abort(grpc.StatusCode.INTERNAL, "Database Error")
 
-        # permission from Django
         except PermissionDenied as e:
-            logger.warning(f"Permission denied: {e}", exc_info=True)
-            context.abort(grpc.StatusCode.PERMISSION_DENIED, "Permission denied")
+            logger.warning(f"Permission Denied: {str(e)}",e)
+            context.abort(grpc.StatusCode.PERMISSION_DENIED, "Permission Denied")
 
-        # built-in Python errors
-        except (ValueError, TypeError) as e:
-            logger.error(f"Invalid argument: {e}", exc_info=True)
-            context.abort(grpc.StatusCode.INVALID_ARGUMENT, str(e))
+        except ValueError as e:
+            logger.warning(f"Invalid Value: {str(e)}")
+            context.abort(grpc.StatusCode.INVALID_ARGUMENT, f"Invalid Value: {str(e)}")
 
-        # timeout
+        except TypeError as e:
+            logger.error(f"Type Error: {str(e)}",e)
+            context.abort(grpc.StatusCode.INVALID_ARGUMENT, f"Type Error: {str(e)}")
+
         except TimeoutError as e:
-            logger.error(f"Timeout: {e}", exc_info=True)
+            logger.warning(f"Timeout Error: {str(e)}")
             context.abort(grpc.StatusCode.DEADLINE_EXCEEDED, "Request timed out")
+            
 
-        # pre-existing gRPC error → rethrow
-        except grpc.RpcError:
-            logger.debug("Propagating existing RpcError", exc_info=True)
+            
+        except grpc.RpcError as e:
+            logger.error(f"RPC Error: {str(e)}")
+            # Don't re-abort as this is likely a propagated error
             raise
 
-        # custom gRPC-style exceptions
         except FailedPrecondition as e:
-            logger.error(f"Failed precondition: {e}", exc_info=True)
-            context.abort(e.status_code, e.details)
+            logger.warning(f"Failed Precondition: {e.details}")
+            context.abort(grpc.StatusCode.FAILED_PRECONDITION, f"Failed Precondition: {str(e)}")
 
         except Unauthenticated as e:
-            logger.warning(f"Unauthenticated: {e.details}", exc_info=True)
-            context.abort(grpc.StatusCode.UNAUTHENTICATED, f"Unauthenticated: {e.details}")
-
+            logger.warning(f"Unauthenticated: {e.details}")
+            context.abort(grpc.StatusCode.PERMISSION_DENIED,f"User Not Allowed To make this Call")
+        
         except GrpcException as e:
-            logger.error(f"gRPC exception: {e}", exc_info=True)
-            context.abort(e.status_code, e.details)
-
-        # transaction errors
+            context.abort(e.status_code,e.details)    
+        
+        except AttributeError as e:
+            logger.error(f"Attribute Error: {str(e)}",e)
+            context.abort(grpc.StatusCode.INVALID_ARGUMENT, f"Attribute Error: {str(e)}")
+            
         except transaction.TransactionManagementError as e:
-            logger.error(f"Transaction management error: {e}", exc_info=True)
-            context.abort(grpc.StatusCode.ABORTED, f"Transaction error: {e}")
+            logger.error(f"Transaction Error: {str(e)}")
+            context.abort(grpc.StatusCode.ABORTED, f"Transaction Error: {str(e)}")
 
-        # catch-all
         except Exception as e:
-            logger.exception(f"Unexpected error in {func.__name__}")
-            context.abort(grpc.StatusCode.INTERNAL, "Internal server error")
-
+            logger.error(f"Unexpected Error: {str(e)}",e)
+            context.abort(grpc.StatusCode.INTERNAL, "Internal Server Error")
+        except UserNotFoundError as e:
+            logger.warning(f"User Not Found: {str(e)}")
+            context.abort(grpc.StatusCode.NOT_FOUND, "User Not Found")
+        except InvalidIdTokenError as e:
+            logger.warning(f"Invalid Token: {str(e)}")
+            context.abort(grpc.StatusCode.UNAUTHENTICATED, "Invalid Token")
+        except ExpiredIdTokenError as e:
+            logger.warning(f"Expired Token: {str(e)}")
+            context.abort(grpc.StatusCode.UNAUTHENTICATED, "Expired Token")
+        except RevokedIdTokenError as e:
+            logger.warning(f"Revoked Token: {str(e)}")
+            context.abort(grpc.StatusCode.UNAUTHENTICATED, "Revoked Token")
+        except CertificateFetchError as e:
+            logger.warning(f"Certificate Fetch Error: {str(e)}")
+            context.abort(grpc.StatusCode.INTERNAL, "Certificate Fetch Error")
+    
     return wrapper
 
 
 class UserAuthService(AuthServiceServicer):
     def __init__(self):
-        self.firebase_auth_manager = firebase_main.FireBaseAuthManager
+        self.firebase_auth_manager = firebase_main.FireBaseAuthManager()
     
     def _address_to_proto(self, address):
         return user_auth_pb2.AddressResponse(
@@ -242,47 +169,13 @@ class UserAuthService(AuthServiceServicer):
     @handle_error
     def CreateUser(self, request, context):
         firebase_uid = request.firebase_uid
-        token = request.token.token
-
-        firebase_uid_from_token = self.firebase_auth_manager.verify_user_token(token)
-
-        if firebase_uid != firebase_uid_from_token:
-            logger.error(f"Firebase UID mismatch: {firebase_uid} != {firebase_uid_from_token}")
-            raise grpc.RpcError(grpc.StatusCode.PERMISSION_DENIED, "Firebase UID mismatch")
-        with transaction.atomic():
-            user = User.objects.create(
-                firebase_uid=firebase_uid,
-                email=request.email,
-                phone=request.phone
-            )
-
-            self.firebase_auth_manager.set_custom_user_claims(firebase_uid, {"user_uuid": str(user.user_uuid)})
-            
-            return empty_pb2.Empty()
-
-    @handle_error 
-    def VerifyToken(self,request,context):
-        token =  request.token
-
-        firebase_id = self.firebase_auth_manager.verify_user_token(token)
-        user =  self.firebase_auth_manager.get_user_by_UID(firebase_id)
-
-        if user != None:
-            return empty_pb2.Empty()
-        else:
-            logger.error("Invalid token User not Found")
-            raise Unauthenticated("User token Could not be verified")
-
-        @handle_error
-    def CreateUser(self, request, context):
-        firebase_uid = request.firebase_uid
         token = getattr(request.token, "token", request.token)
 
         logger.info(f"CreateUser called for firebase_uid={firebase_uid}")
         logger.debug(f"Raw token: {token}")
 
         # Verify the token’s UID matches the requested UID
-        firebase_uid_from_token = self.firebase_auth_manager.verify_user_token(token)
+        firebase_uid_from_token = self.firebase_auth_manager.verify_user_token(id_token=token)
         logger.debug(f"Token verified; firebase_uid_from_token={firebase_uid_from_token}")
         if firebase_uid != firebase_uid_from_token:
             logger.warning(
@@ -292,16 +185,21 @@ class UserAuthService(AuthServiceServicer):
 
         # Create the user in the database
         with transaction.atomic():
+            firebase_user = self.firebase_auth_manager.get_user_by_UID(firebase_uid)
+            if not firebase_user:
+                logger.warning(f"User not found in Firebase for firebase_uid={firebase_uid}")
+                raise Unauthenticated("User not found in Firebase")
+            
             user = User.objects.create(
                 firebase_uid=firebase_uid,
-                email=request.email,
-                phone=request.phone
+                email=firebase_user.email
+
             )
             logger.info(f"Created User record; user_uuid={user.user_uuid}")
 
         # Attach the new user_uuid as a custom claim
-        self.firebase_auth_manager.set_custom_user_claims(
-            firebase_uid,
+        self.firebase_auth_manager.add_custom_claims(
+            token,
             {"user_uuid": str(user.user_uuid)}
         )
         logger.info(f"Set custom claims for firebase_uid={firebase_uid}")
@@ -316,7 +214,7 @@ class UserAuthService(AuthServiceServicer):
         logger.debug(f"Raw token: {token}")
 
         # Verify the token
-        firebase_id = self.firebase_auth_manager.verify_user_token(token)
+        firebase_id = self.firebase_auth_manager.verify_user_token(id_token=token)
         logger.debug(f"Token verified; firebase_id={firebase_id}")
 
         # Ensure the user exists
@@ -354,7 +252,6 @@ class UserAuthService(AuthServiceServicer):
     @handle_error
     def UpdateStore(self, request, context):
         store_uuid = request.store_uuid
-        store_name = request.store_name
 
         with transaction.atomic():
             try:

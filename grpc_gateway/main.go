@@ -14,13 +14,18 @@ import (
 	"google.golang.org/grpc/metadata"
 
 	Cartgw "Gateway/cart"
-	Middleware "Gateway/middleware"
+	// Middleware "Gateway/middleware"
 	Ordergw "Gateway/order"
 	Productgw "Gateway/product"
 	UserAuthgw "Gateway/user_auth"
 )
 
 func main() {
+
+
+
+	app = InitializeFirebaseApp()
+
 	// Read configuration from environment variables
 	productServiceAddr := os.Getenv("PRODUCT_SERVICE_ADDR")
 	if productServiceAddr == "" {
@@ -108,7 +113,7 @@ func main() {
 	// Create an HTTP server for the gRPC Gateway
 	gwServer := &http.Server{
 		Addr:    gatewayAddr,
-		Handler: Middleware.ChainMiddleware(gwmux),
+		Handler: ChainMiddleware(gwmux),
 	}
 
 	// Start the gRPC Gateway server in a goroutine so we can gracefully shut it down

@@ -1,4 +1,4 @@
-package middleware
+package main
 
 import (
 	// "context"
@@ -11,43 +11,43 @@ import (
 	"strings"
 
 	// "google.golang.org/grpc/metadata"
-	"sync"
+
 
 	jwt "github.com/golang-jwt/jwt/v5"
 
 	// "google.golang.org/grpc/metadata"
-	"os"
-
 	"github.com/rs/cors"
-
-	firebase "firebase.google.com/go/v4"
-	"google.golang.org/api/option"
 )
 
-var (
-	app  *firebase.App
-	once sync.Once
-)
+// var (
+// 	app  *firebase.App
+// 	once sync.Once
+// )
 
-// InitializeFirebaseApp initializes the Firebase App only once
-func InitializeFirebaseApp() *firebase.App {
-	once.Do(func() {
-		ctx := context.Background()
-		credentialsPath := os.Getenv("FIREBASE_CREDENTIALS_PATH")
-		if credentialsPath == "" {
-			credentialsPath = "./rasoi-auth-firebase-adminsdk-fbsvc-2131b3731f.json" // fallback
-		}
-		opt := option.WithCredentialsFile(credentialsPath)
-		var err error
-		app, err = firebase.NewApp(ctx, nil, opt)
-		if err != nil {
-			log.Printf("error initializing Firebase app: %v\n", err)
-			return
-		}
-	})
-	return app
-}
+// // InitializeFirebaseApp initializes the Firebase App only once
+// func InitializeFirebaseApp() *firebase.App {
+//     once.Do(func() {
+//         // Load environment variables from .env file
+//         err := godotenv.Load()
+//         if err != nil {
+//             log.Printf("Error loading .env file: %v\n", err)
+//         }
 
+//         ctx := context.Background()
+//         credentialsPath := os.Getenv("FIREBASE_CREDENTIALS_PATH")
+//         if credentialsPath == "rasoi-auth-firebase-adminsdk-fbsvc-2131b3731f.json" {
+//             log.Fatal("FIREBASE_CREDENTIALS_PATH environment variable is not set")
+//         }
+
+//         opt := option.WithCredentialsFile(credentialsPath)
+//         app, err = firebase.NewApp(ctx, nil, opt)
+//         if err != nil {
+//             log.Printf("Error initializing Firebase app: %v\n", err)
+//             return
+//         }
+//     })
+//     return app
+// }
 // responseWriter wraps http.ResponseWriter to capture the status code
 type responseWriter struct {
 	http.ResponseWriter
@@ -187,7 +187,7 @@ func AuthMiddleware(next http.Handler) http.Handler {
 		tokenString := parts[1]
 
 		// Initialize Firebase App
-		app := InitializeFirebaseApp()
+		// app = InitializeFirebaseApp()
 		client, err := app.Auth(context.Background())
 		if err != nil {
 			log.Println("Firebase Auth client initialization failed:", err)
@@ -258,9 +258,9 @@ func respondWithError(w http.ResponseWriter, message string, statusCode int) {
 func ChainMiddleware(h http.Handler) http.Handler {
 
 	var middlewares = []func(http.Handler) http.Handler{
+		CORSMIddleware,
 		LogRequestMiddleware,
 		AuthMiddleware,
-		CORSMIddleware,
 	}
 
 	for i := len(middlewares) - 1; i >= 0; i-- {

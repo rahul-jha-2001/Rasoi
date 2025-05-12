@@ -59,9 +59,7 @@ class FireBaseAuthManager:
         except UserNotFoundError as e:
             raise e
         except Exception as e:
-            raise e
-        
-    
+            raise e 
     
     def add_store_claims(self,id_token,store_uuids):
         # Update store claims for a user
@@ -94,21 +92,80 @@ class FireBaseAuthManager:
             return claims
         except Exception as e:
             raise e
-    def add_custom_claims(self,id_token,claims):
+    
+    def add_custom_claims(self,firebase_uid,claims):
         # Add custom claims to a user
         try:
-            uid = self.verify_user_token(id_token)
-            user = self.auth.get_user(uid)
+            user = self.auth.get_user(firebase_uid)
             if not user:
-                raise UserNotFoundError(f"User not found: {uid}")
+                raise UserNotFoundError(f"User not found: {firebase_uid}")
             # Check if the user already has custom claims
             existing_claims = user.custom_claims or {}
             # Merge existing claims with new ones
             claims = {**existing_claims, **claims}
             
-            self.auth.set_custom_user_claims(uid, claims)
+            self.auth.set_custom_user_claims(firebase_uid, claims)
             
-            logger.info(f"Successfully updated custom claims for user: {uid}")
+            logger.info(f"Successfully updated custom claims for user: {firebase_uid}")
         
+        except Exception as e:
+            raise e
+    
+
+    def create_user(self,email,password) -> UserRecord:
+        # Create a new user
+        try:
+            user = self.auth.create_user(
+                email=email,
+                password=password
+            )
+            logger.info(f"Successfully created user: {user.uid}")
+            return user
+        except Exception as e:
+            raise e
+    
+    def update_user(self,uid,email,password) -> UserRecord:
+        # Update user details
+        try:
+            user = self.auth.update_user(
+                uid=uid,
+                email=email,
+                password=password
+            )
+            logger.info(f"Successfully updated user: {user.uid}")
+            return user
+        except UserNotFoundError as e:
+            raise e
+        except Exception as e:
+            raise e
+    
+    def list_users(self, max_results=1000)  -> list[UserRecord]:
+        # List all users
+        try:
+            page = self.auth.list_users(max_results=max_results)
+            users = page.users
+            logger.info(f"Successfully listed {len(users)} users")
+            return users
+        except Exception as e:
+            raise e
+    def delete_user(self,uid)  -> None:
+        # Delete a user by UID
+        try:
+            self.auth.delete_user(uid)
+            logger.info(f"Successfully deleted user: {uid}")
+        except UserNotFoundError as e:
+            raise e
+        except Exception as e:
+            raise e
+    
+    def get_access_token(self,uid) -> str:
+        # Get access token for a user
+        try:
+            user = self.auth.get_user(uid)
+            if not user:
+                raise UserNotFoundError(f"User not found: {uid}")
+            access_token = auth.create_custom_token(uid)
+            logger.info(f"Successfully created access token for user: {uid}")
+            return access_token
         except Exception as e:
             raise e

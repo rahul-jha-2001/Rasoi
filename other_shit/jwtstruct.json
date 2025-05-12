@@ -18,3 +18,16 @@
   "phone":"+15551234567",
   "name":"Jane Doe"
 }
+
+
+aud: "rasoi-auth"
+auth_time: 1746797871
+email: "rahul23082001jha@gmail.com"
+email_verified: true
+exp: 1746801471
+firebase: {identities: {…}, sign_in_provider: 'password'}
+iat: 1746797871
+iss: "https://securetoken.google.com/rasoi-auth"
+sub: "HzSWKDSKOhdPrtGiQHYAhgEavvT2"
+user_id: "HzSWKDSKOhdPrtGiQHYAhgEavvT2"
+user_uuid: "0ee9ae38-9d08-41b8-9a00-d953ca68d33d"

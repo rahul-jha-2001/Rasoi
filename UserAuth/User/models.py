@@ -4,6 +4,7 @@ import uuid
 from django.core.validators import RegexValidator
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from django.db.models import TextChoices
 
 
 # Validators remain the same
@@ -22,21 +23,34 @@ password_validator = RegexValidator(
     message="Password must be at least 8 characters long and contain both letters and numbers."
 )
 
+class StoreRole(TextChoices):
+    STORE_ROLE_ADMIN = 'STORE_ROLE_ADMIN', 'STORE_ROLE_ADMIN'
+    STORE_ROLE_STAFF = 'STORE_ROLE_STAFF', 'STORE_ROLE_STAFF'
 
 class UserManager(models.Manager):
     pass
 
 class StoreManager(models.Manager):
+    def get_stores(self, user_uuid, limit: int = 10, page: int = 1):
+        """
+        Get paginated stores for a user.
+        Args:
+            user_uuid (str): UUID of the user.
+            limit (int): Number of items per page (1-100).
+            page (int): Page number (1+).
+        Returns:
+            Tuple: (stores queryset, next page number, previous page number)
+        """
+        # Safe guards
+        limit = max(1, min(limit, 100))    # allow between 1 - 100
+        page = max(1, page)
 
-    def get_stores(self,user_uuid,limit:int=10,page:int=0):
-        if limit <= 0:
-            limit = 10
-        if page < 0:
-            page = 0
+        try:
+            user = User.objects.get(user_uuid=user_uuid)
+        except User.DoesNotExist:
+            raise ValidationError(f"User with UUID {user_uuid} does not exist")
 
-        user = User.objects.get(user_uuid=user_uuid)
-        queryset = queryset.filter(user=user).order_by('-created_at')
-        
+        queryset = Store.objects.filter(user=user).order_by('-created_at')
         paginator = Paginator(queryset, limit)
 
         try:
@@ -70,6 +84,8 @@ class Store(models.Model):
     store_uuid = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=255, null=True, blank=True)
     gst_number = models.CharField(max_length=15, validators=[gst_validator], unique=True, null=True, blank=True)
+    is_active = models.BooleanField("Is Active",default= False)
+    is_open = models.BooleanField("Is open",default=True)
     address = models.ForeignKey('Address', on_delete=models.CASCADE, null=True, blank=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='stores')
     created_at = models.DateTimeField(auto_now_add=True)

@@ -6,6 +6,8 @@ require (
 	firebase.google.com/go/v4 v4.15.2
 	github.com/golang-jwt/jwt/v5 v5.2.2
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.26.3
+	github.com/joho/godotenv v1.5.1
+	github.com/rs/cors v1.11.1
 	google.golang.org/api v0.230.0
 	google.golang.org/genproto/googleapis/api v0.0.0-20250311190419-81fb87f6b8bf
 	google.golang.org/grpc v1.72.0

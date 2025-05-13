@@ -415,7 +415,11 @@ class UserAuthService(AuthServiceServicer):
                 store.name = request.store_name
             if request.HasField('gst_number'):
                 store.gst_number = request.gst_number
-            
+            if request.HasField('is_active'):
+                store.is_active = request.is_active
+            if request.HasField('is_open'):
+                store.is_open = request.is_open        
+
             store.save()
 
             return user_auth_pb2.StoreResponse(

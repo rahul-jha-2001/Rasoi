@@ -84,10 +84,11 @@ class Store(models.Model):
     store_uuid = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=255, null=True, blank=True)
     gst_number = models.CharField(max_length=15, validators=[gst_validator], unique=True, null=True, blank=True)
-    is_active = models.BooleanField("Is Active",default= False)
-    is_open = models.BooleanField("Is open",default=True)
+    is_active = models.BooleanField("Is Active",default= True)
+    is_open = models.BooleanField("Is open",default=False)
     address = models.ForeignKey('Address', on_delete=models.CASCADE, null=True, blank=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='stores')
+    description = models.TextField(null=True,blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

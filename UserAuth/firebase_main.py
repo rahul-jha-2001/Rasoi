@@ -61,25 +61,35 @@ class FireBaseAuthManager:
         except Exception as e:
             raise e 
     
-    def add_store_claims(self,id_token,store_uuids):
-        # Update store claims for a user
+    def add_store_claims(self, id_token, store_uuids):
         try:
             uid = self.verify_user_token(id_token)
             user = self.auth.get_user(uid)
             if not user:
                 raise UserNotFoundError(f"User not found: {uid}")
-            # Check if the user already has store claims
-            existing_claims = user.custom_claims or {}
-            if "store_uuids" in existing_claims:
-                # Merge existing store claims with new ones
-                store_uuids = list(set(existing_claims["store_uuids"]) | set(store_uuids))
-            
-            self.auth.set_custom_user_claims(uid, {"role":"store","store_uuids": store_uuids})
-            
+
+            # Grab whatever claims the user already has
+            existing = user.custom_claims or {}
+
+            # Merge or extend the store_uuids list
+            # if "store_uuids" in existing:
+            #     existing_store_uuids = set(existing.get("store_uuids", []))
+            #     store_uuids = list(existing_store_uuids.union(store_uuids))
+
+            # Build a new claims dict by merging in existing claims
+            new_claims = {
+                **existing,                # keeps user_uuid, other roles, etc.
+                "store_uuids": store_uuids # updated list
+            }
+
+            # Now this replaces all claims with new_claims—but since new_claims
+            # starts with existing, nothing gets lost
+            self.auth.set_custom_user_claims(uid, new_claims)
             logger.info(f"Successfully updated store claims for user: {uid}")
-        
+
         except Exception as e:
             raise e
+
         
     def get_user_claims(self,uid):
         # Get user claims

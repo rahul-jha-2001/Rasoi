@@ -16,10 +16,49 @@
     "application/json"
   ],
   "paths": {
-    "/v1/auth/storeuser/create_user": {
-      "post": {
-        "summary": "Store owner authentication",
-        "operationId": "AuthService_CreateUser",
+    "/v1/addresses/{addressUuid}": {
+      "get": {
+        "operationId": "AuthService_GetAddress",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/UserAuth_v1AddressResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "addressUuid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "userUuid",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "storeUuid",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "AuthService"
+        ]
+      },
+      "delete": {
+        "operationId": "AuthService_DeleteAddress",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -37,11 +76,57 @@
         },
         "parameters": [
           {
+            "name": "addressUuid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "userUuid",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "storeUuid",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "AuthService"
+        ]
+      },
+      "patch": {
+        "operationId": "AuthService_UpdateAddress",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/UserAuth_v1AddressResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "addressUuid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
             "name": "body",
             "in": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/UserAuth_v1CreateUserRequest"
+              "$ref": "#/definitions/AuthServiceUpdateAddressBody"
             }
           }
         ],
@@ -50,7 +135,7 @@
         ]
       }
     },
-    "/v1/auth/storeuser/verify_token": {
+    "/v1/auth/verify-token": {
       "post": {
         "operationId": "AuthService_VerifyToken",
         "responses": {
@@ -83,14 +168,122 @@
         ]
       }
     },
-    "/v1/store/{storeUuid}/address": {
-      "post": {
-        "operationId": "AuthService_CreateAddress",
+    "/v1/stores/{storeUuid}": {
+      "get": {
+        "operationId": "AuthService_GetStore",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
               "$ref": "#/definitions/UserAuth_v1StoreResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "storeUuid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "userUuid",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "AuthService"
+        ]
+      },
+      "delete": {
+        "operationId": "AuthService_DeleteStore",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "type": "object",
+              "properties": {}
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "storeUuid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "userUuid",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "AuthService"
+        ]
+      },
+      "patch": {
+        "operationId": "AuthService_UpdateStore",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/UserAuth_v1StoreResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "storeUuid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AuthServiceUpdateStoreBody"
+            }
+          }
+        ],
+        "tags": [
+          "AuthService"
+        ]
+      }
+    },
+    "/v1/stores/{storeUuid}/addresses": {
+      "post": {
+        "summary": "Address operations",
+        "operationId": "AuthService_CreateAddress",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/UserAuth_v1AddressResponse"
             }
           },
           "default": {
@@ -119,14 +312,18 @@
         "tags": [
           "AuthService"
         ]
-      },
-      "patch": {
-        "operationId": "AuthService_UpdateAddress",
+      }
+    },
+    "/v1/users": {
+      "post": {
+        "summary": "User authentication",
+        "operationId": "AuthService_CreateUser",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/UserAuth_v1StoreResponse"
+              "type": "object",
+              "properties": {}
             }
           },
           "default": {
@@ -138,17 +335,11 @@
         },
         "parameters": [
           {
-            "name": "storeUuid",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
             "name": "body",
             "in": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/AuthServiceUpdateAddressBody"
+              "$ref": "#/definitions/UserAuth_v1CreateUserRequest"
             }
           }
         ],
@@ -157,8 +348,49 @@
         ]
       }
     },
-    "/v1/storeuser/{userUuid}/store": {
+    "/v1/users/{userUuid}/stores": {
+      "get": {
+        "operationId": "AuthService_GetAllStores",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/UserAuth_v1GetAllStoreResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "userUuid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "AuthService"
+        ]
+      },
       "post": {
+        "summary": "Store operations",
         "operationId": "AuthService_CreateStore",
         "responses": {
           "200": {
@@ -193,9 +425,12 @@
         "tags": [
           "AuthService"
         ]
-      },
-      "patch": {
-        "operationId": "AuthService_UpdateStore",
+      }
+    },
+    "/v1/users/{userUuid}/stores-with-address": {
+      "post": {
+        "summary": "Optional: create store with address in one call",
+        "operationId": "AuthService_CreateStoreWithAddress",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -222,7 +457,7 @@
             "in": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/AuthServiceUpdateStoreBody"
+              "$ref": "#/definitions/AuthServiceCreateStoreWithAddressBody"
             }
           }
         ],
@@ -267,8 +502,38 @@
       "properties": {
         "storeName": {
           "type": "string"
+        }
+      }
+    },
+    "AuthServiceCreateStoreWithAddressBody": {
+      "type": "object",
+      "properties": {
+        "storeName": {
+          "type": "string"
         },
         "gstNumber": {
+          "type": "string"
+        },
+        "address1": {
+          "type": "string",
+          "title": "nested address details"
+        },
+        "address2": {
+          "type": "string"
+        },
+        "landmark": {
+          "type": "string"
+        },
+        "city": {
+          "type": "string"
+        },
+        "state": {
+          "type": "string"
+        },
+        "pincode": {
+          "type": "string"
+        },
+        "country": {
           "type": "string"
         }
       }
@@ -276,10 +541,7 @@
     "AuthServiceUpdateAddressBody": {
       "type": "object",
       "properties": {
-        "userUuid": {
-          "type": "string"
-        },
-        "addressUuid": {
+        "storeUuid": {
           "type": "string"
         },
         "address1": {
@@ -308,7 +570,7 @@
     "AuthServiceUpdateStoreBody": {
       "type": "object",
       "properties": {
-        "storeUuid": {
+        "userUuid": {
           "type": "string"
         },
         "storeName": {
@@ -316,6 +578,23 @@
         },
         "gstNumber": {
           "type": "string"
+        },
+        "isActive": {
+          "type": "boolean"
+        },
+        "isOpen": {
+          "type": "boolean"
+        }
+      }
+    },
+    "UserAuth_v1AddressResponse": {
+      "type": "object",
+      "properties": {
+        "storeUuid": {
+          "type": "string"
+        },
+        "address": {
+          "$ref": "#/definitions/UserAuth_v1address"
         }
       }
     },
@@ -326,6 +605,24 @@
           "type": "string"
         },
         "token": {
+          "type": "string"
+        }
+      }
+    },
+    "UserAuth_v1GetAllStoreResponse": {
+      "type": "object",
+      "properties": {
+        "stores": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/UserAuth_v1store"
+          }
+        },
+        "prevPage": {
+          "type": "string"
+        },
+        "nextPage": {
           "type": "string"
         }
       }
@@ -348,7 +645,8 @@
           "type": "string"
         },
         "firebaseUid": {
-          "type": "string"
+          "type": "string",
+          "title": "Remove this later"
         }
       }
     },
@@ -378,6 +676,14 @@
         },
         "pincode": {
           "type": "string"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
         }
       }
     },
@@ -395,6 +701,20 @@
         },
         "address": {
           "$ref": "#/definitions/UserAuth_v1address"
+        },
+        "isActive": {
+          "type": "boolean"
+        },
+        "isOpen": {
+          "type": "boolean"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
         }
       }
     },

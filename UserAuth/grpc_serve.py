@@ -26,7 +26,7 @@ import firebase_main
 from Proto import user_auth_pb2
 from Proto import user_auth_pb2_grpc 
 from Proto.user_auth_pb2_grpc import AuthServiceServicer, add_AuthServiceServicer_to_server
-from Proto.user_auth_pb2 import store,address
+from Proto.user_auth_pb2 import store,address,user
 from User.models import User, Store ,Address, StoreRole
 
 from utils.logger import Logger
@@ -41,8 +41,7 @@ from firebase_admin.auth import CertificateFetchError
 logger = Logger("GRPC_Service")
 
 
-def handle_error(func):
-    
+def handle_error(func): 
     @functools.wraps(func)
     def wrapper(self, request, context):
         try:
@@ -73,12 +72,14 @@ def handle_error(func):
             context.abort(grpc.StatusCode.INVALID_ARGUMENT, f"Validation Error: {str(e)}")
 
         except IntegrityError as e:
-            logger.warning(f"Integrity Error: {str(e)}")
-            context.abort(grpc.StatusCode.ALREADY_EXISTS, f"Object Already Exists")
+            detail_message = e.args[0] if e.args else "Integrity constraint violation"
+            logger.warning(f"Integrity Error: {detail_message}")
+            
+            context.abort(grpc.StatusCode.ALREADY_EXISTS, f"DETAIL: {detail_message}")
 
         except DatabaseError as e:
             logger.error(f"Database Error: {str(e)}",e)
-            context.abort(grpc.StatusCode.INTERNAL, "Database Error")
+            context.abort(grpc.StatusCode.INTERNAL, "Internal Error")
 
         except PermissionDenied as e:
             logger.warning(f"Permission Denied: {str(e)}",e)
@@ -183,7 +184,7 @@ class UserAuthService(AuthServiceServicer):
                 logger.error(f"Serialized hex: {serialized.hex()}")
             except:
                 pass
-            return False
+            raise
 
 
     def _address_to_proto(self, address_obj):
@@ -300,6 +301,52 @@ class UserAuthService(AuthServiceServicer):
             logger.error("Error Creating store proto", e)
             raise grpc.RpcError(grpc.StatusCode.INTERNAL, "Internal server error in _store_to_proto")
 
+    def _user_to_proto(self,user_obj:User):
+        try: 
+            response = user_auth_pb2.user()
+
+            try:
+                response.user_uuid = str(user_obj.user_uuid)
+            except (AttributeError, TypeError) as e:
+                logger.warning(f"Failed to convert user_uuid: {e}")
+                response.user_uuid = ""
+            try:
+                response.firebase_uid = str(user_obj.firebase_uid)
+            except (AttributeError, TypeError) as e:
+                logger.warning(f"Failed to convert firebase_uid: {e}")
+                response.firebase_uid = ""
+            try:
+                response.email = str(user_obj.email)
+            except (AttributeError, TypeError) as e:
+                logger.warning(f"Failed to convert email: {e}")
+                response.email = ""
+            try:
+                response.phone = str(user_obj.phone)
+            except (AttributeError, TypeError) as e:
+                logger.warning(f"Failed to convert phone: {e}")
+                response.phone = ""
+
+            try:
+                if user_obj.created_at:
+                    response.created_at.FromDatetime(user_obj.created_at)
+            except (AttributeError, ValueError) as e:
+                logger.warning(f"Failed to convert created_at: {e}")
+
+            try:
+                if user_obj.updated_at:
+                    response.updated_at.FromDatetime(user_obj.updated_at)
+            except (AttributeError, ValueError) as e:
+                logger.warning(f"Failed to convert updated_at: {e}")
+            
+            self._verify_wire_format(response, user_auth_pb2.user, f"user_uuid={user_obj.user_uuid}")
+            
+            return response
+        
+        except Exception as e:
+            logger.error("Error Creating user proto", e)
+            raise
+
+
     @handle_error
     def CreateUser(self, request, context):
         firebase_uid = request.firebase_uid
@@ -372,32 +419,50 @@ class UserAuthService(AuthServiceServicer):
     def CreateStore(self, request, context):
         user_uuid = request.user_uuid
         store_name = request.store_name
-        
-        firebase_user = self.firebase_auth_manager.get_user_by_UID(user_uuid)
-        if not firebase_user:
-            logger.warning(f"User not found in Firebase for user_uuid={user_uuid}")
-            raise Unauthenticated("User not found in Firebase")
-        claims = self.firebase_auth_manager.get_user_claims(user_uuid)
-        if not claims:
-            logger.warning(f"User claims not found in Firebase for user_uuid={user_uuid}")
-            raise Unauthenticated("User claims not found in Firebase")
+        meta = dict(context.invocation_metadata() or [])
+        token = meta.get("authorization").split(" ")[1]
+        logger.info(token)
 
+        logger.info(f"CreateStore called for user_uuid={user_uuid}, store_name={store_name}")
+
+        try:
+            user = User.objects.get(user_uuid=user_uuid)
+            logger.info(f"User retrieved successfully for user_uuid={user_uuid}")
+        except User.DoesNotExist:
+            logger.warning(f"User with user_uuid={user_uuid} does not exist")
+            raise 
+
+        firebase_user = self.firebase_auth_manager.get_user_by_UID(user.firebase_uid)
+        if not firebase_user:
+            logger.warning(f"User not found in Firebase for user_uuid={user_uuid} and firebase_uid={user.firebase_uid}")
+            raise Unauthenticated("User not found in Firebase")
+        logger.info(f"Firebase user retrieved successfully for firebase_uid={user.firebase_uid}")
+
+        claims = self.firebase_auth_manager.get_user_claims(user.firebase_uid)
+        if not claims:
+            logger.warning(f"User claims not found in Firebase for user_uuid={user_uuid} and firebase_uid={user.firebase_uid}")
+            raise Unauthenticated("User claims not found in Firebase")
+        logger.info(f"User claims retrieved successfully for firebase_uid={user.firebase_uid}")
 
         with transaction.atomic():
-           
-            user = User.objects.get(user_uuid=user_uuid)
-        
+            
             store = Store.objects.create(
                 name=store_name,
-                user=user
+                user=user,
+                gst_number=request.gst_number,
+                is_active=request.is_active,
+                discription=request.discription
             )
-            logger.info(f"Created Store record; store_uuid={store.store_uuid}")
+            logger.info(f"Created Store record; store_uuid={store.store_uuid}") 
             store_uuids = user.stores.values_list('store_uuid', flat=True)
-
-            self.firebase_auth_manager.add_store_claims(user_uuid, store_uuids)
+            store_uuids = [str(store_uuid) for store_uuid in store_uuids]
+            logger.info(f"Store UUIDs retrieved for user_uuid={user_uuid}: {list(store_uuids)}")
+            self.firebase_auth_manager.add_store_claims(token, store_uuids)
+            logger.info(f"Store claims updated for user_uuid={user_uuid}")
             return user_auth_pb2.StoreResponse(
                 user_uuid=str(store.user.user_uuid),
-                store = self._store_to_proto(store),)
+                store=self._store_to_proto(store),
+            )
 
     @handle_error
     @check_access(
@@ -460,12 +525,8 @@ class UserAuthService(AuthServiceServicer):
 
         logger.info(f"GetAllStores called for user_uuid={user_uuid}, limit={limit}, page={page}")
 
-        try:
-            data, next_page, prev_page = Store.objects.get_stores(user_uuid, limit, page)
-            logger.info(f"Retrieved {len(data)} stores for user_uuid={user_uuid}")
-        except Exception as e:
-            logger.error(f"Error retrieving stores for user_uuid={user_uuid}: {str(e)}", e)
-            raise grpc.RpcError(grpc.StatusCode.INTERNAL, "Error retrieving stores")
+        data, next_page, prev_page = Store.objects.get_stores(user_uuid, limit, page)
+        logger.info(f"Retrieved {len(data)} stores for user_uuid={user_uuid}")
 
         return user_auth_pb2.GetAllStoreResponse(
             stores=[self._store_to_proto(store) for store in data],
@@ -494,8 +555,8 @@ class UserAuthService(AuthServiceServicer):
 )
     def CreateAddress(self, request, context):
         store_uuid = request.store_uuid
-        address_line_1 = request.address_line_1
-        address_line_2 = request.address_line_2
+        address_line_1 = request.address_1
+        address_line_2 = request.address_2
         city = request.city
         state = request.state
         country = request.country
@@ -583,6 +644,59 @@ class UserAuthService(AuthServiceServicer):
             
             address = Address.objects.get(address_uuid=address_uuid)
             address.delete()
+
+        return empty_pb2.Empty()
+
+    
+    
+    @handle_error
+    @check_access(
+    expected_types=["store"],
+    allowed_roles={"store":["admin","staff"]}
+)
+    def GetUser(self, request, context):
+        user_uuid = request.user_uuid
+
+        with transaction.atomic():
+            user = User.objects.get(user_uuid=user_uuid)
+
+        return self._user_to_proto(user)
+
+    @handle_error
+    @check_access(
+    expected_types=["store"],
+    allowed_roles={"store":["admin","staff"]}
+)
+    def UpdateUser(self, request, context):
+        user_uuid = request.user_uuid
+
+        with transaction.atomic():
+            user = User.objects.get(user_uuid=user_uuid)
+
+            if request.HasField("email"):
+                user.email = request.email
+            if request.HasField("email_verified"):
+                user.email_verified = request.email_verified
+            if request.HasField("role"):
+                user.role = request.role
+            if request.preferences:
+                user.preferences.update(request.preferences)
+
+            user.save()
+
+        return self._user_to_proto(user)
+
+    @handle_error
+    @check_access(
+    expected_types=["store"],
+    allowed_roles={"store":["admin","staff"]}
+)
+    def DeleteUser(self, request, context):
+        user_uuid = request.user_uuid
+
+        with transaction.atomic():
+            user = User.objects.get(user_uuid=user_uuid)
+            user.delete()
 
         return empty_pb2.Empty()
 

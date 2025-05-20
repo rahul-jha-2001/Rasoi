@@ -90,13 +90,33 @@ class AuthServiceStub(object):
                 request_serializer=user__auth__pb2.DeleteAddressRequest.SerializeToString,
                 response_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
                 _registered_method=True)
+        self.CreateStoreWithAddress = channel.unary_unary(
+                '/UserAuth_v1.AuthService/CreateStoreWithAddress',
+                request_serializer=user__auth__pb2.CreateStoreWithAddressRequest.SerializeToString,
+                response_deserializer=user__auth__pb2.StoreResponse.FromString,
+                _registered_method=True)
+        self.GetUser = channel.unary_unary(
+                '/UserAuth_v1.AuthService/GetUser',
+                request_serializer=user__auth__pb2.GetUserRequest.SerializeToString,
+                response_deserializer=user__auth__pb2.user.FromString,
+                _registered_method=True)
+        self.UpdateUser = channel.unary_unary(
+                '/UserAuth_v1.AuthService/UpdateUser',
+                request_serializer=user__auth__pb2.UpdateUserRequest.SerializeToString,
+                response_deserializer=user__auth__pb2.user.FromString,
+                _registered_method=True)
+        self.DeleteUser = channel.unary_unary(
+                '/UserAuth_v1.AuthService/DeleteUser',
+                request_serializer=user__auth__pb2.DeleteUserRequest.SerializeToString,
+                response_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
+                _registered_method=True)
 
 
 class AuthServiceServicer(object):
     """Missing associated documentation comment in .proto file."""
 
     def CreateUser(self, request, context):
-        """Store owner authentication
+        """User authentication
         """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -109,7 +129,8 @@ class AuthServiceServicer(object):
         raise NotImplementedError('Method not implemented!')
 
     def CreateStore(self, request, context):
-        """Missing associated documentation comment in .proto file."""
+        """Store operations
+        """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
@@ -139,7 +160,8 @@ class AuthServiceServicer(object):
         raise NotImplementedError('Method not implemented!')
 
     def CreateAddress(self, request, context):
-        """Missing associated documentation comment in .proto file."""
+        """Address operations
+        """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
@@ -158,6 +180,34 @@ class AuthServiceServicer(object):
 
     def DeleteAddress(self, request, context):
         """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def CreateStoreWithAddress(self, request, context):
+        """Optional: create store with address in one call
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def GetUser(self, request, context):
+        """Get a single user by UUID
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def UpdateUser(self, request, context):
+        """Update user details
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def DeleteUser(self, request, context):
+        """Delete a user
+        """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
@@ -218,6 +268,26 @@ def add_AuthServiceServicer_to_server(servicer, server):
             'DeleteAddress': grpc.unary_unary_rpc_method_handler(
                     servicer.DeleteAddress,
                     request_deserializer=user__auth__pb2.DeleteAddressRequest.FromString,
+                    response_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
+            ),
+            'CreateStoreWithAddress': grpc.unary_unary_rpc_method_handler(
+                    servicer.CreateStoreWithAddress,
+                    request_deserializer=user__auth__pb2.CreateStoreWithAddressRequest.FromString,
+                    response_serializer=user__auth__pb2.StoreResponse.SerializeToString,
+            ),
+            'GetUser': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetUser,
+                    request_deserializer=user__auth__pb2.GetUserRequest.FromString,
+                    response_serializer=user__auth__pb2.user.SerializeToString,
+            ),
+            'UpdateUser': grpc.unary_unary_rpc_method_handler(
+                    servicer.UpdateUser,
+                    request_deserializer=user__auth__pb2.UpdateUserRequest.FromString,
+                    response_serializer=user__auth__pb2.user.SerializeToString,
+            ),
+            'DeleteUser': grpc.unary_unary_rpc_method_handler(
+                    servicer.DeleteUser,
+                    request_deserializer=user__auth__pb2.DeleteUserRequest.FromString,
                     response_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
             ),
     }
@@ -517,6 +587,114 @@ class AuthService(object):
             target,
             '/UserAuth_v1.AuthService/DeleteAddress',
             user__auth__pb2.DeleteAddressRequest.SerializeToString,
+            google_dot_protobuf_dot_empty__pb2.Empty.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def CreateStoreWithAddress(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/UserAuth_v1.AuthService/CreateStoreWithAddress',
+            user__auth__pb2.CreateStoreWithAddressRequest.SerializeToString,
+            user__auth__pb2.StoreResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def GetUser(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/UserAuth_v1.AuthService/GetUser',
+            user__auth__pb2.GetUserRequest.SerializeToString,
+            user__auth__pb2.user.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def UpdateUser(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/UserAuth_v1.AuthService/UpdateUser',
+            user__auth__pb2.UpdateUserRequest.SerializeToString,
+            user__auth__pb2.user.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def DeleteUser(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/UserAuth_v1.AuthService/DeleteUser',
+            user__auth__pb2.DeleteUserRequest.SerializeToString,
             google_dot_protobuf_dot_empty__pb2.Empty.FromString,
             options,
             channel_credentials,

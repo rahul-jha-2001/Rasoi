@@ -145,14 +145,13 @@ def check_access(
                 elif typ == "customer":
                     token_phone = meta.get("phone")
                     req_phone   = getattr(request, "user_phone_no", None)
-                    if req_phone != None:
-                        logger.info(f"Token phone: {token_phone}, Request phone: {req_phone}")
-                        if not req_phone or req_phone != token_phone:
-                            logger.warning("Customer phone number mismatch or missing")
-                            raise Unauthenticated(
-                                StatusCode.PERMISSION_DENIED,
-                                "Customer phone number mismatch or missing"
-                            )
+                    logger.info(f"Token phone: {token_phone}, Request phone: {req_phone}")
+                    if not req_phone or req_phone != token_phone:
+                        logger.warning("Customer phone number mismatch or missing")
+                        raise Unauthenticated(
+                            StatusCode.PERMISSION_DENIED,
+                            "Customer phone number mismatch or missing"
+                        )
 
             logger.info("All access checks passed")
             return handler(self, request, context)

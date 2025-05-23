@@ -462,7 +462,9 @@ class ProductService(product_pb2_grpc.ProductServiceServicer):
 
 
     @handle_error
-    @check_access(roles=["user","store","internal"],require_URL_check=True)
+    @check_access(
+    expected_types=["store"],
+    allowed_roles={"store":["admin","staff"]},require_resource_match=True)
     def CreateProduct(self, request, context):
 
         
@@ -519,7 +521,10 @@ class ProductService(product_pb2_grpc.ProductServiceServicer):
                 product=self._product_to_proto(product))
        
     @handle_error
-    @check_access(roles=["user","store","internal"],require_URL_check=False)
+    @check_access(
+    expected_types=["store","customer"],
+    allowed_roles={"store":["admin","staff"]}
+)
     def GetProduct(self, request, context):
 
         if getattr(request,"category_uuid",None):
@@ -533,23 +538,24 @@ class ProductService(product_pb2_grpc.ProductServiceServicer):
         
     
     @handle_error
-    @check_access(roles=["user","store","internal"],require_URL_check=False)
+    @check_access(
+    expected_types=["store","customer"],
+    allowed_roles={"store":["admin","staff"]}
+)
     def ListProducts(self, request, context):
-        if request.page < 0:
-            request.page = 1
-        if request.limit < 0:
-            request.limit = 10
+        limit = request.limit if request.limit != "" else 10
+        page = request.page if request.page != "" else 1
 
         if getattr(request,"category_uuid",None):
             products,next_page,prev_page = Product.objects.get_products(store_uuid=request.store_uuid,
                                                             category_uuid=request.category_uuid,
-                                                            limit=request.limit,
-                                                            page = request.page)
+                                                            limit=limit,
+                                                            page = page)
         
         else:
             products,next_page,prev_page = Product.objects.get_products(store_uuid=request.store_uuid,
-                                                            limit=request.limit,
-                                                            page = request.page)
+                                                            limit=limit,
+                                                            page =page)
         response = product_pb2.ListProductsResponse(
             products=[self._product_to_proto(x) for x in products],
             next_page=next_page,
@@ -559,7 +565,10 @@ class ProductService(product_pb2_grpc.ProductServiceServicer):
         return response
     
     @handle_error
-    @check_access(roles=["store","internal"],require_URL_check=True)
+    @check_access(
+    expected_types=["store"],
+    allowed_roles={"store":["admin","staff"]},require_resource_match=True
+)
     def UpdateProduct(self, request, context):
 
         category = Category.objects.get(category_uuid = request.category_uuid,store_uuid =request.store_uuid)
@@ -633,7 +642,10 @@ class ProductService(product_pb2_grpc.ProductServiceServicer):
 
 
     @handle_error
-    @check_access(roles=["store","internal"])
+    @check_access(
+    expected_types=["store"],
+    allowed_roles={"store":["admin","staff"]},require_resource_match=True
+)
     def DeleteProduct(self, request, context):
         category = Category.objects.get(category_uuid = request.category_uuid,store_uuid =request.store_uuid)
 
@@ -645,7 +657,10 @@ class ProductService(product_pb2_grpc.ProductServiceServicer):
             return empty_pb2.Empty()
 
     @handle_error
-    @check_access(roles=["store","internal"])
+    @check_access(
+    expected_types=["store"],
+    allowed_roles={"store":["admin","staff"]},require_resource_match=True
+)
     def CreateCategory(self, request, context):
         with transaction.atomic():
             cat = Category.objects.create(
@@ -663,7 +678,9 @@ class ProductService(product_pb2_grpc.ProductServiceServicer):
             )
     
     @handle_error
-    @check_access(roles=["user","store","internal"],require_URL_check=False)
+    @check_access(
+    expected_types=["store","customer"],
+    allowed_roles={"store":["admin","staff"]})
     def GetCategory(self, request, context):
         
         category_uuid = request.category_uuid
@@ -676,7 +693,10 @@ class ProductService(product_pb2_grpc.ProductServiceServicer):
         )
 
     @handle_error
-    @check_access(roles=["store","internal"])
+    @check_access(
+    expected_types=["store"],
+    allowed_roles={"store":["admin","staff"]},require_resource_match=True
+)
     def UpdateCategory(self, request, context):
     
         category_obj = Category.objects.get(category_uuid=request.category_uuid,store_uuid=request.store_uuid)
@@ -705,7 +725,10 @@ class ProductService(product_pb2_grpc.ProductServiceServicer):
             )
 
     @handle_error
-    @check_access(roles=["store","internal"])
+    @check_access(
+    expected_types=["store"],
+    allowed_roles={"store":["admin","staff"]},require_resource_match=True
+)
     def DeleteCategory(self, request, context):  
         with transaction.atomic():
             Category.objects.get(category_uuid = request.category_uuid,store_uuid=request.store_uuid).delete()
@@ -714,12 +737,13 @@ class ProductService(product_pb2_grpc.ProductServiceServicer):
             return empty_pb2.Empty()
     
     @handle_error
-    @check_access(roles=["user","store","internal"],require_URL_check=False)
+    @check_access(
+    expected_types=["store","customer"],
+    allowed_roles={"store":["admin","staff"]}
+)
     def ListCategory(self, request, context):
-        if request.page < 0:
-            request.page = 1
-        if request.limit < 0:
-            request.limit = 10
+        limit = request.limit if request.limit != "" else 10
+        page = request.page if request.page != "" else 1
         categories,next_page,prev_page = Category.objects.get_categories(
                                                         store_uuid=request.store_uuid,
                                                         limit=request.limit,
@@ -735,7 +759,10 @@ class ProductService(product_pb2_grpc.ProductServiceServicer):
     
 
     @handle_error
-    @check_access(roles=["store","internal"])
+    @check_access(
+    expected_types=["store"],
+    allowed_roles={"store":["admin","staff"]},require_resource_match=True
+)
     def CreateAddOn(self, request, context):
         product:Product = Product.objects.get(store_uuid = request.store_uuid,product_uuid = request.product_uuid)
         with transaction.atomic(): 
@@ -754,7 +781,10 @@ class ProductService(product_pb2_grpc.ProductServiceServicer):
             )
 
     @handle_error
-    @check_access(roles=["user","store","internal"],require_URL_check=False)
+    @check_access(
+    expected_types=["store","customer"],
+    allowed_roles={"store":["admin","staff"]}
+)
     def GetAddOn(self,request,context):
 
         product = Product.objects.get(store_uuid = request.store_uuid,product_uuid = request.product_uuid)
@@ -768,7 +798,10 @@ class ProductService(product_pb2_grpc.ProductServiceServicer):
         )
     
     @handle_error
-    @check_access(roles=["store","internal"])
+    @check_access(
+    expected_types=["store"],
+    allowed_roles={"store":["admin","staff"]},require_resource_match=True
+)
     def UpdateAddOn(self, request, context):
         product = Product.objects.get(store_uuid = request.store_uuid,product_uuid = request.product_uuid)
 
@@ -800,19 +833,20 @@ class ProductService(product_pb2_grpc.ProductServiceServicer):
             )
        
     @handle_error
-    @check_access(roles=["user","store","internal"],require_URL_check=False)
+    @check_access(
+    expected_types=["store","customer"],
+    allowed_roles={"store":["admin","staff"]},require_resource_match=False
+)
     def ListAddOn(self, request, context):
 
         product = Product.objects.get(store_uuid = request.store_uuid,product_uuid = request.product_uuid)
   
-        if request.page < 0:
-            request.page = 1
-        if request.limit < 0:
-            request.limit = 10
+        limit = request.limit if request.limit != "" else 10
+        page = request.page if request.page != "" else 1
         add_ons,next_page,prev_page = Add_on.objects.get_add_ons(
                                                         product = product,
-                                                        limit=request.limit,
-                                                        page = request.page
+                                                        limit=limit,
+                                                        page = page
                                                         )
         logger.info(f"Successfully listed {len(add_ons)} Add-ons For product Id {request.product_uuid}")
         response = product_pb2.ListAddOnResponse(
@@ -823,7 +857,10 @@ class ProductService(product_pb2_grpc.ProductServiceServicer):
         return response
 
     @handle_error
-    @check_access(roles=["store","internal"])
+    @check_access(
+    expected_types=["store"],
+    allowed_roles={"store":["admin","staff"]},require_resource_match=True
+)
     def DeleteAddOn(self, request, context):
         product = Product.objects.get(store_uuid = request.store_uuid,product_uuid = request.product_uuid)
         with transaction.atomic():
@@ -836,7 +873,10 @@ class ProductService(product_pb2_grpc.ProductServiceServicer):
 
 
     @handle_error
-    @check_access(roles = ["store","internal"])
+    @check_access(
+    expected_types=["store"],
+    allowed_roles={"store":["admin","staff"]},require_resource_match=True
+)
     def CreateDietPref(self, request, context):
         with transaction.atomic():
             diet_pref = DietaryPreference.objects.create(
@@ -876,7 +916,10 @@ class ProductService(product_pb2_grpc.ProductServiceServicer):
             )
     
     @handle_error
-    @check_access(roles=["user","store","internal"],require_URL_check=False)
+    @check_access(
+    expected_types=["store","customer"],
+    allowed_roles={"store":["admin","staff"]},require_resource_match=False
+)
     def GetDietPref(self, request, context):
         diet_pref = DietaryPreference.objects.get(diet_pref_uuid=request.diet_pref_uuid,store_uuid=request.store_uuid)
         return product_pb2.DietPrefResponse(
@@ -884,7 +927,10 @@ class ProductService(product_pb2_grpc.ProductServiceServicer):
         )
 
     @handle_error
-    @check_access(roles=["store","internal"])
+    @check_access(
+    expected_types=["store"],
+    allowed_roles={"store":["admin","staff"]},require_resource_match=True
+)
     def UpdateDietPref(self, request, context):
         diet_pref = DietaryPreference.objects.get(diet_pref_uuid=request.diet_pref_uuid,store_uuid=request.store_uuid)
         with transaction.atomic():
@@ -924,16 +970,17 @@ class ProductService(product_pb2_grpc.ProductServiceServicer):
                 dietary_preference=self._diet_pref_to_proto(diet_pref)
             )
     @handle_error
-    @check_access(roles=["user","store","internal"],require_URL_check=False)
+    @check_access(
+    expected_types=["store","customer"],
+    allowed_roles={"store":["admin","staff"]},require_resource_match=False
+)
     def ListDietPref(self, request, context):
-        if request.page < 0:
-            request.page = 1
-        if request.limit < 0:
-            request.limit = 10
+        limit = request.limit if request.limit != "" else 10
+        page = request.page if request.page != "" else 1
         diet_prefs,next_page,prev_page = DietaryPreference.objects.get_dietary_prefs(
                                                         store_uuid=request.store_uuid,
-                                                        limit=request.limit,
-                                                        page = request.page)
+                                                        limit=limit,
+                                                        page = page)
         
         response = product_pb2.ListDietPrefResponse(
             dietary_preferences=[self._diet_pref_to_proto(x) for x in diet_prefs],
@@ -944,7 +991,10 @@ class ProductService(product_pb2_grpc.ProductServiceServicer):
         return response
     
     @handle_error
-    @check_access(roles=["store","internal"])
+    @check_access(
+    expected_types=["store"],
+    allowed_roles={"store":["admin","staff"]},require_resource_match=True
+)
     def DeleteDietPref(self, request, context):
         with transaction.atomic():
             DietaryPreference.objects.get(diet_pref_uuid = request.diet_pref_uuid,store_uuid=request.store_uuid).delete()

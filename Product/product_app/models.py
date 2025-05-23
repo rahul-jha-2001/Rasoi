@@ -186,6 +186,12 @@ class Category(BaseModel):
             models.Index(fields=['store_uuid']),
             models.Index(fields=['category_uuid']),
         ]
+        constraints = [
+        models.UniqueConstraint(
+            fields=['store_uuid', 'display_order'],
+            name='unique_display_order_per_store'
+        ),
+    ]
 
 class Product(BaseModel):    
     product_uuid = models.UUIDField(

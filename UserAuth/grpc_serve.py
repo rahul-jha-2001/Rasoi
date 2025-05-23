@@ -467,7 +467,7 @@ class UserAuthService(AuthServiceServicer):
     @handle_error
     @check_access(
     expected_types=["store"],
-    allowed_roles={"store":["admin","staff"]}
+    allowed_roles={"store":["admin","staff"]},require_resource_match=True
 )
     def UpdateStore(self, request, context):
         store_uuid = request.store_uuid
@@ -512,13 +512,12 @@ class UserAuthService(AuthServiceServicer):
     @handle_error
     @check_access(
     expected_types=["store"],
-    allowed_roles={"store":["admin","staff"]}
+    allowed_roles={"store":["admin","staff"]},require_resource_match=True
 )
     def GetAllStores(self, request, context):
 
         user_uuid = request.user_uuid
 
-        print(request.limit,request.page)
 
         limit = request.limit if request.limit != "" else 10
         page = request.page if request.page != "" else 1
@@ -536,7 +535,7 @@ class UserAuthService(AuthServiceServicer):
     @handle_error
     @check_access(
     expected_types=["store"],
-    allowed_roles={"store":["admin","staff"]}
+    allowed_roles={"store":["admin","staff"]},require_resource_match=True
 )
     def DeleteStore(self, request, context):
         store_uuid = request.store_uuid
@@ -551,7 +550,7 @@ class UserAuthService(AuthServiceServicer):
     @handle_error
     @check_access(
     expected_types=["store"],
-    allowed_roles={"store":["admin","staff"]}
+    allowed_roles={"store":["admin","staff"]},require_resource_match=True
 )
     def CreateAddress(self, request, context):
         store_uuid = request.store_uuid
@@ -584,7 +583,7 @@ class UserAuthService(AuthServiceServicer):
     @handle_error
     @check_access(
     expected_types=["store"],
-    allowed_roles={"store":["admin","staff"]}
+    allowed_roles={"store":["admin","staff"]},require_resource_match=True
 )
     def UpdateAddress(self, request, context):
         address_uuid = request.address_uuid
@@ -616,7 +615,7 @@ class UserAuthService(AuthServiceServicer):
     @handle_error
     @check_access(
     expected_types=["store"],
-    allowed_roles={"store":["admin","staff"]}
+    allowed_roles={"store":["admin","staff"]},require_resource_match=True
 )
     def GetAddress(self, request, context):
         address_uuid = request.address_uuid
@@ -634,7 +633,7 @@ class UserAuthService(AuthServiceServicer):
     @handle_error
     @check_access(
     expected_types=["store"],
-    allowed_roles={"store":["admin","staff"]}
+    allowed_roles={"store":["admin","staff"]},require_resource_match=True
 )
     def DeleteAddress(self, request, context):
         address_uuid = request.address_uuid
@@ -652,7 +651,7 @@ class UserAuthService(AuthServiceServicer):
     @handle_error
     @check_access(
     expected_types=["store"],
-    allowed_roles={"store":["admin","staff"]}
+    allowed_roles={"store":["admin","staff"]},require_resource_match=True
 )
     def GetUser(self, request, context):
         user_uuid = request.user_uuid
@@ -665,7 +664,7 @@ class UserAuthService(AuthServiceServicer):
     @handle_error
     @check_access(
     expected_types=["store"],
-    allowed_roles={"store":["admin","staff"]}
+    allowed_roles={"store":["admin","staff"]},require_resource_match=True
 )
     def UpdateUser(self, request, context):
         user_uuid = request.user_uuid
@@ -689,7 +688,7 @@ class UserAuthService(AuthServiceServicer):
     @handle_error
     @check_access(
     expected_types=["store"],
-    allowed_roles={"store":["admin","staff"]}
+    allowed_roles={"store":["admin","staff"]},require_resource_match=True
 )
     def DeleteUser(self, request, context):
         user_uuid = request.user_uuid

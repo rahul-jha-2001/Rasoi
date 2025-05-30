@@ -10,7 +10,7 @@ from django.db import IntegrityError,DatabaseError
 from django.db import transaction
 from django.conf import settings
 
-from grpc_interceptor.exceptions import GrpcException,Unauthenticated,FailedPrecondition
+from grpc_interceptor.exceptions import GrpcException,Unauthenticated,FailedPrecondition,NotFound
 
 import PIL
 
@@ -38,7 +38,7 @@ from utils.check_access import check_access
 
 import boto3
 from botocore.exceptions import ClientError
-from utils.image_handler import image_handler
+from utils.image_handler import ImageHandler
 
 logger = Logger("GRPC_service")
 
@@ -466,7 +466,8 @@ class ProductService(product_pb2_grpc.ProductServiceServicer):
     expected_types=["store"],
     allowed_roles={"store":["admin","staff"]},require_resource_match=True)
     def CreateProduct(self, request, context):
-
+        
+        logger.info(f"Received request to create product for store_uuid: {request}")
         
         category = Category.objects.get(category_uuid = request.category_uuid,store_uuid =request.store_uuid)
         diet_pref = DietaryPreference.objects.get(diet_pref_uuid=request.diet_pref_uuid,store_uuid =request.store_uuid)
@@ -492,17 +493,17 @@ class ProductService(product_pb2_grpc.ProductServiceServicer):
             
             
             if getattr(request,"image_bytes",None):
-                size = image_handler.check_size(request.image_bytes)
+                size = ImageHandler.check_size(request.image_bytes)
                 if size > 5:
                     raise ValidationError(f"Image size:{size}mb exceeds 5mb")
-                ext = image_handler.check_extension(request.image_bytes)
+                ext = ImageHandler.check_extension(request.image_bytes)
                 if ext not in ['.jpg','.png','.jpeg']:
                     logger.debug(ext)
                     raise ValidationError(f"Unspported File Type {ext}")
             
                 image_name = f"{product.store_uuid}/{product.category.category_uuid}/{product.product_uuid}"
 
-                _,url = image_handler.upload_to_s3(
+                _,url = ImageHandler.upload_to_s3(
                     request.image_bytes,
                     bucket_name=BUCKET_NAME,
                     object_name=image_name,
@@ -554,6 +555,7 @@ class ProductService(product_pb2_grpc.ProductServiceServicer):
         
         else:
             products,next_page,prev_page = Product.objects.get_products(store_uuid=request.store_uuid,
+                                                            category_uuid = None,
                                                             limit=limit,
                                                             page =page)
         response = product_pb2.ListProductsResponse(
@@ -609,17 +611,17 @@ class ProductService(product_pb2_grpc.ProductServiceServicer):
                 product.dietary_prefs.set([diet_pref])
 
             if request.HasField('image_bytes'):
-                size = image_handler.check_size(request.image_bytes)
+                size = ImageHandler.check_size(request.image_bytes)
                 if size > 5:
                     raise ValidationError(f"Image size:{size}mb exceeds 5mb")
-                ext = image_handler.check_extension(request.image_bytes)
+                ext = ImageHandler.check_extension(request.image_bytes)
                 if ext not in ['.jpg','.png','.jpeg']:
                     logger.debug(ext)
                     raise ValidationError(f"Unspported File Type {ext}")
             
                 image_name = f"{product.store_uuid}/{product.category.category_uuid}/{product.product_uuid}"
 
-                _,url = image_handler.upload_to_s3(
+                _,url = ImageHandler.upload_to_s3(
                     request.image_bytes,
                     bucket_name=BUCKET_NAME,
                     object_name=image_name,
@@ -730,12 +732,18 @@ class ProductService(product_pb2_grpc.ProductServiceServicer):
     allowed_roles={"store":["admin","staff"]},require_resource_match=True
 )
     def DeleteCategory(self, request, context):  
-        with transaction.atomic():
-            Category.objects.get(category_uuid = request.category_uuid,store_uuid=request.store_uuid).delete()
+        try:
+            with transaction.atomic():
+                category = Category.objects.get(
+                    category_uuid=request.category_uuid,
+                    store_uuid=request.store_uuid
+                )
+                category.delete()
+                logger.info(f"Deleted Category: {request.category_uuid} from Store: {request.store_uuid}")
+                return empty_pb2.Empty()
+        except Category.DoesNotExist:
+            raise NotFound(f"Category with UUID {request.category_uuid} not found")
         
-            logger.info(f"Deleted Category: {request.category_uuid}")
-            return empty_pb2.Empty()
-    
     @handle_error
     @check_access(
     expected_types=["store","customer"],
@@ -878,42 +886,61 @@ class ProductService(product_pb2_grpc.ProductServiceServicer):
     allowed_roles={"store":["admin","staff"]},require_resource_match=True
 )
     def CreateDietPref(self, request, context):
+        logger.info(f"Received request to create dietary preference for store_uuid: {request.store_uuid}")
         with transaction.atomic():
-            diet_pref = DietaryPreference.objects.create(
-                store_uuid = request.store_uuid,
-                name = request.name,
-                description = request.description,
-            )
-
-            if getattr(request,"icon_image_bytes",None):
-                size = image_handler.check_size(request.icon_image_bytes)
-                if size > 5:
-                    raise ValidationError(f"Image size:{size}mb exceeds 5mb")
-                ext = image_handler.check_extension(request.icon_image_bytes)
-                if ext not in ['.jpg','.png','.jpeg']:
-                    logger.debug(ext)
-                    raise ValidationError(f"Unspported File Type {ext}")
-            
-                image_name = f"{diet_pref.store_uuid}/{diet_pref.diet_pref_uuid}"
-
-                _,url = image_handler.upload_to_s3(
-                    request.icon_image_bytes,
-                    bucket_name=BUCKET_NAME,
-                    object_name=image_name,
-                    aws_access_key=AWS_ACCESS_KEY_ID,
-                    aws_secret_key=AWS_SECRET_ACCESS_KEY,
-                    region_name=REGION_NAME
+            try:
+                diet_pref = DietaryPreference.objects.create(
+                    store_uuid=request.store_uuid,
+                    name=request.name,
+                    description=request.description,
                 )
-                if _:
-                    diet_pref.icon_url = url
-                    diet_pref.full_clean()
-                    diet_pref.save()
+                logger.info(f"Successfully created dietary preference object with diet_pref_uuid: {diet_pref.diet_pref_uuid}")
 
+                if getattr(request, "icon_image_bytes", None):
+                    if request.icon_image_bytes == "":
+                        logger.error("No image bytes provided for dietary preference")
+                        raise ValidationError("No image provided for dietary preference")
+                    logger.debug("Processing icon image bytes for dietary preference")
+                    size = ImageHandler.check_size(request.icon_image_bytes)
+                    logger.debug(f"Icon image size: {size}MB")
+                    if size > 5:
+                        logger.error(f"Image size exceeds limit: {size}MB")
+                        raise ValidationError(f"Image size:{size}MB exceeds 5MB")
+
+                    ext = ImageHandler.check_extension(request.icon_image_bytes)
+                    logger.debug(f"Icon image extension: {ext}")
+                    if ext not in ['.jpg', '.png', '.jpeg']:
+                        logger.warning(f"Unsupported file type: {ext}")
+                        raise ValidationError(f"Unsupported File Type {ext}")
+
+                    image_name = f"{diet_pref.store_uuid}/{diet_pref.diet_pref_uuid}"
+                    logger.debug(f"Uploading icon image to S3 with name: {image_name}")
+
+                    success, url = ImageHandler.upload_to_s3(
+                        request.icon_image_bytes,
+                        bucket_name=BUCKET_NAME,
+                        object_name=image_name,
+                        aws_access_key=AWS_ACCESS_KEY_ID,
+                        aws_secret_key=AWS_SECRET_ACCESS_KEY,
+                        region_name=REGION_NAME
+                    )
+
+                    if success:
+                        diet_pref.icon_url = url
+                        logger.info(f"Icon image uploaded successfully. URL: {url}")
+                        diet_pref.full_clean()
+                        diet_pref.save()
+                        logger.info(f"Updated dietary preference with icon URL: {diet_pref.icon_url}")
+                    else:
+                        logger.error("Failed to upload icon image to S3")
+                        raise ValidationError("Failed to upload icon image to S3")
                 logger.info(f"Created Dietary Preference: {diet_pref.diet_pref_uuid} at store {diet_pref.store_uuid}")
-            
-            return product_pb2.DietPrefResponse(
-                dietary_preference=self._diet_pref_to_proto(diet_pref)
-            )
+                return product_pb2.DietPrefResponse(
+                    dietary_preference=self._diet_pref_to_proto(diet_pref)
+                )
+            except Exception as e:
+                logger.error(f"Error occurred while creating dietary preference: {str(e)}",e)
+                raise
     
     @handle_error
     @check_access(
@@ -933,6 +960,7 @@ class ProductService(product_pb2_grpc.ProductServiceServicer):
 )
     def UpdateDietPref(self, request, context):
         diet_pref = DietaryPreference.objects.get(diet_pref_uuid=request.diet_pref_uuid,store_uuid=request.store_uuid)
+        logger.info(f"Received request to update dietary preference for diet_pref_uuid: {request}")
         with transaction.atomic():
             if request.HasField('name'):
                 diet_pref.name = request.name 
@@ -941,17 +969,17 @@ class ProductService(product_pb2_grpc.ProductServiceServicer):
                 diet_pref.description = request.description
             
             if request.HasField('icon_image_bytes'):
-                size = image_handler.check_size(request.icon_image_bytes)
+                size = ImageHandler.check_size(request.icon_image_bytes)
                 if size > 5:
                     raise ValidationError(f"Image size:{size}mb exceeds 5mb")
-                ext = image_handler.check_extension(request.icon_image_bytes)
+                ext = ImageHandler.check_extension(request.icon_image_bytes)
                 if ext not in ['.jpg','.png','.jpeg']:
                     logger.debug(ext)
                     raise ValidationError(f"Unspported File Type {ext}")
             
                 image_name = f"{diet_pref.store_uuid}/{diet_pref.diet_pref_uuid}"
 
-                _,url = image_handler.upload_to_s3(
+                _,url = ImageHandler.upload_to_s3(
                     request.icon_image_bytes,
                     bucket_name=BUCKET_NAME,
                     object_name=image_name,
@@ -969,6 +997,7 @@ class ProductService(product_pb2_grpc.ProductServiceServicer):
             return product_pb2.DietPrefResponse(
                 dietary_preference=self._diet_pref_to_proto(diet_pref)
             )
+        
     @handle_error
     @check_access(
     expected_types=["store","customer"],

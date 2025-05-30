@@ -238,7 +238,7 @@ class Product(BaseModel):
         validators=[MinValueValidator(0)])
     
     category = models.ForeignKey(Category, 
-                                 on_delete=models.PROTECT,
+                                 on_delete=models.CASCADE,
                                  null= False,
                                  blank=False, 
                                  related_name="products", 

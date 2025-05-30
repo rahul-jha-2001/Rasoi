@@ -2,6 +2,7 @@ package main
 
 import (
 	// "context"
+	
 	"context"
 	"encoding/json"
 	"fmt"
@@ -17,6 +18,8 @@ import (
 
 	// "google.golang.org/grpc/metadata"
 	"github.com/rs/cors"
+	// "bytes"
+	// "io"
 )
 
 // var (
@@ -90,17 +93,25 @@ func LogRequestMiddleware(next http.Handler) http.Handler {
 			statusCode:     200, // Default status code
 		}
 
-		// Get IP address
-		ipAddress := getIPAddress((r))
-
-		// Get user agent and other request details
+		// Get IP address and request metadata
+		ipAddress := getIPAddress(r)
 		userAgent := r.UserAgent()
 		protocol := r.Proto
 		host := r.Host
 		contentType := r.Header.Get("Content-Type")
 		referer := r.Referer()
 
-		// Build initial log string with enhanced information
+		// Read and save the request body
+		// var bodyBytes []byte
+		// if r.Body != nil {
+		// 	bodyBytes, _ = io.ReadAll(r.Body)
+		// }
+		// bodyString := string(bodyBytes)
+
+		// // Restore body so it can be read again
+		// r.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
+
+		// Build initial log string
 		str := fmt.Sprintf(
 			"%s %s [%s] Host:[%s] Protocol:[%s] UserAgent:[%s] ContentType:[%s] ",
 			r.Method,
@@ -112,29 +123,28 @@ func LogRequestMiddleware(next http.Handler) http.Handler {
 			contentType,
 		)
 
-		// Add referer if present
 		if referer != "" {
 			str += fmt.Sprintf("Referer:[%s] ", referer)
 		}
 
-		// Add query parameters
 		queryParams := r.URL.Query()
 		if len(queryParams) > 0 {
 			str += "QueryParams:["
 			for key, value := range queryParams {
 				str += fmt.Sprintf("%s:%s,", key, value[0])
 			}
-			str = str[:len(str)-1] + "] " // Remove last comma and close bracket
+			str = str[:len(str)-1] + "] "
 		}
 
-		// Process the request
 		next.ServeHTTP(wrappedWriter, r)
 
-		// Add status code to log after request is processed
+		// Append status code
 		str += fmt.Sprintf("Status:[%d]", wrappedWriter.statusCode)
 		log.Println("INFO:", str)
+
 	})
 }
+
 
 func VerifyJWTAndGetClaims(tokenString string, secretKey []byte) (jwt.MapClaims, error) {
 	// Parse the token with the provided secret key
@@ -220,7 +230,7 @@ func AuthMiddleware(next http.Handler) http.Handler {
 			r.Header.Set("Grpc-Metadata-"+key, strVal)
 		}
 
-		log.Println(r.Header)
+		// log.Println(r.Header)
 		// Continue to next handler
 		next.ServeHTTP(w, r)
 	})
@@ -235,6 +245,7 @@ func CORSMIddleware(next http.Handler) http.Handler {
 			http.MethodPut,
 			http.MethodDelete,
 			http.MethodOptions,
+			http.MethodPatch,
 		},
 		AllowedHeaders: []string{
 			"Accept",

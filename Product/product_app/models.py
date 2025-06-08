@@ -108,7 +108,7 @@ class DietaryPreference(BaseModel):
     
     store_uuid = models.UUIDField(null=False, blank=True)
     diet_pref_uuid = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
-    name = models.CharField(max_length=50, unique=True,blank=False)
+    name = models.CharField(max_length=50,blank=False)
     description = models.TextField(blank=True)
     icon_url = models.URLField(null=True, blank=True)
 
@@ -137,6 +137,9 @@ class DietaryPreference(BaseModel):
             models.Index(fields=['diet_pref_uuid']),
             models.Index(fields=['store_uuid']),
             models.Index(fields=['name']),
+        ]
+        constraints = [
+            models.UniqueConstraint(fields=['store_uuid', 'name'], name='unique_store_uuid_name')
         ]
 
 class Category(BaseModel):

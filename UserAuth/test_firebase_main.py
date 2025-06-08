@@ -1,23 +1,14 @@
-
 import sys
 from pathlib import Path
-
 import pytest
+
 from firebase_main import FireBaseAuthManager
-from firebase_main import UserRecord
-from Proto.user_auth_pb2_grpc import AuthServiceStub
-# Keep your path setup code
+from firebase_admin.auth import UserRecord  # ✅ Corrected import
+
+# Skip unwanted dirs from path
 SKIP_DIRS = {
-    '__pycache__',
-    'venv',
-    'env',
-    '.git',
-    '.idea',
-    '.vscode',
-    'logs',
-    'media',
-    'static',
-    'migrations',
+    '__pycache__', 'venv', 'env', '.git', '.idea', '.vscode',
+    'logs', 'media', 'static', 'migrations',
 }
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -26,89 +17,57 @@ for item in BASE_DIR.iterdir():
         sys.path.append(str(item))
 
 
-
-""" 
-test cases for the fiberbase main class
-"""
+# ===================== Fixtures =====================
 
 @pytest.fixture(scope="session")
 def firebase_main_instance() -> FireBaseAuthManager:
-    """Create an instance of the FirebaseMain class"""
     return FireBaseAuthManager()
 
 @pytest.fixture(scope="session")
 def email():
-    """Provide a test email"""
     return "test@gmail.com"
+
 @pytest.fixture(scope="session")
 def password():
-    """Provide a test password"""
     return "password123"
-@pytest.fixture(scope="session")
+
+@pytest.fixture(scope="function")
 def user(firebase_main_instance, email, password):
-    """Create a test user"""
-    user = firebase_main_instance.create_user(
-        email=email,
-        password=password
-    )
+    """Creates and cleans up a Firebase user"""
+    user = firebase_main_instance.create_user(email=email, password=password)
     yield user
     firebase_main_instance.delete_user(user.uid)
 
 
+# ===================== Tests =====================
 
 def test_create_user(firebase_main_instance, email, password):
-    user = firebase_main_instance.create_user(
-        email= email,
-        password= password
-    )
+    user = firebase_main_instance.create_user(email=email, password=password)
     assert user is not None
     assert user.email == email
     firebase_main_instance.delete_user(user.uid)
 
-
-
-def test_update_user(firebase_main_instance, user, email, password):
-    """Test user update"""
-    email = "test@gmail.com"
-    password = "newpassword123"
+def test_update_user(firebase_main_instance, user):
+    new_password = "newpassword123"
     updated_user = firebase_main_instance.update_user(
         uid=user.uid,
-        email=email,
-        password=password
+        email=user.email,
+        password=new_password
     )
     assert updated_user is not None
-    assert updated_user.email == email
+    assert updated_user.email == user.email
 
-
-def test_list_users(firebase_main_instance,user):
-    """Test listing users"""
+def test_list_users(firebase_main_instance, user):
     users = firebase_main_instance.list_users(max_results=10)
     assert users is not None
-    assert len(users) > 0
-    for user in users:
-        assert isinstance(user, UserRecord)
-
-# def test_delete_user(firebase_main_instance, email, password):
-#     """Test user deletion"""
-#     user = firebase_main_instance.create_user(
-#         email=email,
-#         password=password
-#     )
-#     assert user is not None
-#     firebase_main_instance.delete_user(user.uid)
-
-
+    assert any(u.uid == user.uid for u in users)
+    assert all(isinstance(u, UserRecord) for u in users)
 
 def test_set_custom_claims(firebase_main_instance, user):
-    """Test setting custom claims"""
     claims = {"role": "admin"}
-    firebase_main_instance.add_custom_claims(
-        firebase_uid=user.uid,
-        claims=claims
-    )
-    user = firebase_main_instance.get_user_by_UID(user.uid)
-    assert user is not None
-    assert user.custom_claims == claims
-    assert user.custom_claims == claims
-    assert user.custom_claims is not None
-    assert user.custom_claims["role"] == "admin"
+    firebase_main_instance.add_custom_claims(uid=user.uid, claims=claims)
+    updated_user = firebase_main_instance.get_user_by_UID(user.uid)
+
+    assert updated_user is not None
+    assert updated_user.custom_claims is not None
+    assert updated_user.custom_claims.get("role") == "admin"

@@ -10,7 +10,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 class ImageHandler:
-    ALLOWED_EXTENSIONS = {'.jpg', '.jpeg', '.png'}
+    ALLOWED_EXTENSIONS = {'.jpg', '.jpeg', '.png','.webp'}
 
     @staticmethod
     def check_size(bytes_data: bytes) -> float:

@@ -1,181 +1,134 @@
-
+from datetime import timedelta
 import firebase_admin
 from firebase_admin import credentials, auth
-from firebase_admin.auth import UserRecord, UserNotFoundError, InvalidIdTokenError
-from firebase_admin.auth import ExpiredIdTokenError, RevokedIdTokenError
-from firebase_admin.auth import CertificateFetchError
-
+from firebase_admin.auth import UserRecord, UserNotFoundError
+from firebase_admin.auth import ExpiredIdTokenError, RevokedIdTokenError, InvalidIdTokenError, CertificateFetchError, InvalidSessionCookieError, InvalidSessionCookieError
+from firebase_admin.auth import UserNotFoundError, InvalidIdTokenError, ExpiredIdTokenError, RevokedIdTokenError, CertificateFetchError
 from dotenv import load_dotenv
-load_dotenv()
 from utils.logger import Logger
+
+load_dotenv()
 logger = Logger(__name__)
 
 class FireBaseAuthManager:
-    def __init__(self,cert_file:str = None):
-        # Initialize Firebase Admin SDK
-        self.cred = credentials.Certificate("rasoi-auth-firebase-adminsdk-fbsvc-2131b3731f.json")
-        firebase_admin.initialize_app(self.cred)
+    def __init__(self, cert_file: str = "rasoi-auth-firebase-adminsdk-fbsvc-2131b3731f.json"):
+        if not firebase_admin._apps:
+            cred = credentials.Certificate(cert_file)
+            firebase_admin.initialize_app(cred)
         self.auth = auth
 
 
-    def vetify_token_and_set_claims(self,id_token,claims):
-        # Verify a user and set custom claims
+    def get_user_by_UID(self, uid) -> UserRecord:
+        """
+        Fetch Firebase user by UID.
+        """
         try:
-            uid = self._verify_user_token(id_token)
             user = self.auth.get_user(uid)
-            if user:
-                self.auth.set_custom_user_claims(uid, claims)
-                logger.info(f"Successfully verified user and set claims: {uid}")
-                return user.id
-            else:
-                raise UserNotFoundError(f"User not found: {uid}")
+            logger.info(f"Fetched Firebase user: {uid}")
+            return user
+        except UserNotFoundError as e:
+            logger.warning(f"Firebase user not found: {uid}")
+            raise e
         except Exception as e:
-            logger.error(f"Error verifying user and setting claims: {e}",e)
+            logger.error(f"Error fetching user by UID: {str(e)}", e)
             raise e
 
-    def verify_user_token(self,id_token):
+
+    # ========== SESSION COOKIE ==========
+    def create_session_cookie(self, id_token: str, expires_in_seconds: int = 60 * 60 * 24 * 5) -> str:
         try:
-            decoded_token = auth.verify_id_token(id_token)
-            uid = decoded_token['uid']
-            return uid
-        except auth.InvalidIdTokenError:
+            expires_in = timedelta(seconds=expires_in_seconds)
+            return self.auth.create_session_cookie(id_token, expires_in=expires_in)
+        except Exception as e:
+            logger.error("Failed to create session cookie", e)
+            raise Exception("Failed to create session cookie") from e
+
+    def verify_session_cookie(self, session_cookie: str, check_revoked: bool = True):
+        try:
+            return self.auth.verify_session_cookie(session_cookie, check_revoked=check_revoked)
+        except InvalidSessionCookieError:
+            raise ValueError("Invalid or expired session cookie")
+        except Exception as e:
+            raise e
+
+    # ========== TOKEN HANDLING ==========
+    def verify_user_token(self, id_token: str):
+        try:
+            decoded_token = self.auth.verify_id_token(id_token)
+            return decoded_token["uid"]
+        except InvalidIdTokenError:
             raise ValueError("Invalid token")
-        except auth.ExpiredIdTokenError:
-            raise ValueError("Token expired")
-        except auth.RevokedIdTokenError:
-            raise ValueError("Token revoked")
-        except auth.CertificateFetchError:
+        except CertificateFetchError:
             raise ValueError("Certificate error")
         except Exception as e:
             raise e
-    
-    def get_user_by_UID(self,uid) -> UserRecord:
-        # Verify a user and get their data
-        # Get a user by UID
-        try:
-            user = self.auth.get_user(uid)
-            logger.info(f"Successfully fetched user data: {user.uid}")
-            return user
-        except UserNotFoundError as e:
-            raise e
-        except Exception as e:
-            raise e 
-    
-    def add_store_claims(self, id_token, store_uuids):
-        try:
-            uid = self.verify_user_token(id_token)
-            user = self.auth.get_user(uid)
-            if not user:
-                raise UserNotFoundError(f"User not found: {uid}")
 
-            # Grab whatever claims the user already has
+    # ========== CLAIM MANAGEMENT ==========
+    def set_custom_claims(self, uid: str, claims: dict):
+        try:
+            self.auth.set_custom_user_claims(uid, claims)
+            logger.info(f"Set claims for user: {uid}")
+        except Exception as e:
+            logger.error(f"Failed to set claims for {uid}", e)
+            raise
+
+    def get_user_claims(self, uid: str):
+        try:
+            user = self.auth.get_user(uid)
+            return user.custom_claims or {}
+        except Exception as e:
+            raise e
+
+    def add_custom_claims(self, uid: str, claims: dict):
+        try:
+            user = self.auth.get_user(uid)
             existing = user.custom_claims or {}
-
-            # Merge or extend the store_uuids list
-            # if "store_uuids" in existing:
-            #     existing_store_uuids = set(existing.get("store_uuids", []))
-            #     store_uuids = list(existing_store_uuids.union(store_uuids))
-
-            # Build a new claims dict by merging in existing claims
-            new_claims = {
-                **existing,                # keeps user_uuid, other roles, etc.
-                "store_uuids": store_uuids # updated list
-            }
-
-            # Now this replaces all claims with new_claims—but since new_claims
-            # starts with existing, nothing gets lost
-            self.auth.set_custom_user_claims(uid, new_claims)
-            logger.info(f"Successfully updated store claims for user: {uid}")
-
+            combined = {**existing, **claims}
+            self.auth.set_custom_user_claims(uid, combined)
+            logger.info(f"Updated claims for {uid}")
         except Exception as e:
             raise e
 
-        
-    def get_user_claims(self,uid):
-        # Get user claims
+    # ========== USER MANAGEMENT ==========
+    def get_user_by_uid(self, uid: str) -> UserRecord:
         try:
-            user = self.auth.get_user(uid)
-            if not user:
-                raise UserNotFoundError(f"User not found: {uid}")
-            claims = user.custom_claims
-            logger.info(f"Successfully fetched user claims: {claims}")
-            return claims
-        except Exception as e:
-            raise e
-    
-    def add_custom_claims(self,firebase_uid,claims):
-        # Add custom claims to a user
-        try:
-            user = self.auth.get_user(firebase_uid)
-            if not user:
-                raise UserNotFoundError(f"User not found: {firebase_uid}")
-            # Check if the user already has custom claims
-            existing_claims = user.custom_claims or {}
-            # Merge existing claims with new ones
-            claims = {**existing_claims, **claims}
-            
-            self.auth.set_custom_user_claims(firebase_uid, claims)
-            
-            logger.info(f"Successfully updated custom claims for user: {firebase_uid}")
-        
-        except Exception as e:
-            raise e
-    
-
-    def create_user(self,email,password) -> UserRecord:
-        # Create a new user
-        try:
-            user = self.auth.create_user(
-                email=email,
-                password=password
-            )
-            logger.info(f"Successfully created user: {user.uid}")
-            return user
-        except Exception as e:
-            raise e
-    
-    def update_user(self,uid,email,password) -> UserRecord:
-        # Update user details
-        try:
-            user = self.auth.update_user(
-                uid=uid,
-                email=email,
-                password=password
-            )
-            logger.info(f"Successfully updated user: {user.uid}")
-            return user
+            return self.auth.get_user(uid)
         except UserNotFoundError as e:
             raise e
         except Exception as e:
             raise e
-    
-    def list_users(self, max_results=1000)  -> list[UserRecord]:
-        # List all users
+
+    def create_user(self, email: str, password: str) -> UserRecord:
         try:
-            page = self.auth.list_users(max_results=max_results)
-            users = page.users
-            logger.info(f"Successfully listed {len(users)} users")
-            return users
+            return self.auth.create_user(email=email, password=password)
         except Exception as e:
             raise e
-    def delete_user(self,uid)  -> None:
-        # Delete a user by UID
+
+    def update_user(self, uid: str, email: str, password: str) -> UserRecord:
+        try:
+            return self.auth.update_user(uid=uid, email=email, password=password)
+        except Exception as e:
+            raise e
+
+    def delete_user(self, uid: str):
         try:
             self.auth.delete_user(uid)
-            logger.info(f"Successfully deleted user: {uid}")
-        except UserNotFoundError as e:
-            raise e
         except Exception as e:
             raise e
-    
-    def get_access_token(self,uid) -> str:
-        # Get access token for a user
+
+    def list_users(self, max_results=1000) -> list[UserRecord]:
         try:
-            user = self.auth.get_user(uid)
-            if not user:
-                raise UserNotFoundError(f"User not found: {uid}")
-            access_token = auth.create_custom_token(uid)
-            logger.info(f"Successfully created access token for user: {uid}")
-            return access_token
+            page = self.auth.list_users(max_results=max_results)
+            return page.users
         except Exception as e:
             raise e
+    def create_custom_token(self, uid: str) -> bytes:
+        """
+        Generate a custom Firebase token for the given UID.
+        Used to force a token refresh after setting custom claims.
+        """
+        try:
+            return self.auth.create_custom_token(uid)
+        except Exception as e:
+            logger.error(f"Failed to create custom token for UID={uid}", e)
+            raise Exception("Failed to create custom token") from e

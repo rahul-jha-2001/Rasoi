@@ -484,41 +484,6 @@
           "ProductService"
         ]
       },
-      "delete": {
-        "operationId": "ProductService_DeleteDietPref",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "type": "object",
-              "properties": {}
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "storeUuid",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "dietPrefUuid",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "ProductService"
-        ]
-      },
       "post": {
         "operationId": "ProductService_CreateDietPref",
         "responses": {
@@ -579,29 +544,12 @@
             "type": "string"
           },
           {
-            "name": "dietPrefUuid",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "name",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "description",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "iconImage",
-            "in": "query",
-            "required": false,
-            "type": "string",
-            "format": "byte"
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ProductServiceUpdateDietPrefBody"
+            }
           }
         ],
         "tags": [
@@ -646,6 +594,43 @@
             "required": false,
             "type": "integer",
             "format": "int32"
+          }
+        ],
+        "tags": [
+          "ProductService"
+        ]
+      }
+    },
+    "/v1/store/{storeUuid}/dietpref/{dietPrefUuid}": {
+      "delete": {
+        "operationId": "ProductService_DeleteDietPref",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "type": "object",
+              "properties": {}
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "storeUuid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "dietPrefUuid",
+            "in": "path",
+            "required": true,
+            "type": "string"
           }
         ],
         "tags": [
@@ -1130,6 +1115,24 @@
         },
         "isActive": {
           "type": "boolean"
+        }
+      }
+    },
+    "ProductServiceUpdateDietPrefBody": {
+      "type": "object",
+      "properties": {
+        "dietPrefUuid": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "iconImageBytes": {
+          "type": "string",
+          "format": "byte"
         }
       }
     },

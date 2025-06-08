@@ -2,55 +2,19 @@ package main
 
 import (
 	// "context"
-	
-	"context"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net"
 	"net/http"
+	"os"
+	"regexp"
 	"strings"
 
-	// "google.golang.org/grpc/metadata"
-
-
 	jwt "github.com/golang-jwt/jwt/v5"
-
-	// "google.golang.org/grpc/metadata"
 	"github.com/rs/cors"
-	// "bytes"
-	// "io"
 )
 
-// var (
-// 	app  *firebase.App
-// 	once sync.Once
-// )
-
-// // InitializeFirebaseApp initializes the Firebase App only once
-// func InitializeFirebaseApp() *firebase.App {
-//     once.Do(func() {
-//         // Load environment variables from .env file
-//         err := godotenv.Load()
-//         if err != nil {
-//             log.Printf("Error loading .env file: %v\n", err)
-//         }
-
-//         ctx := context.Background()
-//         credentialsPath := os.Getenv("FIREBASE_CREDENTIALS_PATH")
-//         if credentialsPath == "rasoi-auth-firebase-adminsdk-fbsvc-2131b3731f.json" {
-//             log.Fatal("FIREBASE_CREDENTIALS_PATH environment variable is not set")
-//         }
-
-//         opt := option.WithCredentialsFile(credentialsPath)
-//         app, err = firebase.NewApp(ctx, nil, opt)
-//         if err != nil {
-//             log.Printf("Error initializing Firebase app: %v\n", err)
-//             return
-//         }
-//     })
-//     return app
-// }
 // responseWriter wraps http.ResponseWriter to capture the status code
 type responseWriter struct {
 	http.ResponseWriter
@@ -146,95 +110,94 @@ func LogRequestMiddleware(next http.Handler) http.Handler {
 }
 
 
-func VerifyJWTAndGetClaims(tokenString string, secretKey []byte) (jwt.MapClaims, error) {
-	// Parse the token with the provided secret key
+func VerifyJWTAndGetClaims(tokenString string, secretKey string, algorithm string) (jwt.MapClaims, error) {
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-		// Validate the signing method is what you expect
-		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+		// Ensure the token uses the expected algorithm
+		if token.Method.Alg() != algorithm {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 		}
-		return secretKey, nil
+		return []byte(secretKey), nil
 	})
 
-	if err != nil {
-		return nil, fmt.Errorf("token verification failed: %w", err)
+	if err != nil || !token.Valid {
+		return nil, fmt.Errorf("invalid or failed to parse token: %w", err)
 	}
 
-	// Check if the token is valid
-	if !token.Valid {
-		return nil, fmt.Errorf("invalid token")
-	}
-
-	// Extract the claims
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok {
-		return nil, fmt.Errorf("invalid token claims structure")
+		return nil, fmt.Errorf("invalid claims format")
 	}
 
 	return claims, nil
 }
 
+
 func AuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Skip auth for certain paths (optional)
-		if strings.Contains(r.URL.Path, "auth") {
-			log.Println("Skipping JWT Auth")
+		markInternal := func() {
+			r.Header.Set("Grpc-Metadata-type", "internal")
+			log.Println("Public/internal access granted:", r.URL.Path)
 			next.ServeHTTP(w, r)
+		}
+
+		JWT_SECRET_KEY := os.Getenv("JWT_SECRET_KEY")
+		JWT_ALGO := os.Getenv("JWT_ALGO")
+		// Allow public GET requests to specific endpoints
+		storeUuidRegex := regexp.MustCompile(`^/v1/store/[a-fA-F0-9\-]+$`)
+		path := r.URL.Path
+
+		if r.Method == http.MethodGet &&
+			(strings.HasPrefix(path, "/v1/store/") &&
+				(strings.Contains(path, "/category/") ||
+					strings.Contains(path, "/product/") ||
+					strings.Contains(path, "/add_on/") ||
+					strings.Contains(path, "/dietpref") ||
+					storeUuidRegex.MatchString(path))) {
+			log.Println("Skipping JWT Auth for public GET:", path)
+			markInternal()
 			return
 		}
 
+		// Allow unauthenticated /auth routes
+		if strings.Contains(path, "/auth") {
+			markInternal()
+			return
+		}
+
+		// Expect Authorization: Bearer <token>
 		authHeader := r.Header.Get("Authorization")
 		if authHeader == "" {
 			http.Error(w, "Authorization header required", http.StatusUnauthorized)
 			return
 		}
 
-		parts := strings.Split(authHeader, " ")
+		parts := strings.SplitN(authHeader, " ", 2)
 		if len(parts) != 2 || parts[0] != "Bearer" {
-			http.Error(w, "Authorization header format must be 'Bearer {token}'", http.StatusUnauthorized)
+			http.Error(w, "Authorization header must be 'Bearer <token>'", http.StatusUnauthorized)
 			return
 		}
+
 		tokenString := parts[1]
-
-		// Initialize Firebase App
-		// app = InitializeFirebaseApp()
-		client, err := app.Auth(context.Background())
+		claims, err := VerifyJWTAndGetClaims(tokenString, JWT_SECRET_KEY,JWT_ALGO)
 		if err != nil {
-			log.Println("Firebase Auth client initialization failed:", err)
-			http.Error(w, "Internal server error", http.StatusInternalServerError)
-			return
-		}
-
-		// Verify the ID Token
-		token, err := client.VerifyIDToken(context.Background(), tokenString)
-		if err != nil {
-			log.Println("Token verification failed:", err)
+			log.Println("JWT verification failed:", err)
 			http.Error(w, "Unauthorized: invalid token", http.StatusUnauthorized)
 			return
 		}
 
-		// Set common user data into headers
-		r.Header.Set("Grpc-Metadata-uid", token.UID)
-
-		// Set custom claims if available
-		for key, value := range token.Claims {
-			var strVal string
-
-			switch v := value.(type) {
-			case []interface{}: // if it's a list
-				marshaled, _ := json.Marshal(v)
-				strVal = string(marshaled)
-			default:
-				strVal = fmt.Sprintf("%v", v)
-			}
+		// Set gRPC metadata headers
+		for key, val := range claims {
+			strVal := fmt.Sprintf("%v", val)
 			r.Header.Set("Grpc-Metadata-"+key, strVal)
 		}
 
-		// log.Println(r.Header)
-		// Continue to next handler
+		// Optional: mark the source
+		r.Header.Set("Grpc-Metadata-auth-source", "custom")
+
 		next.ServeHTTP(w, r)
 	})
 }
+
 
 func CORSMIddleware(next http.Handler) http.Handler {
 	c := cors.New(cors.Options{

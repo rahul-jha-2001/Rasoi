@@ -1,6 +1,8 @@
 import sys
 import os
 import functools
+import json
+
 sys.path.append(os.getcwd())
 import django
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'UserAuth.settings')
@@ -27,10 +29,11 @@ from Proto import user_auth_pb2
 from Proto import user_auth_pb2_grpc 
 from Proto.user_auth_pb2_grpc import AuthServiceServicer, add_AuthServiceServicer_to_server
 from Proto.user_auth_pb2 import store,address,user
-from User.models import User, Store ,Address, StoreRole
+from User.models import User, Store ,Address, StoreRole,Customer
 
 from utils.logger import Logger
 from utils.check_access import check_access
+from utils.jwt_manager import JWTManager
 
 from firebase_admin.auth import UserRecord, UserNotFoundError, InvalidIdTokenError
 from firebase_admin.auth import ExpiredIdTokenError, RevokedIdTokenError
@@ -40,6 +43,10 @@ from firebase_admin.auth import CertificateFetchError
 
 logger = Logger("GRPC_Service")
 
+JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY")
+JWT_ALGO = os.getenv("JWT_ALGO",'HS256')
+
+
 
 def handle_error(func): 
     @functools.wraps(func)
@@ -48,7 +55,11 @@ def handle_error(func):
             return func(self, request, context)
         
         except User.DoesNotExist:
-            logger.warning(f"User with UUID {request.user_uuid} does not exist")
+            logger.warning(f"User does not exist")
+            context.abort(grpc.StatusCode.NOT_FOUND, "User Not Found")
+
+        except Customer.DoesNotExist:
+            logger.warning(f"customer does not exist")
             context.abort(grpc.StatusCode.NOT_FOUND, "User Not Found")
 
         except Store.DoesNotExist:
@@ -96,8 +107,6 @@ def handle_error(func):
         except TimeoutError as e:
             logger.warning(f"Timeout Error: {str(e)}")
             context.abort(grpc.StatusCode.DEADLINE_EXCEEDED, "Request timed out")
-            
-
             
         except grpc.RpcError as e:
             logger.error(f"RPC Error: {str(e)}")
@@ -148,6 +157,8 @@ def handle_error(func):
 class UserAuthService(AuthServiceServicer):
     def __init__(self):
         self.firebase_auth_manager = firebase_main.FireBaseAuthManager()
+        self.jwt_manager = JWTManager(secret_key=JWT_SECRET_KEY,algorithm=JWT_ALGO)
+        logger.info(f"{JWT_ALGO},{JWT_SECRET_KEY}")
     
     def _verify_wire_format(self,GRPC_message,GRPC_message_type,context_info = ""):
         """
@@ -185,7 +196,6 @@ class UserAuthService(AuthServiceServicer):
             except:
                 pass
             raise
-
 
     def _address_to_proto(self, address_obj):
         try:
@@ -348,23 +358,22 @@ class UserAuthService(AuthServiceServicer):
 
 
     @handle_error
-    def CreateUser(self, request, context):
+    def EmailSignUp(self, request, context):
+        logger.info(request)
         firebase_uid = request.firebase_uid
         token = getattr(request.token, "token", request.token)
 
         logger.info(f"CreateUser called for firebase_uid={firebase_uid}")
         logger.debug(f"Raw token: {token}")
 
-        # Verify the token’s UID matches the requested UID
+        # 1. Verify the ID token and UID match
         firebase_uid_from_token = self.firebase_auth_manager.verify_user_token(id_token=token)
         logger.debug(f"Token verified; firebase_uid_from_token={firebase_uid_from_token}")
         if firebase_uid != firebase_uid_from_token:
-            logger.warning(
-                f"Firebase UID mismatch: request={firebase_uid}, token={firebase_uid_from_token}"
-            )
+            logger.warning(f"Firebase UID mismatch: request={firebase_uid}, token={firebase_uid_from_token}")
             raise Unauthenticated("Firebase UID mismatch")
 
-        # Create the user in the database
+        # 2. Create user in DB
         with transaction.atomic():
             firebase_user = self.firebase_auth_manager.get_user_by_UID(firebase_uid)
             if not firebase_user:
@@ -374,42 +383,252 @@ class UserAuthService(AuthServiceServicer):
             user = User.objects.create(
                 firebase_uid=firebase_uid,
                 email=firebase_user.email
-
             )
             logger.info(f"Created User record; user_uuid={user.user_uuid}")
 
+            # 3. Set Firebase custom claims
             claims = {
                 "user_uuid": str(user.user_uuid),
                 "firebase_uid": str(firebase_uid),
-                "type":"store",
+                "type": "store",
                 "role": "admin",
-                "store_uuids" : [],
+                "store_uuids": json.dumps([]),
             }
-            # Attach the new user_uuid as a custom claim
-            self.firebase_auth_manager.add_custom_claims(user.firebase_uid,claims)
-            logger.info(f"Set custom claims for firebase_uid={firebase_uid}")
+        # 4. Create session cookie (7 days)
+        session_cookie = self.firebase_auth_manager.create_session_cookie(token,60*60*24*7)
+        jwt_token = self.jwt_manager.create_jwt(claims=claims,expires_in=1800)
 
-        return empty_pb2.Empty()
+        logger.info("Returning session and JWT")
+
+        return user_auth_pb2.AccessTokenResponse(
+            token=jwt_token,
+            session_token=session_cookie,
+        )
 
     @handle_error
-    def VerifyToken(self, request, context):
+    def EmailSignIn(self, request, context):
+        firebase_uid = request.firebase_uid
         token = getattr(request.token, "token", request.token)
 
-        logger.info("VerifyToken called")
+        logger.info(f"Sign-In called for firebase_uid={firebase_uid}")
         logger.debug(f"Raw token: {token}")
 
-        # Verify the token
-        firebase_id = self.firebase_auth_manager.verify_user_token(id_token=token)
-        logger.debug(f"Token verified; firebase_id={firebase_id}")
+        # 1. Verify the ID token and UID match
+        firebase_uid_from_token = self.firebase_auth_manager.verify_user_token(id_token=token)
+        logger.debug(f"Token verified; firebase_uid_from_token={firebase_uid_from_token}")
+        
+        if firebase_uid != firebase_uid_from_token:
+            logger.warning(f"Firebase UID mismatch: request={firebase_uid}, token={firebase_uid_from_token}")
+            raise Unauthenticated("Firebase UID mismatch")
+        user = self.firebase_auth_manager.get_user_by_UID(firebase_uid)
 
-        # Ensure the user exists
-        user = self.firebase_auth_manager.get_user_by_UID(firebase_id)
         if not user:
-            logger.warning(f"User not found for firebase_id={firebase_id}")
-            raise Unauthenticated("User token could not be verified")
+            logger.warning(f"No user found for firebase UID: {firebase_uid}")
+            raise Unauthenticated("User not found")
 
-        logger.info(f"VerifyToken succeeded for firebase_id={firebase_id}")
-        return empty_pb2.Empty()
+        user_db:User = User.objects.prefetch_related('stores').get(firebase_uid=firebase_uid)
+
+        store_uuids = user_db.stores.values_list('store_uuid', flat=True)
+        store_uuids = [str(store_uuid) for store_uuid in store_uuids]
+
+        claims = {
+            "firebase_uid": firebase_uid,
+            "type": "store",
+            "role": "admin",
+            "user_uuid": str(user_db.user_uuid),
+            "store_uuids": json.dumps(store_uuids),  # ✅ fix
+        }
+
+
+        jwt_token = self.jwt_manager.create_jwt(claims=claims,expires_in=1800)
+        session_cookie = self.firebase_auth_manager.create_session_cookie(token,60*60*24*7)
+
+        return user_auth_pb2.AccessTokenResponse(session_token=session_cookie,
+                                                 token = jwt_token
+                                                 )
+
+    @handle_error
+    def OtpSignup(self, request, context):
+        token = request.token
+        name = request.name
+        phone_number = request.phone_number
+
+        logger.info("OtpSignup called")
+
+
+        uid = self.firebase_auth_manager.verify_user_token(token)
+        user = self.firebase_auth_manager.get_user_by_UID(uid)
+
+        if not user:
+            raise Unauthenticated("User not found in Firebase")
+
+        with transaction.atomic():
+            
+            customer, created = Customer.objects.update_or_create(
+                        firebase_UID=uid,
+                        defaults={"phone_number": phone_number, "name": name}
+                    )
+
+        claims = {
+            "type": "customer",
+            "firebase_uid": uid,
+            "user_phone_no":phone_number,
+            "name":name
+
+        }
+
+        session_cookie = self.firebase_auth_manager.create_session_cookie(token,60*60*24*7)
+        jwt_token = self.jwt_manager.create_jwt(claims=claims,expires_in=1800)
+        
+
+        # Done — now client should refresh ID token and call VerifyToken
+       
+        return user_auth_pb2.AccessTokenResponse(
+                token=jwt_token,
+                session_token=session_cookie,
+            )
+
+
+    @handle_error
+    def RefreshUserSession(self, request, context):
+        token = request.session_token
+        logger.info("RefreshUserSession called")
+        uid = self.firebase_auth_manager.verify_user_token(token)
+        user = self.firebase_auth_manager.get_user_by_UID(uid)
+
+        if not user:
+            logger.warning(f"No user found for firebase UID: {uid}")
+            raise Unauthenticated("User not found")
+
+        user_db:User = User.objects.prefetch_related('stores').get(firebase_uid=uid)
+
+        store_uuids = user_db.stores.values_list('store_uuid', flat=True)
+        store_uuids = [str(store_uuid) for store_uuid in store_uuids]
+
+        claims = {
+            "user_uuid": str(user_db.user_uuid),
+            "firebase_uid": str(uid),
+            "type": "store",
+            "role": "admin",
+            "store_uuids": store_uuids,
+            }
+
+
+        jwt_token = self.jwt_manager.create_jwt(claims=claims,expires_in=1800)
+        session_cookie = self.firebase_auth_manager.create_session_cookie(token,60*60*24*7)
+
+        return user_auth_pb2.AccessTokenResponse(session_token=session_cookie,
+                                                 token = jwt_token
+                                                 )
+
+
+    @handle_error
+    def RefreshCustomerSession(self, request, context):
+        token = request.session_token
+        logger.info("RefreshCustomerSession called")
+        
+        _= self.firebase_auth_manager.verify_session_cookie(token)
+        uid = _.get("user_id")
+        user = self.firebase_auth_manager.get_user_by_UID(uid)
+
+
+        if not user:
+            logger.warning(f"No user found for firebase UID: {uid}")
+            raise Unauthenticated("User not found")
+
+        try:
+            customer = Customer.objects.get(firebase_UID=uid)
+        except Customer.DoesNotExist:
+            logger.warning(f"customer with UID:{uid} does not exits" )
+            raise
+
+        
+        claims = {
+            "firebase_uid": uid,
+            "type": "customer",
+            "name": customer.customer_name,
+            "user_phone_no": customer.phone_number,
+        }
+
+        # 4. Issue new session cookie and short-lived
+        session_cookie = self.firebase_auth_manager.create_session_cookie(token, 60 * 60 * 24 * 7)
+        jwt_token = self.jwt_manager.create_jwt(claims=claims, expires_in=1800)
+
+        # 5. Return both tokens
+        return user_auth_pb2.AccessTokenResponse(
+            session_token=session_cookie,
+            token=jwt_token
+        )
+
+    @handle_error
+    def RefreshCustomerJwt(self, request, context):
+        token = request.session_token
+        if not self.jwt_manager.is_jwt(token):
+            raise ValidationError("Not a JWT token")
+        logger.info("RefreshCustomerJwt called")
+
+        # 1. Verify session token
+        _= self.firebase_auth_manager.verify_session_cookie(token)
+        uid = _.get("user_id")
+        user = self.firebase_auth_manager.get_user_by_UID(uid)
+        if not user:
+            raise Unauthenticated("User not found")
+
+        # 2. Get customer from DB
+        try:
+            customer = Customer.objects.get(firebase_UID=uid)
+        except Customer.DoesNotExist:
+            logger.warning(f"No customer found for firebase UID: {uid}")
+            raise Unauthenticated("Customer not found")
+
+        # 3. Construct JWT claims
+        claims = {
+            "firebase_uid": uid,
+            "type": "customer",
+            "name": customer.customer_name,
+            "user_phone_no": customer.phone_number,
+            # "customer_uuid": str(customer.customer_uuid),
+        }
+
+        # 4. Issue short-lived JWT
+        jwt_token = self.jwt_manager.create_jwt(claims=claims, expires_in=1800)
+
+        return user_auth_pb2.AccessTokenResponse(token=jwt_token)
+
+
+    @handle_error
+    def RefreshStoreJwt(self, request, context):
+        logger.info(request)
+        token = request.session_token
+        if not self.jwt_manager.is_jwt(token):
+            raise ValidationError("Not a JWT token")
+        logger.info("RefreshCustomerJwt called")
+
+        logger.info("RefreshStoreJwt called")
+        _= self.firebase_auth_manager.verify_session_cookie(token)
+        uid = _.get("user_id")
+        user = self.firebase_auth_manager.get_user_by_UID(uid)
+
+        if not user:
+            logger.warning(f"No user found for firebase UID: {uid}")
+            raise Unauthenticated("User not found")
+
+        user_db: User = User.objects.prefetch_related('stores').get(firebase_uid=uid)
+
+        store_uuids = user_db.stores.values_list('store_uuid', flat=True)
+        store_uuids = [str(store_uuid) for store_uuid in store_uuids]
+
+        claims = {
+            "firebase_uid": uid,
+            "type": "store",
+            "role": "admin",
+            "user_uuid": str(user_db.user_uuid),
+            "store_uuids": json.dumps(store_uuids),  # ✅ fix
+        }
+        jwt_token = self.jwt_manager.create_jwt(claims=claims, expires_in=1800)
+
+        return user_auth_pb2.AccessTokenResponse(token=jwt_token)
+
 
     @handle_error
     @check_access(
@@ -419,9 +638,6 @@ class UserAuthService(AuthServiceServicer):
     def CreateStore(self, request, context):
         user_uuid = request.user_uuid
         store_name = request.store_name
-        meta = dict(context.invocation_metadata() or [])
-        token = meta.get("authorization").split(" ")[1]
-        logger.info(token)
 
         logger.info(f"CreateStore called for user_uuid={user_uuid}, store_name={store_name}")
 
@@ -432,18 +648,6 @@ class UserAuthService(AuthServiceServicer):
             logger.warning(f"User with user_uuid={user_uuid} does not exist")
             raise 
 
-        firebase_user = self.firebase_auth_manager.get_user_by_UID(user.firebase_uid)
-        if not firebase_user:
-            logger.warning(f"User not found in Firebase for user_uuid={user_uuid} and firebase_uid={user.firebase_uid}")
-            raise Unauthenticated("User not found in Firebase")
-        logger.info(f"Firebase user retrieved successfully for firebase_uid={user.firebase_uid}")
-
-        claims = self.firebase_auth_manager.get_user_claims(user.firebase_uid)
-        if not claims:
-            logger.warning(f"User claims not found in Firebase for user_uuid={user_uuid} and firebase_uid={user.firebase_uid}")
-            raise Unauthenticated("User claims not found in Firebase")
-        logger.info(f"User claims retrieved successfully for firebase_uid={user.firebase_uid}")
-
         with transaction.atomic():
             
             store = Store.objects.create(
@@ -451,14 +655,9 @@ class UserAuthService(AuthServiceServicer):
                 user=user,
                 gst_number=request.gst_number,
                 is_active=request.is_active,
-                discription=request.discription
+                discription=request.description
             )
             logger.info(f"Created Store record; store_uuid={store.store_uuid}") 
-            store_uuids = user.stores.values_list('store_uuid', flat=True)
-            store_uuids = [str(store_uuid) for store_uuid in store_uuids]
-            logger.info(f"Store UUIDs retrieved for user_uuid={user_uuid}: {list(store_uuids)}")
-            self.firebase_auth_manager.add_store_claims(token, store_uuids)
-            logger.info(f"Store claims updated for user_uuid={user_uuid}")
             return user_auth_pb2.StoreResponse(
                 user_uuid=str(store.user.user_uuid),
                 store=self._store_to_proto(store),
@@ -519,8 +718,8 @@ class UserAuthService(AuthServiceServicer):
         user_uuid = request.user_uuid
 
 
-        limit = request.limit if request.limit != "" else 10
-        page = request.page if request.page != "" else 1
+        limit = int(request.limit) if request.limit != "" else 10
+        page = int(request.page) if request.page != "" else 1
 
         logger.info(f"GetAllStores called for user_uuid={user_uuid}, limit={limit}, page={page}")
 
@@ -554,8 +753,8 @@ class UserAuthService(AuthServiceServicer):
 )
     def CreateAddress(self, request, context):
         store_uuid = request.store_uuid
-        address_line_1 = request.address_1
-        address_line_2 = request.address_2
+        address_line_1 = request.address_line_1
+        address_line_2 = request.address_line_2
         city = request.city
         state = request.state
         country = request.country
@@ -586,13 +785,14 @@ class UserAuthService(AuthServiceServicer):
     allowed_roles={"store":["admin","staff"]},require_resource_match=True
 )
     def UpdateAddress(self, request, context):
+        logger.info(request)
         address_uuid = request.address_uuid
-        store_uuid = request.store_uuid        
-
 
         with transaction.atomic():
+        
             address = Address.objects.get(address_uuid=address_uuid)
-    
+            store = Store.objects.get(address=address)
+
             if request.HasField('address_line_1'):
                 address.address_line_1 = request.address_line_1
             if request.HasField('address_line_2'):
@@ -609,8 +809,10 @@ class UserAuthService(AuthServiceServicer):
             address.save()
 
             return user_auth_pb2.AddressResponse(
-                store_uuid=str(address.store.store_uuid),
-                address=self._address_to_proto(address))
+                store_uuid=str(store.store_uuid),
+                address=self._address_to_proto(address)
+            )
+
     
     @handle_error
     @check_access(

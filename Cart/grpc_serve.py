@@ -437,6 +437,7 @@ class CartService(Cart_pb2_grpc.CartServiceServicer):
                 cart.table_no = request.table_no or ""
                 cart.vehicle_no = request.vehicle_no or ""
                 cart.vehicle_description = request.vehicle_description or ""
+                cart.save()
                 logger.info(f"Fetched Cart{cart.cart_uuid} for Phone No:{cart.user_phone_no} at store: {cart.store_uuid}")
                 return self._Cart_to_response(cart)
         except Cart.DoesNotExist:

@@ -121,3 +121,13 @@ class Address(models.Model):
             models.Index(fields=['state']),
             models.Index(fields=['country']),
         ]
+class Customer(models.Model):
+    customer_name = models.CharField(max_length=255,null=True,blank=True)
+    phone_number = models.CharField(max_length=15,null=True,blank=True)
+    firebase_UID = models.CharField(max_length=255,null=True,blank=True)
+
+
+    class Meta:
+        indexes =[
+            models.Index(fields=["customer_name","phone_number","firebase_UID"])
+        ]

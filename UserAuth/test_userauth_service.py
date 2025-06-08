@@ -48,69 +48,6 @@ META_DATA = [
 from User.models import User,Store,Address 
 
 
-# @pytest.fixture(scope="session")
-# def grpc_server():
-#     """Start the gRPC server for testing and stop it after tests"""
-#     server_thread = threading.Thread(target=serve, daemon=True)
-#     print("Starting gRPC server...")
-#     server_thread.start()
-#     time.sleep(1)  # Give server time to start
-#     yield
-#     # If the server has a shutdown method, you'd call it here
-
-# @pytest.fixture(scope="session")
-# def grpc_channel(grpc_server):
-#     """Create a gRPC channel for tests"""
-#     with grpc.insecure_channel(SERVER_ADDRESS) as channel:
-#         yield channel
-
-# @pytest.fixture(scope="session")
-# def user_auth_stub(grpc_channel):
-#     """Create a product service stub"""
-#     return AuthServiceStub(grpc_channel)
-
-# @pytest.fixture(scope="session")
-# def  firbase_UID():
-#     """Create a firebase UID for testing"""
-#     return "HzSWKDSKOhdPrtGiQHYAhgEavvT2"
-# @pytest.fixture(scope="session")
-# def access_token():
-#     """Create an access token for testing"""
-#     return "eyJhbGciOiJSUzI1NiIsImtpZCI6IjU5MWYxNWRlZTg0OTUzNjZjOTgyZTA1MTMzYmNhOGYyNDg5ZWFjNzIiLCJ0eXAiOiJKV1QifQ.eyJ1c2VyX3V1aWQiOiIwZWU5YWUzOC05ZDA4LTQxYjgtOWEwMC1kOTUzY2E2OGQzM2QiLCJpc3MiOiJodHRwczovL3NlY3VyZXRva2VuLmdvb2dsZS5jb20vcmFzb2ktYXV0aCIsImF1ZCI6InJhc29pLWF1dGgiLCJhdXRoX3RpbWUiOjE3NDY3MTY1ODcsInVzZXJfaWQiOiJIelNXS0RTS09oZFBydEdpUUhZQWhnRWF2dlQyIiwic3ViIjoiSHpTV0tEU0tPaGRQcnRHaVFIWUFoZ0VhdnZUMiIsImlhdCI6MTc0NjcxNjU4NywiZXhwIjoxNzQ2NzIwMTg3LCJlbWFpbCI6InJhaHVsMjMwODIwMDFqaGFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsImZpcmViYXNlIjp7ImlkZW50aXRpZXMiOnsiZW1haWwiOlsicmFodWwyMzA4MjAwMWpoYUBnbWFpbC5jb20iXX0sInNpZ25faW5fcHJvdmlkZXIiOiJwYXNzd29yZCJ9fQ.1RJsmZ5UMParkVZLVfbrqqWf5DmiQ9rMGwuxElWkGxbmea-54HojL3nxhsSNcvOGuZ-hGD3NGsU9NGwUt3AVsqGfkFnWhSez9vRPWxWL7MsxzUlIlb7zOMMxuvu3MwBEvFCrhLJ7wZrVsSoAa46cwfiYQsSd_KirZomt7kVBIpP0nHHcA1RDboF2Gh0h-nH46SEc8DHrVFR3cBD-lGozzjFwt_k9Wuz5OZ6FGWhMIzRoxTHA63AQVrVuBUWPol5I-DhmBgEggJO9Qz4tU2YgffnzPHKYLUUMFMYKpJFX2zmQ4cTdMnG3HRlslh2sgTczmGZCNm655HXT86Gpq_eovw"
-# @pytest.fixture(scope="session")
-# def email():
-#     return "test@gamil.com"
-# @pytest.fixture(scope="session")
-# d
-
-# @pytest.fixture(scope="session")
-# def create_user(firbase_UID):
-#     user = User.objects.create(
-
-#     )
-    
-
-# def test_grpc_create_user(user_auth_stub,firbase_UID,access_token):
-#     """Test user creation"""
-#     firebase_UID = firbase_UID
-#     access_token = access_token
-#     request = user_auth_pb2.CreateUserRequest(
-#         firebase_uid=firebase_UID,
-#         token=access_token)
-#     response = user_auth_stub.CreateUser(request, metadata=META_DATA)
-#     assert response is not None
-#     assert response.DESCRIPTOR.full_name == "google.protobuf.Empty"
-
-# def test_verify_token(user_auth_stub,firbase_UID,access_token):
-#     """Test token verification"""
-#     request = user_auth_pb2.VerifyTokenRequest(
-#         token=access_token,firebase_uid=firbase_UID)
-#     response = user_auth_stub.VerifyToken(request, metadata=META_DATA)
-#     assert response is not None
-#     assert response.DESCRIPTOR.full_name == "google.protobuf.Empty"
-
-
-
 @pytest.fixture(scope="session")
 def grpc_server():
     """Start the gRPC server for testing and stop it after tests"""

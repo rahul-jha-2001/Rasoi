@@ -164,7 +164,6 @@ product_db_data
 Restro_db_data
 secrets.*
 *.log
-migrations
 *.env
 *.DS_Store
 *.db

@@ -9,20 +9,20 @@ from typing import ClassVar as _ClassVar, Iterable as _Iterable, Mapping as _Map
 DESCRIPTOR: _descriptor.FileDescriptor
 
 class user(_message.Message):
-    __slots__ = ("user_uuid", "firebase_uid", "email", "stores", "created_at", "updated_at")
+    __slots__ = ("user_uuid", "firebase_uid", "email", "phone", "created_at", "updated_at")
     USER_UUID_FIELD_NUMBER: _ClassVar[int]
     FIREBASE_UID_FIELD_NUMBER: _ClassVar[int]
     EMAIL_FIELD_NUMBER: _ClassVar[int]
-    STORES_FIELD_NUMBER: _ClassVar[int]
+    PHONE_FIELD_NUMBER: _ClassVar[int]
     CREATED_AT_FIELD_NUMBER: _ClassVar[int]
     UPDATED_AT_FIELD_NUMBER: _ClassVar[int]
     user_uuid: str
     firebase_uid: str
     email: str
-    stores: _containers.RepeatedCompositeFieldContainer[store]
+    phone: str
     created_at: _timestamp_pb2.Timestamp
     updated_at: _timestamp_pb2.Timestamp
-    def __init__(self, user_uuid: _Optional[str] = ..., firebase_uid: _Optional[str] = ..., email: _Optional[str] = ..., stores: _Optional[_Iterable[_Union[store, _Mapping]]] = ..., created_at: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+    def __init__(self, user_uuid: _Optional[str] = ..., firebase_uid: _Optional[str] = ..., email: _Optional[str] = ..., phone: _Optional[str] = ..., created_at: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
 
 class store(_message.Message):
     __slots__ = ("store_uuid", "store_name", "gst_number", "address", "is_active", "is_open", "created_at", "updated_at")
@@ -75,6 +75,12 @@ class VerifyTokenRequest(_message.Message):
     token: str
     firebase_uid: str
     def __init__(self, token: _Optional[str] = ..., firebase_uid: _Optional[str] = ...) -> None: ...
+
+class VerifyTokenResponse(_message.Message):
+    __slots__ = ("session_token",)
+    SESSION_TOKEN_FIELD_NUMBER: _ClassVar[int]
+    session_token: str
+    def __init__(self, session_token: _Optional[str] = ...) -> None: ...
 
 class CreateUserRequest(_message.Message):
     __slots__ = ("firebase_uid", "token")

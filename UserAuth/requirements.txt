@@ -7,3 +7,5 @@ python-dotenv
 psycopg
 firebase-admin
 grpc_interceptor
+pillow
+boto3

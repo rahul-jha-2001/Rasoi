@@ -34,7 +34,7 @@ from User.models import User, Store ,Address, StoreRole,Customer
 from utils.logger import Logger
 from utils.check_access import check_access
 from utils.jwt_manager import JWTManager
-
+from utils.image_handler import ImageHandler
 from firebase_admin.auth import UserRecord, UserNotFoundError, InvalidIdTokenError
 from firebase_admin.auth import ExpiredIdTokenError, RevokedIdTokenError
 from firebase_admin.auth import CertificateFetchError
@@ -45,7 +45,10 @@ logger = Logger("GRPC_Service")
 
 JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY")
 JWT_ALGO = os.getenv("JWT_ALGO",'HS256')
-
+BUCKET_NAME = os.getenv("BUCKET_NAME")
+REGION_NAME = os.getenv("AWS_DEFAULT_REGION")
+AWS_ACCESS_KEY_ID= os.getenv("AWS_ACCESS_KEY_ID")
+AWS_SECRET_ACCESS_KEY= os.getenv("AWS_SECRET_ACCESS_KEY")
 
 
 def handle_error(func): 
@@ -284,6 +287,12 @@ class UserAuthService(AuthServiceServicer):
             except (AttributeError, TypeError) as e:
                 logger.warning(f"Failed to convert is_open: {e}")
                 response.is_open = False
+
+            try:
+                response.image_url = str(store_obj.image_url)
+            except (AttributeError, TypeError) as e:
+                logger.warning(f"Failed to convert image_url: {e}")
+                response.is_open = ""
 
             try:
                 if store_obj.created_at:
@@ -658,6 +667,30 @@ class UserAuthService(AuthServiceServicer):
                 discription=request.description
             )
             logger.info(f"Created Store record; store_uuid={store.store_uuid}") 
+            
+            if getattr(request,"image_bytes",None):
+                size = ImageHandler.check_size(request.image_bytes)
+                if size > 5:
+                    raise ValidationError(f"Image size:{size}mb exceeds 5mb")
+                ext = ImageHandler.check_extension(request.image_bytes)
+                if ext not in ['.jpg','.png','.jpeg']:
+                    logger.debug(ext)
+                    raise ValidationError(f"Unspported File Type {ext}")
+            
+                image_name = f"user/{store.user.user_uuid}/store/{store.store_uuid}"
+
+                _,url = ImageHandler.upload_to_s3(
+                    request.image_bytes,
+                    bucket_name=BUCKET_NAME,
+                    object_name=image_name,
+                    aws_access_key=AWS_ACCESS_KEY_ID,
+                    aws_secret_key=AWS_SECRET_ACCESS_KEY,
+                    region_name=REGION_NAME
+                )
+                if _:
+                    store.image_url = url
+            
+            
             return user_auth_pb2.StoreResponse(
                 user_uuid=str(store.user.user_uuid),
                 store=self._store_to_proto(store),
@@ -682,7 +715,29 @@ class UserAuthService(AuthServiceServicer):
             if request.HasField('is_active'):
                 store.is_active = request.is_active
             if request.HasField('is_open'):
-                store.is_open = request.is_open        
+                store.is_open = request.is_open 
+            if request.HasField('image_bytes'):
+                size = ImageHandler.check_size(request.image_bytes)
+                if size > 5:
+                    raise ValidationError(f"Image size:{size}mb exceeds 5mb")
+                ext = ImageHandler.check_extension(request.image_bytes)
+                if ext not in ['.jpg','.png','.jpeg']:
+                    logger.debug(ext)
+                    raise ValidationError(f"Unspported File Type {ext}")
+            
+                image_name = f"user/{store.user.user_uuid}/store/{store.store_uuid}"
+
+                _,url = ImageHandler.upload_to_s3(
+                    request.image_bytes,
+                    bucket_name=BUCKET_NAME,
+                    object_name=image_name,
+                    aws_access_key=AWS_ACCESS_KEY_ID,
+                    aws_secret_key=AWS_SECRET_ACCESS_KEY,
+                    region_name=REGION_NAME
+                )
+                if _:
+                    store.image_url = url
+                    store.save()       
 
             store.save()
 

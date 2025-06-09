@@ -89,6 +89,7 @@ class Store(models.Model):
     address = models.ForeignKey('Address', on_delete=models.CASCADE, null=True, blank=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='stores')
     discription = models.TextField(null=True,blank=True)
+    image_url = models.URLField(null=True,blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

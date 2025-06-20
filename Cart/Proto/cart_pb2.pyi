@@ -9,6 +9,20 @@ from typing import ClassVar as _ClassVar, Iterable as _Iterable, Mapping as _Map
 
 DESCRIPTOR: _descriptor.FileDescriptor
 
+class PAYMENTTYPE(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
+    __slots__ = ()
+    PAYMENT_TYPE_UNSPECIFIED: _ClassVar[PAYMENTTYPE]
+    PAYMENT_TYPE_POSTPAID: _ClassVar[PAYMENTTYPE]
+    PAYMENT_TYPE_PREPAID: _ClassVar[PAYMENTTYPE]
+
+class SERVICESESSIONSTATUS(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
+    __slots__ = ()
+    SERVICE_SESSION_UNSPECIFIED: _ClassVar[SERVICESESSIONSTATUS]
+    SERVICE_SESSION_PENDING: _ClassVar[SERVICESESSIONSTATUS]
+    SERVICE_SESSION_ONGOING: _ClassVar[SERVICESESSIONSTATUS]
+    SERVICE_SESSION_ENDED: _ClassVar[SERVICESESSIONSTATUS]
+    SERVICE_SESSION_CANCELLED: _ClassVar[SERVICESESSIONSTATUS]
+
 class ORDERTYPE(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     __slots__ = ()
     ORDER_TYPE_UNSPECIFIED: _ClassVar[ORDERTYPE]
@@ -25,9 +39,17 @@ class CARTSTATE(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
 
 class DISCOUNTTYPE(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     __slots__ = ()
-    UNSPCIFIED_DISCOUNT: _ClassVar[DISCOUNTTYPE]
-    PERCENTAGE_DISCOUNT: _ClassVar[DISCOUNTTYPE]
-    FIXED_DISCOUNT: _ClassVar[DISCOUNTTYPE]
+    DISCOUNT_TYPE_UNSPCIFIED: _ClassVar[DISCOUNTTYPE]
+    DISCOUNT_TYPE_PERCENTAGE: _ClassVar[DISCOUNTTYPE]
+    DISCOUNT_TYPE_FIXED: _ClassVar[DISCOUNTTYPE]
+PAYMENT_TYPE_UNSPECIFIED: PAYMENTTYPE
+PAYMENT_TYPE_POSTPAID: PAYMENTTYPE
+PAYMENT_TYPE_PREPAID: PAYMENTTYPE
+SERVICE_SESSION_UNSPECIFIED: SERVICESESSIONSTATUS
+SERVICE_SESSION_PENDING: SERVICESESSIONSTATUS
+SERVICE_SESSION_ONGOING: SERVICESESSIONSTATUS
+SERVICE_SESSION_ENDED: SERVICESESSIONSTATUS
+SERVICE_SESSION_CANCELLED: SERVICESESSIONSTATUS
 ORDER_TYPE_UNSPECIFIED: ORDERTYPE
 ORDER_TYPE_DINE_IN: ORDERTYPE
 ORDER_TYPE_TAKE_AWAY: ORDERTYPE
@@ -36,12 +58,42 @@ CART_STATE_UNSPECIFIED_STATE: CARTSTATE
 CART_STATE_ACTIVE: CARTSTATE
 CART_STATE_LOCKED: CARTSTATE
 CART_STATE_ABANDONED: CARTSTATE
-UNSPCIFIED_DISCOUNT: DISCOUNTTYPE
-PERCENTAGE_DISCOUNT: DISCOUNTTYPE
-FIXED_DISCOUNT: DISCOUNTTYPE
+DISCOUNT_TYPE_UNSPCIFIED: DISCOUNTTYPE
+DISCOUNT_TYPE_PERCENTAGE: DISCOUNTTYPE
+DISCOUNT_TYPE_FIXED: DISCOUNTTYPE
+
+class Table(_message.Message):
+    __slots__ = ("table_uuid", "store_uuid", "table_number", "payment_type", "no_of_sitting", "is_active")
+    TABLE_UUID_FIELD_NUMBER: _ClassVar[int]
+    STORE_UUID_FIELD_NUMBER: _ClassVar[int]
+    TABLE_NUMBER_FIELD_NUMBER: _ClassVar[int]
+    PAYMENT_TYPE_FIELD_NUMBER: _ClassVar[int]
+    NO_OF_SITTING_FIELD_NUMBER: _ClassVar[int]
+    IS_ACTIVE_FIELD_NUMBER: _ClassVar[int]
+    table_uuid: str
+    store_uuid: str
+    table_number: str
+    payment_type: PAYMENTTYPE
+    no_of_sitting: int
+    is_active: bool
+    def __init__(self, table_uuid: _Optional[str] = ..., store_uuid: _Optional[str] = ..., table_number: _Optional[str] = ..., payment_type: _Optional[_Union[PAYMENTTYPE, str]] = ..., no_of_sitting: _Optional[int] = ..., is_active: bool = ...) -> None: ...
+
+class ServiceSession(_message.Message):
+    __slots__ = ("service_session_uuid", "table_uuid", "started_at", "ended_at", "service_status")
+    SERVICE_SESSION_UUID_FIELD_NUMBER: _ClassVar[int]
+    TABLE_UUID_FIELD_NUMBER: _ClassVar[int]
+    STARTED_AT_FIELD_NUMBER: _ClassVar[int]
+    ENDED_AT_FIELD_NUMBER: _ClassVar[int]
+    SERVICE_STATUS_FIELD_NUMBER: _ClassVar[int]
+    service_session_uuid: str
+    table_uuid: str
+    started_at: _timestamp_pb2.Timestamp
+    ended_at: _timestamp_pb2.Timestamp
+    service_status: SERVICESESSIONSTATUS
+    def __init__(self, service_session_uuid: _Optional[str] = ..., table_uuid: _Optional[str] = ..., started_at: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ..., ended_at: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ..., service_status: _Optional[_Union[SERVICESESSIONSTATUS, str]] = ...) -> None: ...
 
 class Cart(_message.Message):
-    __slots__ = ("store_uuid", "cart_uuid", "user_phone_no", "order_type", "table_no", "vehicle_no", "vehicle_description", "coupon_code", "special_instructions", "items", "sub_total", "total_discount", "total_price_before_tax", "total_tax", "packaging_cost", "final_amount", "cart_state", "created_at", "updated_at")
+    __slots__ = ("store_uuid", "cart_uuid", "user_phone_no", "order_type", "table_no", "vehicle_no", "vehicle_description", "coupon_code", "special_instructions", "items", "sub_total", "total_discount", "total_price_before_tax", "total_tax", "packaging_cost", "final_amount", "cart_state", "table_uuid", "service_session_uuid", "created_at", "updated_at")
     STORE_UUID_FIELD_NUMBER: _ClassVar[int]
     CART_UUID_FIELD_NUMBER: _ClassVar[int]
     USER_PHONE_NO_FIELD_NUMBER: _ClassVar[int]
@@ -59,6 +111,8 @@ class Cart(_message.Message):
     PACKAGING_COST_FIELD_NUMBER: _ClassVar[int]
     FINAL_AMOUNT_FIELD_NUMBER: _ClassVar[int]
     CART_STATE_FIELD_NUMBER: _ClassVar[int]
+    TABLE_UUID_FIELD_NUMBER: _ClassVar[int]
+    SERVICE_SESSION_UUID_FIELD_NUMBER: _ClassVar[int]
     CREATED_AT_FIELD_NUMBER: _ClassVar[int]
     UPDATED_AT_FIELD_NUMBER: _ClassVar[int]
     store_uuid: str
@@ -78,9 +132,11 @@ class Cart(_message.Message):
     packaging_cost: float
     final_amount: float
     cart_state: CARTSTATE
+    table_uuid: str
+    service_session_uuid: str
     created_at: _timestamp_pb2.Timestamp
     updated_at: _timestamp_pb2.Timestamp
-    def __init__(self, store_uuid: _Optional[str] = ..., cart_uuid: _Optional[str] = ..., user_phone_no: _Optional[str] = ..., order_type: _Optional[_Union[ORDERTYPE, str]] = ..., table_no: _Optional[str] = ..., vehicle_no: _Optional[str] = ..., vehicle_description: _Optional[str] = ..., coupon_code: _Optional[str] = ..., special_instructions: _Optional[str] = ..., items: _Optional[_Iterable[_Union[CartItem, _Mapping]]] = ..., sub_total: _Optional[float] = ..., total_discount: _Optional[float] = ..., total_price_before_tax: _Optional[float] = ..., total_tax: _Optional[float] = ..., packaging_cost: _Optional[float] = ..., final_amount: _Optional[float] = ..., cart_state: _Optional[_Union[CARTSTATE, str]] = ..., created_at: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+    def __init__(self, store_uuid: _Optional[str] = ..., cart_uuid: _Optional[str] = ..., user_phone_no: _Optional[str] = ..., order_type: _Optional[_Union[ORDERTYPE, str]] = ..., table_no: _Optional[str] = ..., vehicle_no: _Optional[str] = ..., vehicle_description: _Optional[str] = ..., coupon_code: _Optional[str] = ..., special_instructions: _Optional[str] = ..., items: _Optional[_Iterable[_Union[CartItem, _Mapping]]] = ..., sub_total: _Optional[float] = ..., total_discount: _Optional[float] = ..., total_price_before_tax: _Optional[float] = ..., total_tax: _Optional[float] = ..., packaging_cost: _Optional[float] = ..., final_amount: _Optional[float] = ..., cart_state: _Optional[_Union[CARTSTATE, str]] = ..., table_uuid: _Optional[str] = ..., service_session_uuid: _Optional[str] = ..., created_at: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
 
 class CartItem(_message.Message):
     __slots__ = ("cart_item_uuid", "cart_uuid", "product_name", "product_uuid", "tax_percentage", "discount", "unit_price", "quantity", "add_ons_total", "subtotal_amount", "discount_amount", "price_before_tax", "tax_amount", "final_price", "packaging_cost", "add_ons")
@@ -135,6 +191,136 @@ class AddOn(_message.Message):
     is_free: bool
     subtotal_amount: float
     def __init__(self, cart_item_uuid: _Optional[str] = ..., add_on_name: _Optional[str] = ..., add_on_uuid: _Optional[str] = ..., quantity: _Optional[int] = ..., unit_price: _Optional[float] = ..., is_free: bool = ..., subtotal_amount: _Optional[float] = ...) -> None: ...
+
+class CreateTableRequest(_message.Message):
+    __slots__ = ("store_uuid", "table_number", "area_name", "payment_type", "no_of_sitting")
+    STORE_UUID_FIELD_NUMBER: _ClassVar[int]
+    TABLE_NUMBER_FIELD_NUMBER: _ClassVar[int]
+    AREA_NAME_FIELD_NUMBER: _ClassVar[int]
+    PAYMENT_TYPE_FIELD_NUMBER: _ClassVar[int]
+    NO_OF_SITTING_FIELD_NUMBER: _ClassVar[int]
+    store_uuid: str
+    table_number: str
+    area_name: str
+    payment_type: PAYMENTTYPE
+    no_of_sitting: int
+    def __init__(self, store_uuid: _Optional[str] = ..., table_number: _Optional[str] = ..., area_name: _Optional[str] = ..., payment_type: _Optional[_Union[PAYMENTTYPE, str]] = ..., no_of_sitting: _Optional[int] = ...) -> None: ...
+
+class GetTableRequest(_message.Message):
+    __slots__ = ("store_uuid", "table_uuid")
+    STORE_UUID_FIELD_NUMBER: _ClassVar[int]
+    TABLE_UUID_FIELD_NUMBER: _ClassVar[int]
+    store_uuid: str
+    table_uuid: str
+    def __init__(self, store_uuid: _Optional[str] = ..., table_uuid: _Optional[str] = ...) -> None: ...
+
+class ListTablesRequest(_message.Message):
+    __slots__ = ("store_uuid",)
+    STORE_UUID_FIELD_NUMBER: _ClassVar[int]
+    store_uuid: str
+    def __init__(self, store_uuid: _Optional[str] = ...) -> None: ...
+
+class ListTablesResponse(_message.Message):
+    __slots__ = ("tables",)
+    TABLES_FIELD_NUMBER: _ClassVar[int]
+    tables: _containers.RepeatedCompositeFieldContainer[Table]
+    def __init__(self, tables: _Optional[_Iterable[_Union[Table, _Mapping]]] = ...) -> None: ...
+
+class UpdateTableRequest(_message.Message):
+    __slots__ = ("store_uuid", "table_uuid", "area_name", "payment_type", "no_of_sitting", "is_active")
+    STORE_UUID_FIELD_NUMBER: _ClassVar[int]
+    TABLE_UUID_FIELD_NUMBER: _ClassVar[int]
+    AREA_NAME_FIELD_NUMBER: _ClassVar[int]
+    PAYMENT_TYPE_FIELD_NUMBER: _ClassVar[int]
+    NO_OF_SITTING_FIELD_NUMBER: _ClassVar[int]
+    IS_ACTIVE_FIELD_NUMBER: _ClassVar[int]
+    store_uuid: str
+    table_uuid: str
+    area_name: str
+    payment_type: PAYMENTTYPE
+    no_of_sitting: int
+    is_active: bool
+    def __init__(self, store_uuid: _Optional[str] = ..., table_uuid: _Optional[str] = ..., area_name: _Optional[str] = ..., payment_type: _Optional[_Union[PAYMENTTYPE, str]] = ..., no_of_sitting: _Optional[int] = ..., is_active: bool = ...) -> None: ...
+
+class DeleteTableRequest(_message.Message):
+    __slots__ = ("store_uuid", "table_uuid")
+    STORE_UUID_FIELD_NUMBER: _ClassVar[int]
+    TABLE_UUID_FIELD_NUMBER: _ClassVar[int]
+    store_uuid: str
+    table_uuid: str
+    def __init__(self, store_uuid: _Optional[str] = ..., table_uuid: _Optional[str] = ...) -> None: ...
+
+class CreateServiceSessionRequest(_message.Message):
+    __slots__ = ("store_uuid", "table_uuid")
+    STORE_UUID_FIELD_NUMBER: _ClassVar[int]
+    TABLE_UUID_FIELD_NUMBER: _ClassVar[int]
+    store_uuid: str
+    table_uuid: str
+    def __init__(self, store_uuid: _Optional[str] = ..., table_uuid: _Optional[str] = ...) -> None: ...
+
+class GetServiceSessionRequest(_message.Message):
+    __slots__ = ("store_uuid", "service_session_uuid")
+    STORE_UUID_FIELD_NUMBER: _ClassVar[int]
+    SERVICE_SESSION_UUID_FIELD_NUMBER: _ClassVar[int]
+    store_uuid: str
+    service_session_uuid: str
+    def __init__(self, store_uuid: _Optional[str] = ..., service_session_uuid: _Optional[str] = ...) -> None: ...
+
+class GetActiveSessionByTableRequest(_message.Message):
+    __slots__ = ("store_uuid", "table_uuid")
+    STORE_UUID_FIELD_NUMBER: _ClassVar[int]
+    TABLE_UUID_FIELD_NUMBER: _ClassVar[int]
+    store_uuid: str
+    table_uuid: str
+    def __init__(self, store_uuid: _Optional[str] = ..., table_uuid: _Optional[str] = ...) -> None: ...
+
+class GetActiveSessionByTableResponse(_message.Message):
+    __slots__ = ("service_session",)
+    SERVICE_SESSION_FIELD_NUMBER: _ClassVar[int]
+    service_session: ServiceSession
+    def __init__(self, service_session: _Optional[_Union[ServiceSession, _Mapping]] = ...) -> None: ...
+
+class ListServiceSessionsRequest(_message.Message):
+    __slots__ = ("store_uuid",)
+    STORE_UUID_FIELD_NUMBER: _ClassVar[int]
+    store_uuid: str
+    def __init__(self, store_uuid: _Optional[str] = ...) -> None: ...
+
+class ListServiceSessionsResponse(_message.Message):
+    __slots__ = ("sessions",)
+    SESSIONS_FIELD_NUMBER: _ClassVar[int]
+    sessions: _containers.RepeatedCompositeFieldContainer[ServiceSession]
+    def __init__(self, sessions: _Optional[_Iterable[_Union[ServiceSession, _Mapping]]] = ...) -> None: ...
+
+class UpdateServiceSessionRequest(_message.Message):
+    __slots__ = ("store_uuid", "service_session_uuid", "service_status", "ended_at")
+    STORE_UUID_FIELD_NUMBER: _ClassVar[int]
+    SERVICE_SESSION_UUID_FIELD_NUMBER: _ClassVar[int]
+    SERVICE_STATUS_FIELD_NUMBER: _ClassVar[int]
+    ENDED_AT_FIELD_NUMBER: _ClassVar[int]
+    store_uuid: str
+    service_session_uuid: str
+    service_status: SERVICESESSIONSTATUS
+    ended_at: _timestamp_pb2.Timestamp
+    def __init__(self, store_uuid: _Optional[str] = ..., service_session_uuid: _Optional[str] = ..., service_status: _Optional[_Union[SERVICESESSIONSTATUS, str]] = ..., ended_at: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+
+class ValidateSessionRequest(_message.Message):
+    __slots__ = ("store_uuid", "service_session_uuid")
+    STORE_UUID_FIELD_NUMBER: _ClassVar[int]
+    SERVICE_SESSION_UUID_FIELD_NUMBER: _ClassVar[int]
+    store_uuid: str
+    service_session_uuid: str
+    def __init__(self, store_uuid: _Optional[str] = ..., service_session_uuid: _Optional[str] = ...) -> None: ...
+
+class ValidateSessionResponse(_message.Message):
+    __slots__ = ("valid", "message", "cart_uuids")
+    VALID_FIELD_NUMBER: _ClassVar[int]
+    MESSAGE_FIELD_NUMBER: _ClassVar[int]
+    CART_UUIDS_FIELD_NUMBER: _ClassVar[int]
+    valid: bool
+    message: str
+    cart_uuids: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, valid: bool = ..., message: _Optional[str] = ..., cart_uuids: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class CreateCartRequest(_message.Message):
     __slots__ = ("store_uuid", "user_phone_no", "order_type", "table_no", "vehicle_no", "vehicle_description")

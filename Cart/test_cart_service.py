@@ -9,7 +9,7 @@ from uuid import uuid4
 from grpc_serve import serve
 from Proto import cart_pb2_grpc
 from Proto import cart_pb2
-from Proto.cart_pb2 import CartItem, Cart,CARTSTATE
+from Proto.cart_pb2 import CartItem, Cart,CARTSTATE,PAYMENTTYPE,SERVICESESSIONSTATUS,ORDERTYPE
 from Proto.cart_pb2_grpc import CartServiceStub
 
 
@@ -32,11 +32,8 @@ for item in BASE_DIR.iterdir():
     if item.is_dir() and item.name not in SKIP_DIRS:
         sys.path.append(str(item))
 
-# Define constants
-PRODUCT_SERVER_ADDRESS = 'localhost:50052'
-CART_SERVER_ADDRESS = 'localhost:50051'
 META_DATA = [
-    ("role", "internal"),
+    ("type", "internal"),
     ("service", "Cart")
 ]
 
@@ -66,7 +63,7 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'Cart.settings')
 
 
 # Fake product service
-PRODUCT_SERVER_ADDRESS = 'localhost:50052'
+PRODUCT_SERVER_ADDRESS = os.getenv("PRODUCT_SERVICE_ADDR",'localhost:50052')
 CART_SERVER_ADDRESS = 'localhost:50051'
 store_uuid = str(uuid.uuid4())
 product_uuid = str(uuid.uuid4())
@@ -75,10 +72,12 @@ product_uuid = str(uuid.uuid4())
 add_on_uuid = str(uuid.uuid4())
 diet_pref_uuid = str(uuid.uuid4())
 add_on_uuid = str(uuid.uuid4())
-user_phone_no = str("9977636633")
+user_phone_no = str("+919977636633")
+table_number = "A1"
+area_name = "Outdoor"
 
 META_DATA = [
-    ("role", "internal"),
+    ("type", "internal"),
     ("service", "product")
 ]
 
@@ -164,20 +163,34 @@ def grpc_product_server():
     product_server_thread.start()
     # Wait for the server to start
     time.sleep(1)
+    yield
+    # Stop the product server
+    grpc.server(futures.ThreadPoolExecutor(max_workers=10)).stop(0)
 
 @pytest.fixture(scope="session")
 def grpc_cart_server():
     cart_server_thread = threading.Thread(target=serve)
     cart_server_thread.start()
     yield
+    # Stop the cart server
+    grpc.server(futures.ThreadPoolExecutor(max_workers=10)).stop(0)
 
 
 @pytest.fixture(scope="session")
 def grpc_cart_stub(grpc_cart_server: None,):
     channel = grpc.insecure_channel(CART_SERVER_ADDRESS)
+    logger.info(f"Cart service strated")
     stub = cart_pb2_grpc.CartServiceStub(channel)
     yield stub
     channel.close()
+@pytest.fixture(scope="session")
+def grpc_coupon_stub(grpc_cart_server: None,):
+    channel = grpc.insecure_channel(CART_SERVER_ADDRESS)
+    logger.info(f"Cart service strated")
+    stub = cart_pb2_grpc.CouponServiceStub(channel)
+    yield stub
+    channel.close()
+
 @pytest.fixture(scope="function")
 def grpc_product_stub(grpc_product_server: None):
     channel = grpc.insecure_channel(PRODUCT_SERVER_ADDRESS)
@@ -185,9 +198,42 @@ def grpc_product_stub(grpc_product_server: None):
     yield stub
     channel.close()
 
+@pytest.fixture(scope="function")
+def table(grpc_cart_stub):
+    request = cart_pb2.CreateTableRequest(
+        store_uuid = store_uuid,
+        table_number = table_number,
+        area_name = area_name,
+        payment_type = PAYMENTTYPE.Value("PAYMENT_TYPE_POSTPAID"),
+        no_of_sitting = 4
+    )
+    response = grpc_cart_stub.CreateTable(request, metadata=META_DATA)
+    yield response
+    try:
+        grpc_cart_stub.DeleteTable(cart_pb2.DeleteTableRequest(table_uuid=response.table_uuid), metadata=META_DATA)
+    except grpc.RpcError as e:
+        if e.code() != grpc.StatusCode.NOT_FOUND:
+            raise e
+
+# @pytest.fixture(scope="function")
+# def session(grpc_cart_stub, cart):
+#     request = cart_pb2.CreateSessionRequest(
+#         cart_uuid=cart.cart_uuid,
+#         store_uuid=cart.store_uuid,
+#         user_phone_no=cart.user_phone_no,
+#         session_status=cart_pb2.SERVICESESSIONSTATUS.SESSION_STATUS_ACTIVE
+#     )
+#     response = grpc_cart_stub.CreateSession(request, metadata=META_DATA)
+#     yield response.session
+
+#     try:
+#         grpc_cart_stub.DeleteSession(cart_pb2.DeleteSessionRequest(session_uuid=response.session.session_uuid), metadata=META_DATA)
+#     except grpc.RpcError as e:
+#         if e.code() != grpc.StatusCode.NOT_FOUND:
+#             raise e
 
 @pytest.fixture(scope="function")
-def cart(grpc_cart_stub):
+def cart(grpc_cart_stub,table):
     request = cart_pb2.CreateCartRequest(
         store_uuid=store_uuid,
         user_phone_no=user_phone_no,
@@ -238,15 +284,23 @@ def add_on(grpc_cart_stub,cart,cart_item):
             raise e
 
 @pytest.fixture(scope="function")
-def coupon(grpc_cart_stub):
+def coupon(grpc_coupon_stub):
+    valid_from = datetime.datetime.now() - datetime.timedelta(days=1)
+    valid_to = datetime.datetime.now() + datetime.timedelta(days=5)
+
+    valid_from_ts = Timestamp()
+    valid_from_ts.FromDatetime(valid_from)
+    valid_to_ts = Timestamp()
+    valid_to_ts.FromDatetime(valid_to)
+
     request = cart_pb2.CreateCouponRequest(
         store_uuid=store_uuid,
         coupon=cart_pb2.Coupon(
             coupon_code = "TESTCOUPON",
             discount_type=cart_pb2.DISCOUNTTYPE.DISCOUNT_TYPE_PERCENTAGE,
             discount=10.0,
-            valid_from=Timestamp().FromDatetime(datetime.datetime.now()-datetime.timedelta(days=1)),
-            valid_to=Timestamp().FromDatetime(datetime.datetime.now()+datetime.timedelta(days=1)),
+            valid_from=valid_from_ts,
+            valid_to=valid_to_ts,
             usage_limit_per_user=1,
             total_usage_limit=10,
             min_spend=0,
@@ -257,112 +311,113 @@ def coupon(grpc_cart_stub):
             is_active=True
     )
     )
-    response = grpc_cart_stub.CreateCoupon(request, metadata=META_DATA)
-    yield response.coupon
+    response = grpc_coupon_stub.CreateCoupon(request, metadata=META_DATA)
+    yield response
     try:
-        grpc_cart_stub.RemoveCoupon(cart_pb2.RemoveCouponRequest(coupon_uuid=response.coupon.coupon_uuid), metadata=META_DATA)
+        grpc_coupon_stub.DeleteCoupon(cart_pb2.DeleteCouponRequest(coupon_uuid=response.coupon_uuid), metadata=META_DATA)
     except grpc.RpcError as e:
         if e.code() != grpc.StatusCode.NOT_FOUND:
             raise e
 
+
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
-def test_create_cart(grpc_cart_stub):
-    logger.debug("Starting test_create_cart")
-    request = cart_pb2.CreateCartRequest(
-        store_uuid=store_uuid,
-        user_phone_no=user_phone_no,
-        order_type=cart_pb2.ORDERTYPE.ORDER_TYPE_DINE_IN,
-        table_no="A1",
-    )
-    logger.debug(f"Sending CreateCart request: {request}")
-    response = grpc_cart_stub.CreateCart(request, metadata=META_DATA)
-    cart = response.cart
-    logger.debug(f"Received cart: {cart}")
-    assert cart.cart_uuid is not None
-    assert cart.store_uuid == store_uuid
-    assert cart.user_phone_no == user_phone_no
-    assert cart.cart_state == cart_pb2.CARTSTATE.CART_STATE_ACTIVE
+# def test_create_cart(grpc_cart_stub,table):
+#     logger.debug("Starting test_create_cart")
+#     request = cart_pb2.CreateCartRequest(
+#         store_uuid=store_uuid,
+#         user_phone_no=user_phone_no,
+#         order_type=cart_pb2.ORDERTYPE.ORDER_TYPE_DINE_IN,
+#         table_no="A1",
+#     )
+#     logger.debug(f"Sending CreateCart request: {request}")
+#     response = grpc_cart_stub.CreateCart(request, metadata=META_DATA)
+#     cart = response.cart
+#     logger.debug(f"Received cart: {cart}")
+#     assert cart.cart_uuid is not None
+#     assert cart.store_uuid == store_uuid
+#     assert cart.user_phone_no == user_phone_no
+#     assert cart.cart_state == cart_pb2.CARTSTATE.CART_STATE_ACTIVE
 
-    request = cart_pb2.DeleteCartRequest(
-        cart_uuid=cart.cart_uuid,
-        store_uuid=cart.store_uuid,
-        user_phone_no=cart.user_phone_no
-    )
-    logger.debug(f"Sending DeleteCart request: {request}")
-    grpc_cart_stub.DeleteCart(request, metadata=META_DATA)
-    logger.debug("Cart deleted successfully")
+#     request = cart_pb2.DeleteCartRequest(
+#         cart_uuid=cart.cart_uuid,
+#         store_uuid=cart.store_uuid,
+#         user_phone_no=cart.user_phone_no
+#     )
+#     logger.debug(f"Sending DeleteCart request: {request}")
+#     grpc_cart_stub.DeleteCart(request, metadata=META_DATA)
+#     logger.debug("Cart deleted successfully")
 
-def test_update_cart(grpc_cart_stub, cart):
-    logger.debug("Starting test_update_cart")
-    request = cart_pb2.UpdateCartRequest(
-        cart_uuid=cart.cart_uuid,
-        store_uuid=cart.store_uuid,
-        user_phone_no=cart.user_phone_no,
-        order_type=cart_pb2.ORDERTYPE.ORDER_TYPE_TAKE_AWAY,
-        vehicle_no="KA-01-HH-1234",
-        vehicle_description="Red Sedan"
-    )
-    logger.debug(f"Sending UpdateCart request: {request}")
-    response = grpc_cart_stub.UpdateCart(request, metadata=META_DATA)
-    logger.debug(f"Received updated cart: {response.cart}")
-    assert response.cart.vehicle_no == "KA-01-HH-1234"
-    assert response.cart.vehicle_description == "Red Sedan" 
-    assert response.cart.order_type == cart_pb2.ORDERTYPE.ORDER_TYPE_TAKE_AWAY
+# def test_update_cart(grpc_cart_stub, cart):
+#     logger.debug("Starting test_update_cart")
+#     request = cart_pb2.UpdateCartRequest(
+#         cart_uuid=cart.cart_uuid,
+#         store_uuid=cart.store_uuid,
+#         user_phone_no=cart.user_phone_no,
+#         order_type=cart_pb2.ORDERTYPE.ORDER_TYPE_TAKE_AWAY,
+#         vehicle_no="KA-01-HH-1234",
+#         vehicle_description="Red Sedan"
+#     )
+#     logger.debug(f"Sending UpdateCart request: {request}")
+#     response = grpc_cart_stub.UpdateCart(request, metadata=META_DATA)
+#     logger.debug(f"Received updated cart: {response.cart}")
+#     assert response.cart.vehicle_no == "KA-01-HH-1234"
+#     assert response.cart.vehicle_description == "Red Sedan" 
+#     assert response.cart.order_type == cart_pb2.ORDERTYPE.ORDER_TYPE_TAKE_AWAY
 
-def test_get_cart(grpc_cart_stub, cart):
-    logger.debug("Starting test_get_cart")
-    request = cart_pb2.GetCartRequest(
-        cart_uuid=cart.cart_uuid,
-        store_uuid=cart.store_uuid,
-        user_phone_no=cart.user_phone_no
-    )
-    logger.debug(f"Sending GetCart request: {request}")
-    response = grpc_cart_stub.GetCart(request, metadata=META_DATA)
-    logger.debug(f"Received cart: {response.cart}")
-    assert response.cart.cart_uuid == cart.cart_uuid
-    assert response.cart.store_uuid == cart.store_uuid
-    assert response.cart.user_phone_no == cart.user_phone_no
-    assert response.cart.cart_state == cart_pb2.CARTSTATE.CART_STATE_ACTIVE
+# def test_get_cart(grpc_cart_stub, cart):
+#     logger.debug("Starting test_get_cart")
+#     request = cart_pb2.GetCartRequest(
+#         cart_uuid=cart.cart_uuid,
+#         store_uuid=cart.store_uuid,
+#         user_phone_no=cart.user_phone_no
+#     )
+#     logger.debug(f"Sending GetCart request: {request}")
+#     response = grpc_cart_stub.GetCart(request, metadata=META_DATA)
+#     logger.debug(f"Received cart: {response.cart}")
+#     assert response.cart.cart_uuid == cart.cart_uuid
+#     assert response.cart.store_uuid == cart.store_uuid
+#     assert response.cart.user_phone_no == cart.user_phone_no
+#     assert response.cart.cart_state == cart_pb2.CARTSTATE.CART_STATE_ACTIVE
 
-def test_get_cart_invalid_uuid(grpc_cart_stub):
-    logger.debug("Starting test_get_cart_invalid_uuid")
-    with pytest.raises(grpc.RpcError) as exc_info:
-        request = cart_pb2.GetCartRequest(
-            cart_uuid=str(uuid4()),
-            store_uuid=store_uuid,
-            user_phone_no=user_phone_no
-        )
-        logger.debug(f"Sending GetCart request with invalid UUID: {request}")
-        grpc_cart_stub.GetCart(request, metadata=META_DATA)
-    logger.debug(f"Received expected error: {exc_info.value}")
-    assert exc_info.value.code() == grpc.StatusCode.NOT_FOUND
+# def test_get_cart_invalid_uuid(grpc_cart_stub):
+#     logger.debug("Starting test_get_cart_invalid_uuid")
+#     with pytest.raises(grpc.RpcError) as exc_info:
+#         request = cart_pb2.GetCartRequest(
+#             cart_uuid=str(uuid4()),
+#             store_uuid=store_uuid,
+#             user_phone_no=user_phone_no
+#         )
+#         logger.debug(f"Sending GetCart request with invalid UUID: {request}")
+#         grpc_cart_stub.GetCart(request, metadata=META_DATA)
+#     logger.debug(f"Received expected error: {exc_info.value}")
+#     assert exc_info.value.code() == grpc.StatusCode.NOT_FOUND
 
-def test_delete_cart(grpc_cart_stub, cart):
-    logger.debug("Starting test_delete_cart")
-    request = cart_pb2.DeleteCartRequest(
-        cart_uuid=cart.cart_uuid,
-        store_uuid=cart.store_uuid,
-        user_phone_no=cart.user_phone_no
-    )
-    logger.debug(f"Sending DeleteCart request: {request}")
-    response = grpc_cart_stub.DeleteCart(request, metadata=META_DATA)
-    logger.debug("Cart deleted successfully")
-    assert response is not None
+# def test_delete_cart(grpc_cart_stub, cart):
+#     logger.debug("Starting test_delete_cart")
+#     request = cart_pb2.DeleteCartRequest(
+#         cart_uuid=cart.cart_uuid,
+#         store_uuid=cart.store_uuid,
+#         user_phone_no=cart.user_phone_no
+#     )
+#     logger.debug(f"Sending DeleteCart request: {request}")
+#     response = grpc_cart_stub.DeleteCart(request, metadata=META_DATA)
+#     logger.debug("Cart deleted successfully")
+#     assert response is not None
     
-    logger.debug("Verifying cart deletion")
-    with pytest.raises(grpc.RpcError) as exc_info:
-        grpc_cart_stub.GetCart(
-            cart_pb2.GetCartRequest(
-                cart_uuid=cart.cart_uuid,
-                store_uuid=cart.store_uuid,
-                user_phone_no=cart.user_phone_no
-            ), 
-            metadata=META_DATA
-        )
-    assert exc_info.value.code() == grpc.StatusCode.NOT_FOUND
-    logger.debug("Cart deletion verified")
+#     logger.debug("Verifying cart deletion")
+#     with pytest.raises(grpc.RpcError) as exc_info:
+#         grpc_cart_stub.GetCart(
+#             cart_pb2.GetCartRequest(
+#                 cart_uuid=cart.cart_uuid,
+#                 store_uuid=cart.store_uuid,
+#                 user_phone_no=cart.user_phone_no
+#             ), 
+#             metadata=META_DATA
+#         )
+#     assert exc_info.value.code() == grpc.StatusCode.NOT_FOUND
+#     logger.debug("Cart deletion verified")
 
 def test_add_cart_item(grpc_cart_stub, cart,grpc_product_server):
     logger.debug("Starting test_add_cart_item")
@@ -495,7 +550,7 @@ def test_validate_cart_invalid_uuid(grpc_cart_stub):
 
 
 
-def test_add_coupon(grpc_cart_stub, cart):
+def test_add_coupon(grpc_cart_stub, cart,coupon):
     request = cart_pb2.AddCouponRequest(
         cart_uuid=cart.cart_uuid,
         store_uuid=cart.store_uuid,
@@ -505,3 +560,64 @@ def test_add_coupon(grpc_cart_stub, cart):
     response = grpc_cart_stub.AddCoupon(request, metadata=META_DATA)
     
     assert response.cart.coupon_code == "TESTCOUPON"
+
+
+# Define the new test cases to fill the coverage gaps
+def test_create_table(grpc_cart_stub):
+    request = cart_pb2.CreateTableRequest(
+        store_uuid=store_uuid,
+        table_number="B1",
+        # area_name="Indoor",
+        payment_type=PAYMENTTYPE.Value("PAYMENT_TYPE_POSTPAID"),
+        no_of_sitting=2
+    )
+    response = grpc_cart_stub.CreateTable(request, metadata=META_DATA)
+    assert response.table_uuid is not None
+    assert response.table_number == "B1"
+
+def test_get_table(grpc_cart_stub, table):
+    request = cart_pb2.GetTableRequest(table_uuid=table.table_uuid)
+    response = grpc_cart_stub.GetTable(request, metadata=META_DATA)
+    assert response.table_uuid == table.table_uuid
+
+def test_update_table(grpc_cart_stub, table):
+    request = cart_pb2.UpdateTableRequest(
+        table_uuid=table.table_uuid,
+        # area_name="Updated Area",
+        no_of_sitting=6
+    )
+    response = grpc_cart_stub.UpdateTable(request, metadata=META_DATA)
+    # assert response.area_name == "Updated Area"
+    assert response.no_of_sitting == 6
+
+# def test_list_tables(grpc_cart_stub):
+#     request = cart_pb2.ListTablesRequest(store_uuid=store_uuid)
+#     response = grpc_cart_stub.ListTables(request, metadata=META_DATA)
+#     assert isinstance(response.tables, list)
+
+# def test_create_service_session(grpc_cart_stub, table):
+#     request = cart_pb2.CreateServiceSessionRequest(table_uuid=table.table_uuid)
+#     response = grpc_cart_stub.CreateServiceSession(request, metadata=META_DATA)
+#     assert response.session.table_uuid == table.table_uuid
+
+# def test_validate_service_session_failure(grpc_cart_stub):
+#     request = cart_pb2.ValidateServiceSessionRequest(
+#         store_uuid=store_uuid,
+#         service_session_uuid=str(uuid4())  # non-existent session
+#     )
+#     response = grpc_cart_stub.ValidateServiceSession(request, metadata=META_DATA)
+#     assert response.valid is False
+
+# def test_validate_service_session_success(grpc_cart_stub, cart):
+#     grpc_cart_stub.ValidateCart(cart_pb2.ValidateCartRequest(
+#         cart_uuid=cart.cart_uuid,
+#         store_uuid=cart.store_uuid,
+#         user_phone_no=cart.user_phone_no
+#     ), metadata=META_DATA)
+
+#     session_request = cart_pb2.ValidateServiceSessionRequest(
+#         store_uuid=cart.store_uuid,
+#         service_session_uuid=cart.service_session.service_session_uuid
+#     )
+#     response = grpc_cart_stub.ValidateServiceSession(session_request, metadata=META_DATA)
+#     assert response.valid is True

@@ -111,29 +111,35 @@ func LogRequestMiddleware(next http.Handler) http.Handler {
 
 
 func VerifyJWTAndGetClaims(tokenString string, secretKey string, algorithm string) (jwt.MapClaims, error) {
+	log.Println("Verifying JWT token...")
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		// Ensure the token uses the expected algorithm
 		if token.Method.Alg() != algorithm {
+			log.Printf("Unexpected signing method: %v\n", token.Header["alg"])
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 		}
 		return []byte(secretKey), nil
 	})
 
 	if err != nil || !token.Valid {
+		log.Printf("Token validation failed: %v\n", err)
 		return nil, fmt.Errorf("invalid or failed to parse token: %w", err)
 	}
 
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok {
+		log.Println("Invalid claims format")
 		return nil, fmt.Errorf("invalid claims format")
 	}
 
+	log.Println("JWT token successfully verified")
 	return claims, nil
 }
 
-
 func AuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		log.Println("AuthMiddleware invoked for path:", r.URL.Path)
+
 		markInternal := func() {
 			r.Header.Set("Grpc-Metadata-type", "internal")
 			log.Println("Public/internal access granted:", r.URL.Path)
@@ -142,6 +148,8 @@ func AuthMiddleware(next http.Handler) http.Handler {
 
 		JWT_SECRET_KEY := os.Getenv("JWT_SECRET_KEY")
 		JWT_ALGO := os.Getenv("JWT_ALGO")
+		log.Println("JWT_SECRET_KEY and JWT_ALGO loaded from environment variables")
+
 		// Allow public GET requests to specific endpoints
 		storeUuidRegex := regexp.MustCompile(`^/v1/store/[a-fA-F0-9\-]+$`)
 		path := r.URL.Path
@@ -160,6 +168,7 @@ func AuthMiddleware(next http.Handler) http.Handler {
 
 		// Allow unauthenticated /auth routes
 		if strings.Contains(path, "/auth") {
+			log.Println("Skipping JWT Auth for /auth route:", path)
 			markInternal()
 			return
 		}
@@ -167,37 +176,42 @@ func AuthMiddleware(next http.Handler) http.Handler {
 		// Expect Authorization: Bearer <token>
 		authHeader := r.Header.Get("Authorization")
 		if authHeader == "" {
+			log.Println("Authorization header missing")
 			http.Error(w, "Authorization header required", http.StatusUnauthorized)
 			return
 		}
 
 		parts := strings.SplitN(authHeader, " ", 2)
 		if len(parts) != 2 || parts[0] != "Bearer" {
+			log.Println("Invalid Authorization header format")
 			http.Error(w, "Authorization header must be 'Bearer <token>'", http.StatusUnauthorized)
 			return
 		}
 
 		tokenString := parts[1]
-		claims, err := VerifyJWTAndGetClaims(tokenString, JWT_SECRET_KEY,JWT_ALGO)
+		log.Println("Authorization header found, verifying token...")
+		claims, err := VerifyJWTAndGetClaims(tokenString, JWT_SECRET_KEY, JWT_ALGO)
 		if err != nil {
-			log.Println("JWT verification failed:", err)
+			log.Printf("JWT verification failed: %v\n", err)
 			http.Error(w, "Unauthorized: invalid token", http.StatusUnauthorized)
 			return
 		}
 
+		log.Println("JWT verification succeeded, setting gRPC metadata headers")
 		// Set gRPC metadata headers
 		for key, val := range claims {
 			strVal := fmt.Sprintf("%v", val)
+			log.Printf("Setting gRPC metadata header: Grpc-Metadata-%s=%s\n", key, strVal)
 			r.Header.Set("Grpc-Metadata-"+key, strVal)
 		}
 
 		// Optional: mark the source
 		r.Header.Set("Grpc-Metadata-auth-source", "custom")
+		log.Println("Auth source set to 'custom'")
 
 		next.ServeHTTP(w, r)
 	})
 }
-
 
 func CORSMIddleware(next http.Handler) http.Handler {
 	c := cors.New(cors.Options{

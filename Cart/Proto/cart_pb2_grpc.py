@@ -6,7 +6,7 @@ import warnings
 import cart_pb2 as cart__pb2
 from google.protobuf import empty_pb2 as google_dot_protobuf_dot_empty__pb2
 
-GRPC_GENERATED_VERSION = '1.70.0'
+GRPC_GENERATED_VERSION = '1.71.0'
 GRPC_VERSION = grpc.__version__
 _version_not_supported = False
 
@@ -27,7 +27,8 @@ if _version_not_supported:
 
 
 class CartServiceStub(object):
-    """Missing associated documentation comment in .proto file."""
+    """Core Cart Service
+    """
 
     def __init__(self, channel):
         """Constructor.
@@ -35,6 +36,51 @@ class CartServiceStub(object):
         Args:
             channel: A grpc.Channel.
         """
+        self.CreateTable = channel.unary_unary(
+                '/Cart_v1.CartService/CreateTable',
+                request_serializer=cart__pb2.CreateTableRequest.SerializeToString,
+                response_deserializer=cart__pb2.Table.FromString,
+                _registered_method=True)
+        self.GetTable = channel.unary_unary(
+                '/Cart_v1.CartService/GetTable',
+                request_serializer=cart__pb2.GetTableRequest.SerializeToString,
+                response_deserializer=cart__pb2.Table.FromString,
+                _registered_method=True)
+        self.ListTables = channel.unary_unary(
+                '/Cart_v1.CartService/ListTables',
+                request_serializer=cart__pb2.ListTablesRequest.SerializeToString,
+                response_deserializer=cart__pb2.ListTablesResponse.FromString,
+                _registered_method=True)
+        self.UpdateTable = channel.unary_unary(
+                '/Cart_v1.CartService/UpdateTable',
+                request_serializer=cart__pb2.UpdateTableRequest.SerializeToString,
+                response_deserializer=cart__pb2.Table.FromString,
+                _registered_method=True)
+        self.DeleteTable = channel.unary_unary(
+                '/Cart_v1.CartService/DeleteTable',
+                request_serializer=cart__pb2.DeleteTableRequest.SerializeToString,
+                response_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
+                _registered_method=True)
+        self.CreateServiceSession = channel.unary_unary(
+                '/Cart_v1.CartService/CreateServiceSession',
+                request_serializer=cart__pb2.CreateServiceSessionRequest.SerializeToString,
+                response_deserializer=cart__pb2.ServiceSession.FromString,
+                _registered_method=True)
+        self.GetServiceSession = channel.unary_unary(
+                '/Cart_v1.CartService/GetServiceSession',
+                request_serializer=cart__pb2.GetServiceSessionRequest.SerializeToString,
+                response_deserializer=cart__pb2.ServiceSession.FromString,
+                _registered_method=True)
+        self.ListServiceSessions = channel.unary_unary(
+                '/Cart_v1.CartService/ListServiceSessions',
+                request_serializer=cart__pb2.ListServiceSessionsRequest.SerializeToString,
+                response_deserializer=cart__pb2.ListServiceSessionsResponse.FromString,
+                _registered_method=True)
+        self.ValidateSession = channel.unary_unary(
+                '/Cart_v1.CartService/ValidateSession',
+                request_serializer=cart__pb2.ValidateSessionRequest.SerializeToString,
+                response_deserializer=cart__pb2.ValidateSessionResponse.FromString,
+                _registered_method=True)
         self.CreateCart = channel.unary_unary(
                 '/Cart_v1.CartService/CreateCart',
                 request_serializer=cart__pb2.CreateCartRequest.SerializeToString,
@@ -118,11 +164,65 @@ class CartServiceStub(object):
 
 
 class CartServiceServicer(object):
-    """Missing associated documentation comment in .proto file."""
+    """Core Cart Service
+    """
+
+    def CreateTable(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def GetTable(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def ListTables(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def UpdateTable(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def DeleteTable(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def CreateServiceSession(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def GetServiceSession(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def ListServiceSessions(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def ValidateSession(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
 
     def CreateCart(self, request, context):
-        """Core Cart Service
-        """
+        """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
@@ -177,14 +277,7 @@ class CartServiceServicer(object):
         raise NotImplementedError('Method not implemented!')
 
     def RemoveAddOn(self, request, context):
-        """rpc UpdateAddOn(UpdateAddOnRequest) returns (CartResponse){
-        option (google.api.http) = {
-        patch : "/v1/store/{store_uuid}/user/{user_phone_no}/cart/{cart_uuid}/cartitem/{cart_item_uuid}/addon/{add_on_uuid}"
-        body : "*"
-        };
-        };
-
-        """
+        """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
@@ -228,6 +321,51 @@ class CartServiceServicer(object):
 
 def add_CartServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
+            'CreateTable': grpc.unary_unary_rpc_method_handler(
+                    servicer.CreateTable,
+                    request_deserializer=cart__pb2.CreateTableRequest.FromString,
+                    response_serializer=cart__pb2.Table.SerializeToString,
+            ),
+            'GetTable': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetTable,
+                    request_deserializer=cart__pb2.GetTableRequest.FromString,
+                    response_serializer=cart__pb2.Table.SerializeToString,
+            ),
+            'ListTables': grpc.unary_unary_rpc_method_handler(
+                    servicer.ListTables,
+                    request_deserializer=cart__pb2.ListTablesRequest.FromString,
+                    response_serializer=cart__pb2.ListTablesResponse.SerializeToString,
+            ),
+            'UpdateTable': grpc.unary_unary_rpc_method_handler(
+                    servicer.UpdateTable,
+                    request_deserializer=cart__pb2.UpdateTableRequest.FromString,
+                    response_serializer=cart__pb2.Table.SerializeToString,
+            ),
+            'DeleteTable': grpc.unary_unary_rpc_method_handler(
+                    servicer.DeleteTable,
+                    request_deserializer=cart__pb2.DeleteTableRequest.FromString,
+                    response_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
+            ),
+            'CreateServiceSession': grpc.unary_unary_rpc_method_handler(
+                    servicer.CreateServiceSession,
+                    request_deserializer=cart__pb2.CreateServiceSessionRequest.FromString,
+                    response_serializer=cart__pb2.ServiceSession.SerializeToString,
+            ),
+            'GetServiceSession': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetServiceSession,
+                    request_deserializer=cart__pb2.GetServiceSessionRequest.FromString,
+                    response_serializer=cart__pb2.ServiceSession.SerializeToString,
+            ),
+            'ListServiceSessions': grpc.unary_unary_rpc_method_handler(
+                    servicer.ListServiceSessions,
+                    request_deserializer=cart__pb2.ListServiceSessionsRequest.FromString,
+                    response_serializer=cart__pb2.ListServiceSessionsResponse.SerializeToString,
+            ),
+            'ValidateSession': grpc.unary_unary_rpc_method_handler(
+                    servicer.ValidateSession,
+                    request_deserializer=cart__pb2.ValidateSessionRequest.FromString,
+                    response_serializer=cart__pb2.ValidateSessionResponse.SerializeToString,
+            ),
             'CreateCart': grpc.unary_unary_rpc_method_handler(
                     servicer.CreateCart,
                     request_deserializer=cart__pb2.CreateCartRequest.FromString,
@@ -317,7 +455,251 @@ def add_CartServiceServicer_to_server(servicer, server):
 
  # This class is part of an EXPERIMENTAL API.
 class CartService(object):
-    """Missing associated documentation comment in .proto file."""
+    """Core Cart Service
+    """
+
+    @staticmethod
+    def CreateTable(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/Cart_v1.CartService/CreateTable',
+            cart__pb2.CreateTableRequest.SerializeToString,
+            cart__pb2.Table.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def GetTable(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/Cart_v1.CartService/GetTable',
+            cart__pb2.GetTableRequest.SerializeToString,
+            cart__pb2.Table.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def ListTables(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/Cart_v1.CartService/ListTables',
+            cart__pb2.ListTablesRequest.SerializeToString,
+            cart__pb2.ListTablesResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def UpdateTable(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/Cart_v1.CartService/UpdateTable',
+            cart__pb2.UpdateTableRequest.SerializeToString,
+            cart__pb2.Table.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def DeleteTable(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/Cart_v1.CartService/DeleteTable',
+            cart__pb2.DeleteTableRequest.SerializeToString,
+            google_dot_protobuf_dot_empty__pb2.Empty.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def CreateServiceSession(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/Cart_v1.CartService/CreateServiceSession',
+            cart__pb2.CreateServiceSessionRequest.SerializeToString,
+            cart__pb2.ServiceSession.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def GetServiceSession(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/Cart_v1.CartService/GetServiceSession',
+            cart__pb2.GetServiceSessionRequest.SerializeToString,
+            cart__pb2.ServiceSession.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def ListServiceSessions(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/Cart_v1.CartService/ListServiceSessions',
+            cart__pb2.ListServiceSessionsRequest.SerializeToString,
+            cart__pb2.ListServiceSessionsResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def ValidateSession(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/Cart_v1.CartService/ValidateSession',
+            cart__pb2.ValidateSessionRequest.SerializeToString,
+            cart__pb2.ValidateSessionResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
 
     @staticmethod
     def CreateCart(request,

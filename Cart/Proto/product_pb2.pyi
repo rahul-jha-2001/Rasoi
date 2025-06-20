@@ -421,18 +421,18 @@ class DietPrefResponse(_message.Message):
     def __init__(self, dietary_preference: _Optional[_Union[dietary_preference, _Mapping]] = ...) -> None: ...
 
 class UpdateDietaryPreference(_message.Message):
-    __slots__ = ("store_uuid", "diet_pref_uuid", "name", "description", "icon_image")
+    __slots__ = ("store_uuid", "diet_pref_uuid", "name", "description", "icon_image_bytes")
     STORE_UUID_FIELD_NUMBER: _ClassVar[int]
     DIET_PREF_UUID_FIELD_NUMBER: _ClassVar[int]
     NAME_FIELD_NUMBER: _ClassVar[int]
     DESCRIPTION_FIELD_NUMBER: _ClassVar[int]
-    ICON_IMAGE_FIELD_NUMBER: _ClassVar[int]
+    ICON_IMAGE_BYTES_FIELD_NUMBER: _ClassVar[int]
     store_uuid: str
     diet_pref_uuid: str
     name: str
     description: str
-    icon_image: bytes
-    def __init__(self, store_uuid: _Optional[str] = ..., diet_pref_uuid: _Optional[str] = ..., name: _Optional[str] = ..., description: _Optional[str] = ..., icon_image: _Optional[bytes] = ...) -> None: ...
+    icon_image_bytes: bytes
+    def __init__(self, store_uuid: _Optional[str] = ..., diet_pref_uuid: _Optional[str] = ..., name: _Optional[str] = ..., description: _Optional[str] = ..., icon_image_bytes: _Optional[bytes] = ...) -> None: ...
 
 class DeleteDietaryPreference(_message.Message):
     __slots__ = ("store_uuid", "diet_pref_uuid")

@@ -24,13 +24,15 @@ from google.protobuf.timestamp_pb2 import Timestamp
 import google.protobuf.json_format as json_format
 
 from google.protobuf import empty_pb2 
-from api.models import Cart,CartItem,AddOn,Coupon,CouponUsage,Coupon_Validator
+from api.models import Cart,CartItem,AddOn,Coupon,CouponUsage,Coupon_Validator,ServiceSession,Table
 from Proto import cart_pb2_grpc as Cart_pb2_grpc
 from Proto import cart_pb2 as Cart_pb2
 from Proto.cart_pb2 import (
     ORDERTYPE,
     DISCOUNTTYPE,
     CARTSTATE,
+    SERVICESESSIONSTATUS,
+    PAYMENTTYPE,
 )
 from Proto import product_pb2_grpc,product_pb2
 from Proto.product_pb2 import GetProductRequest,AddOnResponse
@@ -54,17 +56,37 @@ class CartVaildator:
     #     self.product_stub = product_pb2_grpc.ProductServiceStub(self.product_channel)
     #     # self.store_stub = store_pb2_grpc.StoreServiceStub(self.store_channel)
     @staticmethod
-    def validate_cart(cart:Cart, coupon:Coupon|None):
-
+    def validate_cart(cart: Cart, coupon: Coupon | None):
         errors = []
         total_price = 0
+        flag = True  # assume valid unless proven otherwise
 
+        # Check coupon validity
         if coupon is not None:
-            flag,msg = Coupon_Validator.validate(coupon=coupon,cart=cart)
+            flag, msg = Coupon_Validator.validate(coupon=coupon, cart=cart)
             if not flag:
-                return {"valid": flag, "messeage": msg}
+                return {"valid": False, "message": msg}
 
-        return {"valid": flag, "messeage": "Cart is Valid"}
+        # Check for postpaid table with valid session
+        if cart.service_session and cart.table:
+            if cart.table.payment_type == PAYMENTTYPE.PAYMENT_TYPE_POSTPAID:
+
+                # Ensure cart is active or locked
+                if cart.state not in [Cart.cart_state.CART_STATE_ACTIVE, Cart.cart_state.CART_STATE_LOCKED]:
+                    return {"valid": False, "message": "Postpaid cart must be in active or locked state"}
+
+                # Ensure phone number exists
+                if not cart.user_phone_no:
+                    return {"valid": False, "message": "Phone number is required for postpaid orders"}
+
+                # Ensure session is still ongoing
+                if cart.service_session.service_status != ServiceSession.ServiceStatus.SERVICE_SESSION_ONGOING:
+                    return {
+                        "valid": False,
+                        "message": f"Service session is not ongoing (current: {cart.service_session.service_status})"
+                    }
+
+        return {"valid": flag, "message": "Cart is valid"}
     
 
 def handle_error(func):
@@ -335,9 +357,9 @@ class CartService(Cart_pb2_grpc.CartServiceServicer):
                 raise
 
             try:
-                response.table_no = str(cart.table_no) or ""
+                response.table_no = str(cart.table.table_number) or ""
             except (AttributeError, TypeError, ValueError) as e:
-                logger.warning(f"Failed to convert table_no: {e}")
+                logger.warning(f"Failed to convert table_number: {e}")
                 raise
 
             try:
@@ -370,6 +392,19 @@ class CartService(Cart_pb2_grpc.CartServiceServicer):
                 response.items.extend(ITEMS or [])
             except (AttributeError, TypeError, ValueError) as e:
                 logger.warning(f"Failed to convert items: {e}")
+                raise
+
+            # --- NEW: table_uuid and service_session_uuid ---
+            try:
+                response.table_uuid = str(cart.table.table_uuid) if cart.table else ""
+            except (AttributeError, TypeError, ValueError) as e:
+                logger.warning(f"Failed to convert table_uuid: {e}")
+                raise
+
+            try:
+                response.service_session_uuid = str(cart.service_session.service_session_uuid) if cart.service_session else ""
+            except (AttributeError, TypeError, ValueError) as e:
+                logger.warning(f"Failed to convert service_session_uuid: {e}")
                 raise
 
             # Handling float fields with default 0.0
@@ -407,6 +442,118 @@ class CartService(Cart_pb2_grpc.CartServiceServicer):
             logger.error(f"Unexpected error in _Cart_to_response: {e}",e)
             raise
 
+    def _Table_to_response(self, table: Table) -> Cart_pb2.Table:
+        """Convert Django Table instance to protobuf Table message."""
+        try:
+            response = Cart_pb2.Table()
+
+            try:
+                response.table_uuid = str(table.table_uuid)
+            except (AttributeError, TypeError, ValueError) as e:
+                logger.warning(f"Failed to convert table_uuid: {e}")
+                raise
+
+            try:
+                response.store_uuid = str(table.store_uuid)
+            except (AttributeError, TypeError, ValueError) as e:
+                logger.warning(f"Failed to convert store_uuid: {e}")
+                raise
+
+            try:
+                response.table_number = table.table_number or ""
+            except (AttributeError, TypeError, ValueError) as e:
+                logger.warning(f"Failed to convert table_number: {e}")
+                raise
+
+            try:
+                response.area_name = table.area_name or ""
+            except (AttributeError, TypeError, ValueError) as e:
+                logger.warning(f"Failed to convert area_name: {e}")
+                raise
+
+            try:
+                response.payment_type = PAYMENTTYPE.Value(table.payment_type)
+            except (AttributeError, TypeError, ValueError) as e:
+                logger.warning(f"Failed to convert payment_type: {e}")
+                raise
+
+            try:
+                response.no_of_sitting = table.no_of_sitting
+            except (AttributeError, TypeError, ValueError) as e:
+                logger.warning(f"Failed to convert no_of_sitting: {e}")
+                raise
+
+            try:
+                response.is_active = table.is_active
+            except (AttributeError, TypeError, ValueError) as e:
+                logger.warning(f"Failed to convert is_active: {e}")
+                raise
+
+            # # created_at timestamp
+            # try:
+            #     if table.created_at:
+            #         response.created_at.FromDatetime(table.created_at)
+            # except Exception as e:
+            #     logger.warning(f"Failed to convert created_at: {e}")
+            #     raise
+
+            if not self._verify_wire_format(response, Cart_pb2.Table, f"Table_uuid={table.table_uuid}"):
+                raise grpc.RpcError(grpc.StatusCode.INTERNAL, f"Failed to serialize Table {table.table_uuid}")
+            logger.info(f"{response}")
+
+
+            return response
+        except Exception as e:
+            logger.error(f"Unexpected error in _Table_to_response: {e}")
+            raise
+
+    def _ServiceSession_to_response(self, session:ServiceSession) -> Cart_pb2.ServiceSession:
+        """Convert Django ServiceSession instance to protobuf ServiceSession message."""
+        try:
+            response = Cart_pb2.ServiceSession()
+
+            try:
+                response.service_session_uuid = str(session.service_session_uuid)
+            except (AttributeError, TypeError, ValueError) as e:
+                logger.warning(f"Failed to convert service_session_uuid: {e}")
+                raise
+
+            # nested table
+            try:
+                response.table_uuid =  str(session.table.table_uuid)
+            except Exception as e:
+                logger.warning(f"Failed to convert table uuid: {e}")
+                raise
+
+            # timestamps
+            try:
+                if session.started_at:
+                    ts = Timestamp()
+                    ts.FromDatetime(session.started_at)
+                    response.started_at.CopyFrom(ts)
+                if session.ended_at:
+                    ts2 = Timestamp()
+                    ts2.FromDatetime(session.ended_at)
+                    response.ended_at.CopyFrom(ts2)
+            except Exception as e:
+                logger.warning(f"Failed to convert timestamps: {e}")
+                raise
+
+            try:
+                response.service_status = SERVICESESSIONSTATUS.Value(session.service_status)
+            except (AttributeError, TypeError, ValueError) as e:
+                logger.warning(f"Failed to convert service_status: {e}")
+                raise
+            
+            if not self._verify_wire_format(response, ServiceSession, f"Session_uuid={session.service_session_uuid}"):
+                raise grpc.RpcError(grpc.StatusCode.INTERNAL, f"Failed to serialize Session {session.service_session_uuid}")
+            logger.info(f"{response}")
+
+            return response
+        except Exception as e:
+            logger.error(f"Unexpected error in _ServiceSession_to_response: {e}")
+            raise
+
     def __init__(self):
         try:
             self.channel_pool = GrpcChannelPool()
@@ -426,109 +573,389 @@ class CartService(Cart_pb2_grpc.CartServiceServicer):
             logger.error(f"Failed to initialize CartService: {str(e)}")
             raise
 
+
     @handle_error
-    @check_access(roles=["user","store","internal"])
-    def CreateCart(self, request, context):
+    @check_access(
+    expected_types=["store"],
+    allowed_roles={"store":["admin","staff"]},require_resource_match=True)
+    def CreateTable(self, request, context):
+        logger.debug(f"CreateTable request received: {request}")
+        with transaction.atomic():
+            table = Table.objects.create(
+                store_uuid=request.store_uuid,
+                table_number=request.table_number,
+                area_name=request.area_name,
+                payment_type=PAYMENTTYPE.Name(request.payment_type),
+                no_of_sitting=request.no_of_sitting,
+            )
+            logger.info(f"Created Table {table.table_uuid} in store {table.store_uuid} with table_number {table.table_number}, area_name {table.area_name}, payment_type {table.payment_type}, and no_of_sitting {table.no_of_sitting}")
+            return self._Table_to_response(table)
+
+    @handle_error
+    @check_access(
+    expected_types=["store"],
+    allowed_roles={"store":["admin","staff"]},require_resource_match=True)
+    def GetTable(self, request, context):
+        logger.debug(f"GetTable request received: {request}")
+        table = Table.objects.get_table(
+            table_uuid=request.table_uuid
+        )
+        logger.info(f"Fetched Table {table.table_uuid} in store {table.store_uuid} with table_number {table.table_number}, area_name {table.area_name}, payment_type {table.payment_type}, and no_of_sitting {table.no_of_sitting}")
+        return self._Table_to_response(table)
+
+    @handle_error
+    @check_access(
+    expected_types=["store"],
+    allowed_roles={"store":["admin","staff"]},require_resource_match=True)
+    def ListTables(self, request, context):
+        logger.debug(f"ListTables request received for store_uuid: {request.store_uuid}")
+        tables = Table.objects.filter_by_store(request.store_uuid)
+        logger.info(f"Found {len(tables)} tables for store_uuid: {request.store_uuid}")
+        response = Cart_pb2.ListTablesResponse()
+        for t in tables:
+            logger.debug(f"Adding Table {t.table_uuid} to response")
+            response.tables.append(self._Table_to_response(t))
+        return response
+
+    @handle_error
+    @check_access(
+    expected_types=["store"],
+    allowed_roles={"store":["admin","staff"]},require_resource_match=True)
+    def UpdateTable(self, request, context):
+        logger.debug(f"UpdateTable request received: {request}")
+        with transaction.atomic():
+            table = Table.objects.get(table_uuid=request.table_uuid)
+            logger.info(f"Updating Table {table.table_uuid} in store {table.store_uuid}")
+            if request.area_name:
+                logger.debug(f"Updating area_name to {request.area_name}")
+                table.area_name = request.area_name
+            if request.HasField('payment_type'):
+                logger.debug(f"Updating payment_type to {Cart_pb2.PAYMENTTYPE.Name(request.payment_type)}")
+                table.payment_type = Cart_pb2.PAYMENTTYPE.Name(request.payment_type)
+            if request.HasField('no_of_sitting'):
+                logger.debug(f"Updating no_of_sitting to {request.no_of_sitting}")
+                table.no_of_sitting = request.no_of_sitting
+            if request.HasField('is_active'):
+                logger.debug(f"Updating is_active to {request.is_active}")
+                table.is_active = request.is_active
+            table.save()
+            logger.info(f"Updated Table {table.table_uuid} with new values: area_name={table.area_name}, payment_type={table.payment_type}, no_of_sitting={table.no_of_sitting}, is_active={table.is_active}")
+            return self._Table_to_response(table)
+
+    @handle_error
+    @check_access(
+    expected_types=["store"],
+    allowed_roles={"store":["admin","staff"]},require_resource_match=True)
+    def DeleteTable(self, request, context):
+        with transaction.atomic():
+            table = Table.objects.get(table_uuid=request.table_uuid)
+            table.delete()
+            logger.info(f"Deleted Table {request.table_uuid}")
+            return empty_pb2.Empty()
+
+
+    @handle_error
+    @check_access(
+    expected_types=["store"],
+    allowed_roles={"store":["admin","staff"]},require_resource_match=True)
+    def CreateServiceSession(self, request, context):
+        with transaction.atomic():
+            try:
+                session = ServiceSession.objects.get_active_session(
+                    table_uuid=request.table_uuid
+                )
+                logger.info(f"Fetched active Session {session.service_session_uuid}")
+            except ServiceSession.DoesNotExist:
+                table = Table.objects.get(table_uuid=request.table_uuid)
+                session = ServiceSession.objects.create(
+                    table=table
+                )
+                logger.info(f"Created Session {session.service_session_uuid} for Table {table.table_uuid}")
+            return self._ServiceSession_to_response(session)
+
+    @handle_error
+    @check_access(
+    expected_types=["store"],
+    allowed_roles={"store":["admin","staff"]},require_resource_match=True)
+    def GetServiceSession(self, request, context):
+        session = ServiceSession.objects.get_session(
+            session_uuid=request.service_session_uuid
+        )
+        logger.info(f"Fetched Session {session.service_session_uuid}")
+        return self._ServiceSession_to_response(session)
+    
+
+    @handle_error
+    @check_access(
+    expected_types=["store"],
+    allowed_roles={"store":["admin","staff"]},require_resource_match=True)
+    def GetActiveSession(self, request, context):
+        session = ServiceSession.objects.get_active_session(
+            request.table_uuid )
+        logger.info(f"Fetched Session {session.service_session_uuid}")
+        return self._ServiceSession_to_response(session)
+    
+    @handle_error
+    @check_access(
+        expected_types=["store"],
+        allowed_roles={"store": ["admin", "staff"]}, require_resource_match=True)
+    def ListServiceSessions(self, request, context):
+        # Filter sessions based on request parameters
+        filters = {"store_uuid": request.store_uuid}
+        if request.HasField("table_uuid"):
+            filters["table__table_uuid"] = request.table_uuid
+        if request.HasField("service_session_status"):
+            filters["service_status"] = SERVICESESSIONSTATUS.Name(request.service_session_status)
+        if request.HasField("from"):
+            filters["created_at__gte"] = request.from_time.ToDatetime()
+
+        # Fetch paginated sessions using the new paginated_list method
+        sessions, next_page, prev_page = ServiceSession.objects.paginated_list(
+            filters=filters,
+            limit=request.limit or 10,
+            page=request.page or 1
+        )
+
+        # Build response
+        response = Cart_pb2.ListServiceSessionsResponse(
+            sessions=[self._ServiceSession_to_response(s) for s in sessions],
+            next_page=next_page,
+            prev_page=prev_page
+        )
+        return response
+
+    @handle_error
+    @check_access(
+    expected_types=["store"],
+    allowed_roles={"store":["admin","staff"]},require_resource_match=True)
+    def UpdateServiceSession(self, request, context):
+        with transaction.atomic():
+            session = ServiceSession.objects.get_session(
+                session_uuid=request.service_session_uuid
+            )
+            if request.HasField('service_status'):
+                session.service_status = Cart_pb2.ServiceSession.Status.Name(request.service_status)
+            if request.HasField('ended_at'):
+                session.ended_at = request.ended_at.ToDatetime()
+            session.save()
+            logger.info(f"Updated Session {session.service_session_uuid}")
+            return self._ServiceSession_to_response(session)
+
+    @handle_error
+    @check_access(
+        expected_types=["store"],
+        allowed_roles={"store": ["admin", "staff"]},
+        require_resource_match=True
+    )
+    def ValidateServiceSession(self, request, context):
+        logger.info(f"Validating service session: {request.service_session_uuid} for store: {request.store_uuid}")
 
         try:
-            with transaction.atomic():
-                cart = Cart.objects.get_active_cart(store_uuid =  request.store_uuid ,user_phone_no = request.user_phone_no)
-                cart.order_type = ORDERTYPE.Name(request.order_type)
-                cart.table_no = request.table_no or ""
+            # Fetch the service session
+            service_session = ServiceSession.objects.filter(
+                service_session_uuid=request.service_session_uuid,
+                store_uuid=request.store_uuid
+            ).first()
+
+            if not service_session:
+                logger.warning("Service session not found")
+                return Cart_pb2.ValidateSessionResponse(
+                    valid=False,
+                    message="Service session not found",
+                    cart_uuids=[]
+                )
+
+            # Check if session is ongoing
+            if service_session.service_status != ServiceSession.ServiceStatus.SERVICE_SESSION_ONGOING:
+                logger.warning(f"Invalid session status: {service_session.service_status}")
+                return Cart_pb2.ValidateSessionResponse(
+                    valid=False,
+                    message="Service session is not ongoing",
+                    cart_uuids=[]
+                )
+
+            # Fetch locked carts associated with the session
+            locked_carts = Cart.objects.filter(
+                service_session=service_session,
+                state=Cart.cart_state.CART_STATE_LOCKED
+            )
+
+            if not locked_carts.exists():
+                logger.warning("No locked carts found for session")
+                return Cart_pb2.ValidateSessionResponse(
+                    valid=False,
+                    message="No locked carts found for this session",
+                    cart_uuids=[]
+                )
+
+            # Extract UUIDs
+            cart_uuids = [str(cart.cart_uuid) for cart in locked_carts]
+
+            # Mark session as ended
+            service_session.service_status = ServiceSession.ServiceStatus.SERVICE_SESSION_ENDED
+            service_session.ended_at = datetime.now()
+            service_session.save()
+
+            logger.info(f"Service session {service_session.service_session_uuid} validated and ended. {len(cart_uuids)} carts locked.")
+
+            return Cart_pb2.ValidateSessionResponse(
+                valid=True,
+                message=f"Session validated. {len(cart_uuids)} carts ready for billing.",
+                cart_uuids=cart_uuids
+            )
+
+        except Exception as e:
+            logger.error(f"Error validating session: {e}")
+            raise
+
+
+
+    @handle_error
+    @check_access(expected_types=["store", "customer"], allowed_roles={"store": ["admin", "staff"]}, require_resource_match=True)
+    def CreateCart(self, request, context):
+        with transaction.atomic():
+            order_type_str = ORDERTYPE.Name(request.order_type)
+            phone = getattr(request, "user_phone_no", None)
+            cart = None
+
+            # Try lookup by cart_uuid
+            if getattr(request, 'cart_uuid', None):
+                cart = Cart.objects.filter(cart_uuid=request.cart_uuid, store_uuid=request.store_uuid).first()
+
+            # Fallback lookup by phone
+            if not cart and phone:
+                cart = Cart.objects.filter(
+                    store_uuid=request.store_uuid,
+                    user_phone_no=phone,
+                    state=Cart.cart_state.CART_STATE_ACTIVE
+                ).first()
+
+            if not cart:
+                cart = Cart(store_uuid=request.store_uuid, user_phone_no=phone)
+
+            if request.order_type == ORDERTYPE.ORDER_TYPE_DINE_IN:
+                table = Table.objects.filter(
+                    store_uuid=request.store_uuid,
+                    table_number=request.table_no
+                ).select_for_update().first()
+                if not table:
+                    context.abort(grpc.StatusCode.NOT_FOUND, f"Table {request.table_no} not found")
+
+                session = ServiceSession.objects.filter(
+                    table=table,
+                    service_status=ServiceSession.ServiceStatus.SERVICE_SESSION_ONGOING
+                ).first()
+
+                if not session:
+                    session = ServiceSession.objects.create(table=table)
+
+                cart.table = table
+                cart.service_session = session
+                cart.vehicle_no = ""
+                cart.vehicle_description = ""
+
+            elif request.order_type == ORDERTYPE.ORDER_TYPE_DRIVE_THRU:
+                cart.table = None
+                cart.service_session = None
                 cart.vehicle_no = request.vehicle_no or ""
                 cart.vehicle_description = request.vehicle_description or ""
-                cart.save()
-                logger.info(f"Fetched Cart{cart.cart_uuid} for Phone No:{cart.user_phone_no} at store: {cart.store_uuid}")
-                return self._Cart_to_response(cart)
-        except Cart.DoesNotExist:
-            with transaction.atomic():
-                cart = Cart.objects.create(store_uuid = request.store_uuid,
-                    user_phone_no = request.user_phone_no,
-                    order_type = ORDERTYPE.Name(request.order_type),
-                    table_no = request.table_no or "",
-                    vehicle_no = request.vehicle_no or "",
-                    vehicle_description = request.vehicle_description or "")
-                
-                logger.info(f"Created Cart{cart.cart_uuid} for Phone No:{cart.user_phone_no} at store: {cart.store_uuid}")
-                return self._Cart_to_response(cart)
-            
+
+            else:
+                cart.table = None
+                cart.service_session = None
+                cart.vehicle_no = ""
+                cart.vehicle_description = ""
+
+            cart.order_type = order_type_str
+            cart.save()
+
+            logger.info(f"Upserted Cart {cart.cart_uuid} (Type={order_type_str}, Phone={phone})")
+            return self._Cart_to_response(cart)
+
+
     @handle_error
-    @check_access(roles=["user","store","internal"])
+    @check_access(
+        expected_types=["store", "customer"],
+        allowed_roles={"store": ["admin", "staff"]},
+        require_resource_match=True
+    )
     def GetCart(self, request, context):
-        
-        if getattr(request,"cart_uuid",None):
+        if getattr(request, "cart_uuid", None):
             cart = Cart.objects.get_active_cart(cart_uuid=request.cart_uuid)
             return self._Cart_to_response(cart)
-        
-        # Fall back to store_uuid + user_phone_no combination
-        elif getattr(request,"store_uuid",None) and getattr(request,"user_phone_no",None):
+        elif getattr(request, "store_uuid", None) and getattr(request, "user_phone_no", None):
             cart = Cart.objects.get_active_cart(
                 store_uuid=request.store_uuid,
                 user_phone_no=request.user_phone_no
             )
             return self._Cart_to_response(cart)
-        
         else:
             raise ValueError("Must provide either cart_uuid or both store_uuid and user_phone_no")
 
-        
-    @handle_error    
+    @handle_error
+    @check_access(expected_types=["store", "customer", "anonymous"], allowed_roles={"store": ["admin", "staff"]}, require_resource_match=True)
     def UpdateCart(self, request, context):
         logger.debug(f"UpdateCart request received: {request}")
+        phone = getattr(request, "user_phone_no", None)
 
-        try:
-            if getattr(request,"cart_uuid",None):
-                logger.debug(f"Looking up cart by cart_uuid={request.cart_uuid}")
-                cart = Cart.objects.get_active_cart(cart_uuid = request.cart_uuid,user_phone_no = request.user_phone_no,store_uuid = request.store_uuid)
-            
-            # Fall back to store_uuid + user_phone_no combination
-            elif getattr(request,"store_uuid",None) and getattr(request,"user_phone_no",None):
-                logger.debug(f"Looking up cart by store_uuid={request.store_uuid} and user_phone_no={request.user_phone_no}")
-                cart = Cart.objects.get_active_cart(
+        if getattr(request, "cart_uuid", None):
+            cart = Cart.objects.get_active_cart(
+                cart_uuid=request.cart_uuid,
+                user_phone_no=phone,
+                store_uuid=request.store_uuid
+            )
+        elif getattr(request, "store_uuid", None) and phone:
+            cart = Cart.objects.get_active_cart(
+                store_uuid=request.store_uuid,
+                user_phone_no=phone
+            )
+        else:
+            logger.error("Missing required parameters for cart lookup")
+            raise ValueError("Must provide either cart_uuid or both store_uuid and user_phone_no")
+
+        with transaction.atomic():
+            if request.HasField("order_type"):
+                cart.order_type = ORDERTYPE.Name(request.order_type)
+
+            if request.HasField("table_no"):
+                table = Table.objects.filter(
                     store_uuid=request.store_uuid,
-                    user_phone_no=request.user_phone_no
-                )
-            else:
-                logger.error("Missing required parameters for cart lookup")
-                raise ValueError("Must provide either cart_uuid or both store_uuid and user_phone_no")
+                    table_number=request.table_no
+                ).select_for_update().first()
+                if not table:
+                    raise GrpcException(status_code=grpc.StatusCode.NOT_FOUND, details=f"Table not found: {request.table_no}")
+                cart.table = table
 
-            with transaction.atomic():
-                logger.debug(f"Before Update - Cart state: {cart}")
-                
-                if request.HasField("order_type"):
-                    logger.debug(f"Updating order_type from {cart.order_type} to {ORDERTYPE.Name(request.order_type)}")
-                    cart.order_type = ORDERTYPE.Name(request.order_type)
-                
-                if request.HasField("table_no"):
-                    logger.debug(f"Updating table_no from {cart.table_no} to {request.table_no}")
-                    cart.table_no = request.table_no
-                
-                if request.HasField("vehicle_no"):
-                    logger.debug(f"Updating vehicle_no from {cart.vehicle_no} to {request.vehicle_no}")
-                    cart.vehicle_no = request.vehicle_no    
-                
-                if request.HasField("vehicle_description"):
-                    logger.debug(f"Updating vehicle_description from {cart.vehicle_description} to {request.vehicle_description}")
-                    cart.vehicle_description = request.vehicle_description
-                
-                if request.HasField("special_instructions"):
-                    logger.debug(f"Updating special_instructions from {cart.special_instructions} to {request.special_instructions}")
-                    cart.special_instructions = request.special_instructions
-                
-                logger.debug(f"After Update - Cart state: {cart}")
-                
-                cart.full_clean()
-                cart.save() 
+                # Update session if order type is dine-in
+                if request.order_type == ORDERTYPE.ORDER_TYPE_DINE_IN:
+                    session = ServiceSession.objects.filter(
+                        table=table,
+                        service_status=ServiceSession.ServiceStatus.SERVICE_SESSION_ONGOING
+                    ).first()
+                    if not session:
+                        session = ServiceSession.objects.create(table=table)
+                    cart.service_session = session
 
-                logger.info(f"Successfully updated Cart:{cart.cart_uuid} for store:{cart.store_uuid} and user:{cart.user_phone_no}")
-                return self._Cart_to_response(cart)
-                
-        except Exception as e:
-            logger.error(f"Error in UpdateCart: {str(e)}",e)
-            raise
+            if request.HasField("vehicle_no"):
+                cart.vehicle_no = request.vehicle_no
+
+            if request.HasField("vehicle_description"):
+                cart.vehicle_description = request.vehicle_description
+
+            if request.HasField("special_instructions"):
+                cart.special_instructions = request.special_instructions
+
+            cart.full_clean()
+            cart.save()
+
+            logger.info(f"Successfully updated Cart:{cart.cart_uuid} for store:{cart.store_uuid} and user:{phone}")
+            return self._Cart_to_response(cart)
+
 
     @handle_error
-    @check_access(roles=["user","store","internal"])
+    @check_access(
+    expected_types=["store"],
+    allowed_roles={"store":["admin","staff"]},require_resource_match=True)
     def DeleteCart(self, request, context):
 
         if getattr(request,"cart_uuid",None):
@@ -545,7 +972,9 @@ class CartService(Cart_pb2_grpc.CartServiceServicer):
             return empty_pb2.Empty()
         
     @handle_error    
-    @check_access(roles=["user","store","internal"])
+    @check_access(
+    expected_types=["store"],
+    allowed_roles={"store":["admin","staff"]},require_resource_match=True)
     def AddCartItem(self, request, context):
         logger.debug(f"AddCartItem request - Cart UUID: {request.cart_uuid}, Product UUID: {request.product_uuid}")
 
@@ -608,7 +1037,9 @@ class CartService(Cart_pb2_grpc.CartServiceServicer):
             return self._Cart_to_response(cart)
 
     @handle_error
-    @check_access(roles=["user","store","internal"])
+    @check_access(
+    expected_types=["store"],
+    allowed_roles={"store":["admin","staff"]},require_resource_match=True)
     def RemoveCartItem(self, request, context):
         cart = Cart.objects.get_active_cart(cart_uuid = request.cart_uuid,user_phone_no = request.user_phone_no,store_uuid = request.store_uuid)
 
@@ -620,7 +1051,9 @@ class CartService(Cart_pb2_grpc.CartServiceServicer):
 
 
     @handle_error
-    @check_access(roles=["user","store","internal"])
+    @check_access(
+    expected_types=["store"],
+    allowed_roles={"store":["admin","staff"]},require_resource_match=True)
     def CreateAddOn(self, request, context):
         logger.debug(f"CreateAddOn request - Cart UUID: {request.cart_uuid}, Cart Item UUID: {request.cart_item_uuid}")
         
@@ -633,9 +1066,10 @@ class CartService(Cart_pb2_grpc.CartServiceServicer):
         add_on_request = product_pb2.GetAddOnRequest(product_uuid=str(cart_item.product_uuid),store_uuid = str(cart.store_uuid),add_on_uuid = str(request.add_on_uuid))  
         logger.debug(f"Making GetAddOn request to Product service for addon: {request.add_on_uuid}")
         
+        response:AddOnResponse|None = None  # Initialize response to None
         try:
             logger.debug(f"Calling Product service with metadata: {self.meta_data}")
-            response:AddOnResponse = self.Product_stub.GetAddOn(add_on_request,metadata = self.meta_data)
+            response = self.Product_stub.GetAddOn(add_on_request,metadata = self.meta_data)
             logger.debug(f"Received addon response: {response}")
         except RpcError as e:
             error_message = e.details()
@@ -652,7 +1086,7 @@ class CartService(Cart_pb2_grpc.CartServiceServicer):
                 logger.error(f"Product Service unavailable at: {PRODUCT_SERVICE_ADDR}")
                 raise GrpcException("Internal Server Error",status_code=StatusCode.UNAVAILABLE)
             
-        if response.add_on.is_available == False:
+        if response and response.add_on.is_available == False:
             logger.error(f"Add-on: {request.add_on.add_on_uuid} is not available")
             raise GrpcException("Add-on Not Available",status_code=StatusCode.NOT_FOUND)
 
@@ -673,28 +1107,10 @@ class CartService(Cart_pb2_grpc.CartServiceServicer):
             
             return self._Cart_to_response(cart)
 
-    # @handle_error
-    # @check_access(roles=["user","store","internal"])
-    # def UpdateAddOn(self, request, context):
-    #     cart = Cart.objects.get_active_cart(cart_uuid = request.cart_uuid,user_phone_no = request.user_phone_no,store_uuid = request.store_uuid)
-    #     cart_item = CartItem.objects.get(cart = cart,cart_item_uuid = request.cart_item_uuid)
-    #     add_on = AddOn.objects.get(cart_item = cart_item,add_on_uuid = request.add_on_uuid)
-    #     with transaction.atomic():
-    #         if request.add_on.add_on_name:
-    #             add_on.add_on_name = request.add_on.add_on_name
-    #         if request.add_on.quantity:
-    #             add_on.quantity = request.add_on.quantity
-    #         if request.add_on.unit_price:
-    #             add_on.unit_price = request.add_on.unit_price
-    #         if request.add_on.is_free:
-    #             add_on.is_free = request.add_on.is_free
-
-    #         add_on.save()
-    #         logger.info(f"Updated Add-on:{add_on.add_on_uuid} in Cart_item:{cart_item.cart_item_uuid} in Cart:{cart.cart_uuid}")
-    #         return self._Cart_to_response(cart)
-
     @handle_error
-    @check_access(roles=["user","store","internal"])
+    @check_access(
+    expected_types=["store"],
+    allowed_roles={"store":["admin","staff"]},require_resource_match=True)
     def RemoveAddOn(self, request, context):
         cart = Cart.objects.get_active_cart(cart_uuid = request.cart_uuid,user_phone_no = request.user_phone_no,store_uuid = request.store_uuid)
         cart_item = CartItem.objects.get(cart = cart,cart_item_uuid = request.cart_item_uuid)
@@ -705,7 +1121,9 @@ class CartService(Cart_pb2_grpc.CartServiceServicer):
             return self._Cart_to_response(cart)
 
     @handle_error
-    @check_access(roles=["user","store","internal"])
+    @check_access(
+    expected_types=["store"],
+    allowed_roles={"store":["admin","staff"]},require_resource_match=True)
     def AddQuantity(self, request, context):
         cart = Cart.objects.get_active_cart(cart_uuid = request.cart_uuid,user_phone_no = request.user_phone_no,store_uuid = request.store_uuid)
 
@@ -716,7 +1134,9 @@ class CartService(Cart_pb2_grpc.CartServiceServicer):
             return self._Cart_to_response(cart)
 
     @handle_error
-    @check_access(roles=["user","store","internal"])
+    @check_access(
+    expected_types=["store"],
+    allowed_roles={"store":["admin","staff"]},require_resource_match=True)
     def RemoveQuantity(self, request, context):
         cart = Cart.objects.get_active_cart(cart_uuid = request.cart_uuid,user_phone_no = request.user_phone_no,store_uuid = request.store_uuid)
 
@@ -731,7 +1151,9 @@ class CartService(Cart_pb2_grpc.CartServiceServicer):
             return self._Cart_to_response(cart)
 
     @handle_error
-    @check_access(roles=["user","store","internal"])
+    @check_access(
+    expected_types=["store"],
+    allowed_roles={"store":["admin","staff"]},require_resource_match=True)
     def IncreaseAddOnQuantity(self, request, context):
         cart = Cart.objects.get_active_cart(cart_uuid = request.cart_uuid,user_phone_no = request.user_phone_no,store_uuid = request.store_uuid)
         cart_item = CartItem.objects.get(cart = cart,cart_item_uuid = request.cart_item_uuid)
@@ -742,7 +1164,9 @@ class CartService(Cart_pb2_grpc.CartServiceServicer):
             return self._Cart_to_response(cart)
 
     @handle_error
-    @check_access(roles=["user","store","internal"])
+    @check_access(
+    expected_types=["store"],
+    allowed_roles={"store":["admin","staff"]},require_resource_match=True)
     def RemoveAddOnQuantity(self, request, context):
         cart = Cart.objects.get_active_cart(cart_uuid = request.cart_uuid,user_phone_no = request.user_phone_no,store_uuid = request.store_uuid)
         cart_item = CartItem.objects.get(cart = cart,cart_item_uuid = request.cart_item_uuid)
@@ -759,7 +1183,9 @@ class CartService(Cart_pb2_grpc.CartServiceServicer):
 
    
     @handle_error
-    @check_access(roles=["user","store","internal"])
+    @check_access(
+    expected_types=["store"],
+    allowed_roles={"store":["admin","staff"]},require_resource_match=True)
     def ValidateCoupon(self, request, context):
         cart = Cart.objects.get_active_cart(cart_uuid = request.cart_uuid,user_phone_no = request.user_phone_no,store_uuid = request.store_uuid)
 
@@ -773,12 +1199,14 @@ class CartService(Cart_pb2_grpc.CartServiceServicer):
         return Cart_pb2.ValidCouponResponse(Valid=Valid,message=message)
 
     @handle_error
-    @check_access(roles=["user","store","internal"])
+    @check_access(
+    expected_types=["store"],
+    allowed_roles={"store":["admin","staff"]},require_resource_match=True)
     def AddCoupon(self, request, context):
         
         cart = Cart.objects.get_active_cart(cart_uuid = request.cart_uuid,user_phone_no = request.user_phone_no,store_uuid = request.store_uuid)
 
-        coupon  = Coupon.objects.get(coupon_code = request.coupon_code,cart_uuid = request.cart_uuid)
+        coupon  = Coupon.objects.get(coupon_code = request.coupon_code,store_uuid = request.store_uuid)
         
         Valid,message = Coupon_Validator.validate(coupon=coupon,cart=cart)
         
@@ -786,12 +1214,16 @@ class CartService(Cart_pb2_grpc.CartServiceServicer):
             raise ValidationError(message=message)
         
         with transaction.atomic():
+            cart.coupon_code = coupon.coupon_code
             cart.apply_discount(discount=coupon.discount)
+            cart.save()
             logger.info(f"Applied discount to Cart:{cart.cart_uuid} from coupon {coupon.coupon_uuid}")
             return self._Cart_to_response(cart=cart)
 
     @handle_error
-    @check_access(roles=["user","store","internal"])
+    @check_access(
+    expected_types=["store"],
+    allowed_roles={"store":["admin","staff"]},require_resource_match=True)
     def RemoveCoupon(self, request, context):
         cart = Cart.objects.get_active_cart(cart_uuid = request.cart_uuid,user_phone_no = request.user_phone_no,store_uuid = request.store_uuid)
         with transaction.atomic():
@@ -799,7 +1231,9 @@ class CartService(Cart_pb2_grpc.CartServiceServicer):
             return self._Cart_to_response(cart)
 
     @handle_error
-    @check_access(roles=["internal"])
+    @check_access(
+    expected_types=["store"],
+    allowed_roles={"store":["admin","staff"]},require_resource_match=True)
     def ValidateCart(self,request,context):
         # Get the cart based on cart_uuid
             cart = Cart.objects.get_active_cart(cart_uuid = request.cart_uuid,user_phone_no = request.user_phone_no,store_uuid = request.store_uuid)
@@ -1014,7 +1448,9 @@ class CouponService(Cart_pb2_grpc.CouponServiceServicer):
             raise
     
     @handle_error
-    @check_access(roles=["store","internal"])
+    @check_access(
+    expected_types=["store"],
+    allowed_roles={"store":["admin","staff"]},require_resource_match=True)
     def CreateCoupon(self,request,context):
         with transaction.atomic():
             coupon =  Coupon.objects.create(
@@ -1044,7 +1480,9 @@ class CouponService(Cart_pb2_grpc.CouponServiceServicer):
             return self._Coupon_to_response(coupon=coupon)
 
     @handle_error
-    @check_access(roles=["store","internal"])       
+    @check_access(
+    expected_types=["store"],
+    allowed_roles={"store":["admin","staff"]},require_resource_match=True)
     def GetCoupon(self,request,context):
 
         coupon = Coupon.objects.get(coupon_uuid=request.coupon_uuid,
@@ -1054,7 +1492,9 @@ class CouponService(Cart_pb2_grpc.CouponServiceServicer):
 
 
     @handle_error    
-    @check_access(roles=["store","internal"])
+    @check_access(
+    expected_types=["store"],
+    allowed_roles={"store":["admin","staff"]},require_resource_match=True)
     def UpdateCoupon(self,request,context):
         coupon = Coupon.objects.get(coupon_uuid=request.coupon_uuid, store_uuid=request.store_uuid)
         with transaction.atomic():
@@ -1089,7 +1529,9 @@ class CouponService(Cart_pb2_grpc.CouponServiceServicer):
 
         
     @handle_error
-    @check_access(roles=["store","internal"])
+    @check_access(
+    expected_types=["store"],
+    allowed_roles={"store":["admin","staff"]},require_resource_match=True)
     def DeleteCoupon(self,request,context):
         coupon = Coupon.objects.get(coupon_uuid=request.coupon_uuid,
                                     store_uuid = request.store_uuid)
@@ -1099,7 +1541,9 @@ class CouponService(Cart_pb2_grpc.CouponServiceServicer):
             return self._Coupon_to_response(coupon)
         
     @handle_error
-    @check_access(roles=["store","internal"])
+    @check_access(
+    expected_types=["store"],
+    allowed_roles={"store":["admin","staff"]},require_resource_match=True)
     def listCoupon(self,request,context):
         coupons,next_page,prev_page = Coupon.objects.get_coupons()
 
@@ -1110,7 +1554,9 @@ class CouponService(Cart_pb2_grpc.CouponServiceServicer):
             )   
 
     @handle_error
-    @check_access(roles=["store","internal"])
+    @check_access(
+    expected_types=["store"],
+    allowed_roles={"store":["admin","staff"]},require_resource_match=True)
     def GetCouponUsage(self, request, context):
         coupon  = Coupon.objects.get(store_uuid= request.store_uuid,coupon_uuid = request.coupon_uuid)
 

@@ -8,4 +8,4 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'Cart.settings')
 django.setup()
 
 call_command("makemigrations","api")
-call_command("migrate")
+# call_command("migrate")

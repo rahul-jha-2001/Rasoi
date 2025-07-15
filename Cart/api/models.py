@@ -48,32 +48,50 @@ class coupon_usage_manager(models.Manager) :
         return paginated_data.object_list, next_page, prev_page
 
 class cart_manager(models.Manager):
-    def filter_active_carts(self,cart_uuid:str|None = None,store_uuid:str|None = None,user_phone_no:str|None = None):
-
+    def filter_active_carts(self, cart_uuid: str | None = None, store_uuid: str | None = None, user_phone_no: str | None = None):
         """Returns all carts that are currently active."""
-        if cart_uuid:
-            return self.filter(cart_uuid=cart_uuid,state=Cart.cart_state.CART_STATE_ACTIVE)
-        if store_uuid and user_phone_no:
+        if cart_uuid and cart_uuid.strip() and store_uuid and store_uuid.strip():
+            return self.filter(
+                cart_uuid=cart_uuid,
+                store_uuid=store_uuid,
+                state=Cart.cart_state.CART_STATE_ACTIVE
+            )
+        if cart_uuid and cart_uuid.strip():
+            return self.filter(
+                cart_uuid=cart_uuid,
+                state=Cart.cart_state.CART_STATE_ACTIVE
+            )
+        if store_uuid and store_uuid.strip() and user_phone_no and user_phone_no.strip():
             return self.filter(
                 store_uuid=store_uuid,
                 user_phone_no=user_phone_no,
                 state=Cart.cart_state.CART_STATE_ACTIVE
             )
+        return self.none()
     def filter_all_carts(self,store_uuid:str|None = None):
         """Returns all carts, regardless of their state."""
         return self.filter(store_uuid = store_uuid)
     
-    def get_active_cart(self,cart_uuid:str|None = None,store_uuid:str|None = None,user_phone_no:str|None = None):
-
+    def get_active_cart(self, cart_uuid: str | None = None, store_uuid: str | None = None, user_phone_no: str | None = None):
         """Returns all carts that are currently active."""
-        if cart_uuid:
-            return self.get(cart_uuid=cart_uuid,state=Cart.cart_state.CART_STATE_ACTIVE)
-        if store_uuid and user_phone_no:
-            return self.get(
+        if cart_uuid and cart_uuid.strip() and store_uuid and store_uuid.strip():
+            return self.filter(
+                cart_uuid=cart_uuid,
+                store_uuid=store_uuid,
+                state=Cart.cart_state.CART_STATE_ACTIVE
+            ).first()
+        if cart_uuid and cart_uuid.strip():
+            return self.filter(
+                cart_uuid=cart_uuid,
+                state=Cart.cart_state.CART_STATE_ACTIVE
+            ).first()
+        if store_uuid and store_uuid.strip() and user_phone_no and user_phone_no.strip():
+            return self.filter(
                 store_uuid=store_uuid,
                 user_phone_no=user_phone_no,
                 state=Cart.cart_state.CART_STATE_ACTIVE
-            )
+            ).first()
+        return self.none()
 
 class TableManager(models.Manager):
     """Manager for Table model to encapsulate common queries."""
@@ -224,7 +242,8 @@ class ServiceSession(models.Model):
     table = models.ForeignKey(Table, on_delete=models.CASCADE, related_name="sessions")
     started_at = models.DateTimeField(auto_now_add=True)
     ended_at = models.DateTimeField(null=True, blank=True)
-
+    phone_number = models.CharField(max_length = 15,null=True,blank= True,verbose_name=_("Phone Number"))
+    
     service_status = models.CharField(
         max_length=30,
         choices=ServiceStatus.choices,
@@ -245,6 +264,32 @@ class ServiceSession(models.Model):
             models.Index(fields=['table']),  # Add index for table
         ]
 
+    def clean(self):
+        """Validate the ServiceSession data."""
+        if self.service_status == self.ServiceStatus.SERVICE_SESSION_ONGOING:
+            ongoing_session = ServiceSession.objects.filter(
+                table=self.table,
+                service_status=self.ServiceStatus.SERVICE_SESSION_ONGOING
+            ).exclude(pk=self.pk).first()
+            if ongoing_session:
+                raise ValidationError("An ongoing session already exists for this table.")
+        
+        if self.phone_number:
+            try:
+                parsed = phonenumbers.parse(self.phone_number, "IN")
+                if not phonenumbers.is_valid_number(parsed):
+                    raise ValidationError("Invalid phone number.")
+                self.phone_number = phonenumbers.format_number(
+                    parsed, phonenumbers.PhoneNumberFormat.E164
+                )
+            except phonenumbers.NumberParseException:
+                raise ValidationError("Invalid phone number format.")
+
+    def save(self, *args, **kwargs):
+        """Validate and save the ServiceSession instance."""
+        self.clean()
+        super().save(*args, **kwargs)
+
     def end_session(self):
         self.ended_at = datetime.datetime.now()
         self.service_status = self.ServiceStatus.SERVICE_SESSION_ENDED
@@ -259,65 +304,62 @@ class ServiceSession(models.Model):
 
 class Cart(models.Model):
     class order_types(models.TextChoices):
-        ORDER_TYPE_UNSPECIFIED = "ORDER_TYPE_UNSPECIFIED",_("ORDER_TYPE_UNSPECIFIED")
-        ORDER_TYPE_DINE_IN ="ORDER_TYPE_DINE_IN",_("ORDER_TYPE_DINE_IN")
-        ORDER_TYPE_TAKE_AWAY = "ORDER_TYPE_TAKE_AWAY",_("ORDER_TYPE_TAKE_AWAY")
-        ORDER_TYPE_DRIVE_THRU = "ORDER_TYPE_DRIVE_THRU",_("ORDER_TYPE_DRIVE_THRU")
-    
+        ORDER_TYPE_UNSPECIFIED = "ORDER_TYPE_UNSPECIFIED", _("Unspecified")
+        ORDER_TYPE_DINE_IN = "ORDER_TYPE_DINE_IN", _("Dine-In")
+        ORDER_TYPE_TAKE_AWAY = "ORDER_TYPE_TAKE_AWAY", _("Takeaway")
+        ORDER_TYPE_DRIVE_THRU = "ORDER_TYPE_DRIVE_THRU", _("Drive-Thru")
+
     class cart_state(models.TextChoices):
-        CART_STATE_UNSPECIFIED_STATE = "CART_STATE_UNSPECIFIED_STATE",_("Unspecified_State")
-        CART_STATE_ACTIVE = "CART_STATE_ACTIVE",_("Active")
-        CART_STATE_LOCKED = "CART_STATE_LOCKED",_("Completed")
-        CART_STATE_ABANDONED = "CART_STATE_ABANDONED",_("Abandoned")
+        CART_STATE_UNSPECIFIED_STATE = "CART_STATE_UNSPECIFIED_STATE", _("Unspecified")
+        CART_STATE_ACTIVE = "CART_STATE_ACTIVE", _("Active")
+        CART_STATE_LOCKED = "CART_STATE_LOCKED", _("Locked")
+        CART_STATE_ABANDONED = "CART_STATE_ABANDONED", _("Abandoned")
 
     store_uuid = models.UUIDField(db_index=True)
-    cart_uuid = models.UUIDField(primary_key= True,default=uuid.uuid4,db_index=True)
-    user_phone_no = models.CharField(max_length = 15,null=True,blank= True,verbose_name=_("Phone Number"))
-    order_type = models.CharField(max_length=30,choices=order_types.choices,default=order_types.ORDER_TYPE_DINE_IN,verbose_name=_("Order type"))
-    # table_no = models.CharField(max_length=4,null=True,blank=True,verbose_name=_("Table No"))
-    vehicle_no = models.CharField(max_length=13,null=True,blank=True,verbose_name=_("Vehicle No"))
-    vehicle_description = models.CharField(max_length=50,null=True,blank=True,verbose_name=_("Vehicle Description"))
-    coupon_code = models.CharField(max_length=20,null=True,blank= True,verbose_name=_("coupone"))
-    special_instructions = models.TextField(verbose_name="special instructions",null=True,blank=True)
-    state = models.CharField(max_length=30,verbose_name = "State",choices = cart_state.choices,default = cart_state.CART_STATE_ACTIVE)
-    # TotalAmount = TextChoices.DecimalField(max_digits=6,decimal_places=2,blank= True,default=Decimal("0.00"),verbose_name= _("Total Amount"))
+    cart_uuid = models.UUIDField(primary_key=True, default=uuid.uuid4, db_index=True)
 
-    table = models.ForeignKey(
-        "Table",
-        null=True,
-        blank=True,
-        on_delete=models.SET_NULL,
-        related_name="carts"
+    user_phone_no = models.CharField(max_length=15, null=True, blank=True, verbose_name=_("Phone Number"))
+
+    order_type = models.CharField(max_length=30, choices=order_types.choices, default=order_types.ORDER_TYPE_DINE_IN)
+    vehicle_no = models.CharField(max_length=13, null=True, blank=True)
+    vehicle_description = models.CharField(max_length=50, null=True, blank=True)
+    coupon_code = models.CharField(max_length=20, null=True, blank=True)
+    special_instructions = models.TextField(null=True, blank=True)
+
+    state = models.CharField(max_length=30, choices=cart_state.choices, default=cart_state.CART_STATE_ACTIVE)
+
+    table = models.ForeignKey("Table", null=True, blank=True, on_delete=models.SET_NULL, related_name="carts")
+    service_session = models.ForeignKey("ServiceSession", null=True, blank=True, on_delete=models.SET_NULL, related_name="carts")
+    payment_type = models.CharField(
+        max_length=30,
+        choices=Table.PaymentType.choices,
+        default=Table.PaymentType.PAYMENT_TYPE_PREPAID,
+        verbose_name=_("Payment Type")
     )
 
-    service_session = models.ForeignKey(
-        "ServiceSession",
-        null=True,
-        blank=True,
-        on_delete=models.SET_NULL,
-        related_name="carts"
-    )
-
+    # Financial fields
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    objects = cart_manager()
 
     class Meta:
         verbose_name = "Cart"
         verbose_name_plural = "Carts"
         indexes = [
-            models.Index(fields=["store_uuid", "user_phone_no", "cart_uuid"])
-        ]
-
-
-    objects = cart_manager()
-
+        models.Index(fields=["store_uuid","user_phone_no"]),
+        models.Index(fields=["cart_uuid"]),
+        models.Index(fields=["service_session"]),
+        models.Index(fields=["state"]),
+        models.Index(fields=["payment_type"]),
+    ]
 
     @property
     def is_active(self):
         return self.state == self.cart_state.CART_STATE_ACTIVE
 
     @property
-    def sub_total(self)->Decimal:
+    def sub_total(self) -> Decimal:
         return Decimal(sum(item.sub_total for item in self.items.all()))
 
     @property
@@ -335,22 +377,21 @@ class Cart(models.Model):
     @property
     def packaging_cost(self) -> Decimal:
         if self.order_type == self.order_types.ORDER_TYPE_DINE_IN:
-            return Decimal(0.00)
+            return Decimal("0.00")
         return Decimal(sum(item.packaging_cost for item in self.items.all()))
-    
+
     @property
     def final_amount(self) -> Decimal:
         return Decimal(sum(item.final_price for item in self.items.all()))
 
     @property
-    def total_items(self)->int:
+    def total_items(self) -> int:
         return self.items.count()
 
-
-    def get_items(self)->models.QuerySet:
+    def get_items(self) -> models.QuerySet:
         return self.items.all()
 
-    def apply_discount(self,discount:Decimal):
+    def apply_discount(self, discount: Decimal):
         for item in self.get_items():
             item.apply_discount(discount)
 
@@ -359,38 +400,44 @@ class Cart(models.Model):
             item.remove_discount()
 
     def lock_cart(self):
-        """Locks the cart and prevents further modifications."""
-        self.state = self.cart_state.CART_STATE_LOCKED  
-        super().save(update_fields=["state"])  # Save only the state field     
+        self.state = self.cart_state.CART_STATE_LOCKED
+        self.save(update_fields=["state"])
 
     def clean(self):
-        # Normalize and validate phone number
+        # --- Validate and format phone number ---
         if self.user_phone_no:
             try:
                 parsed = phonenumbers.parse(self.user_phone_no, "IN")
                 if not phonenumbers.is_valid_number(parsed):
                     raise ValidationError("Invalid phone number.")
-                self.user_phone_no = phonenumbers.format_number(
-                    parsed, phonenumbers.PhoneNumberFormat.E164
-                )
+                self.user_phone_no = phonenumbers.format_number(parsed, phonenumbers.PhoneNumberFormat.E164)
             except phonenumbers.NumberParseException:
                 raise ValidationError("Invalid phone number format.")
 
-            # Prevent duplicate active cart
-            existing = Cart.objects.filter(
+            if Cart.objects.filter(
                 store_uuid=self.store_uuid,
                 user_phone_no=self.user_phone_no,
                 state=self.cart_state.CART_STATE_ACTIVE
-            ).exclude(pk=self.pk).first()
-            if existing:
+            ).exclude(pk=self.pk).exists():
                 raise ValidationError("An active cart already exists for this phone number in this store.")
 
-        # Order type specific validation
+        if not self.user_phone_no:
+            raise ValidationError("Phone number must be set.")
+
+        # --- Validate order type and assign payment_type ---
         if self.order_type == self.order_types.ORDER_TYPE_DINE_IN:
             if not self.table:
                 raise ValidationError("Dine-In orders must have a table.")
             if not self.service_session:
                 raise ValidationError("Dine-In orders must be part of a service session.")
+
+            # Infer payment type from table
+            if self.table.payment_type:
+                self.payment_type = self.table.payment_type
+            else:
+                raise ValidationError("Dine-In table does not have a payment type set.")
+
+            # Reset vehicle fields
             self.vehicle_no = ""
             self.vehicle_description = ""
 
@@ -400,12 +447,24 @@ class Cart(models.Model):
             self.table = None
             self.service_session = None
 
-        # Financial sanity checks
+            # Require explicit payment type
+            if not self.payment_type:
+                self.payment_type = Table.PaymentType.PAYMENT_TYPE_PREPAID  # fallback
+
+        elif self.order_type == self.order_types.ORDER_TYPE_TAKE_AWAY:
+            self.table = None
+            self.service_session = None
+            self.vehicle_no = ""
+            self.vehicle_description = ""
+
+            if not self.payment_type:
+                self.payment_type = Table.PaymentType.PAYMENT_TYPE_PREPAID
+
+        # --- Financial sanity checks ---
         if hasattr(self, 'items') and self.items.exists() and self.sub_total < Decimal("0.00"):
             raise ValidationError("Subtotal cannot be negative.")
         if self.final_amount < Decimal("0.00"):
             raise ValidationError("Final amount cannot be negative.")
-
     def save(self, *args, **kwargs):
         if self.pk:
             existing_cart = Cart.objects.filter(pk=self.pk).first()
@@ -414,11 +473,12 @@ class Cart(models.Model):
         self.clean()
         super().save(*args, **kwargs)
 
-
     def delete(self, *args, **kwargs):
         if self.state == self.cart_state.CART_STATE_LOCKED:
             raise ValidationError("Locked carts cannot be deleted.")
         return super().delete(*args, **kwargs)
+
+
 
 
 class CartItem(models.Model):
@@ -448,8 +508,10 @@ class CartItem(models.Model):
         verbose_name = "Cart Item"
         verbose_name_plural = "Cart Items"
         indexes = [
-            models.Index(fields=["cart"]),
-            models.Index(fields=["product_uuid", "cart_item_uuid"]),
+            models.Index(fields=["cart"], name="idx_cart"),
+            models.Index(fields=["product_uuid"], name="idx_product_uuid"),
+            models.Index(fields=["cart_item_uuid"], name="idx_cart_item_uuid"),
+            models.Index(fields=["cart", "product_uuid"], name="idx_cart_product_uuid"),
         ]
 
     def clean(self):
@@ -565,8 +627,9 @@ class AddOn(models.Model):
         verbose_name = 'Add On'
         verbose_name_plural = 'Add Ons'
         indexes = [
-            models.Index(fields=['cart_item']),
-            models.Index(fields=['add_on_uuid']),
+            models.Index(fields=['cart_item'], name='idx_addon_cart_item'),
+            models.Index(fields=['add_on_uuid'], name='idx_addon_uuid'),
+            models.Index(fields=['cart_item', 'add_on_uuid'], name='idx_addon_cart_item_uuid'),
         ]
 
     def clean(self):
@@ -678,7 +741,10 @@ class CouponUsage(models.Model):
     class Meta:
         unique_together = ["coupon", "user_phone_no", "cart_uuid"]  # Prevent duplicate usage by user for a single order
         indexes = [
-                models.Index(fields=["user_phone_no","coupon","cart_uuid"])
+            models.Index(fields=["coupon"], name="idx_coupon"),
+            models.Index(fields=["user_phone_no"], name="idx_user_phone_no"),
+            models.Index(fields=["cart_uuid"], name="idx_cart_uuid"),
+            models.Index(fields=["coupon", "user_phone_no", "cart_uuid"], name="idx_coupon_user_cart"),
         ]
 
     def __str__(self):
